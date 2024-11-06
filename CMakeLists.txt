@@ -8,21 +8,21 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-set(ECTOR_INCLUDE
-    "inc/ect_types.h"
-    "inc/ect_math.h"
-    "inc/object.h"
-)
-
 set(ECTOR_SOURCE
-    "src/object.c"
+    "src/core/context.c"
+    "src/core/object.c"
 )
 
 add_subdirectory("external/")
 
 add_library(Ector STATIC ${ECTOR_SOURCE})
 target_compile_features(Ector PRIVATE c_std_11)
-target_include_directories(Ector PUBLIC "inc/")
+target_include_directories(Ector
+    PUBLIC
+        "inc/"
+    PRIVATE
+        "src/"
+)
 target_link_libraries(Ector PUBLIC external)
 
 add_subdirectory("tools")
