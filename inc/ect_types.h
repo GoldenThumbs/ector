@@ -3,12 +3,20 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // Denotes a pointer that is a hashmap.
 #define HM(T) T*
 
 // Denotes a pointer that is a dynamic array.
 #define AR(T) T*
+
+#define VEC2(...) (vec2)   { { __VA_ARGS__ } }
+#define VEC3(...) (vec3)   { { __VA_ARGS__ } }
+#define VEC4(...) (vec4)   { { __VA_ARGS__ } }
+#define QUAT(...) (quat)   { { __VA_ARGS__ } }
+#define MAT3(...) (mat3x3) { { __VA_ARGS__ } }
+#define MAT4(...) (mat4x4) { { __VA_ARGS__ } }
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -36,28 +44,29 @@ typedef union vec3_t
    struct {
       f32 x;
       union {
-         vec2 v_yz;
+         vec2 yz;
          struct { f32 y, z; };
       };
    };
-   vec2 v_xy;
+   vec2 xy;
 } vec3;
 
 typedef union vec4_t
 {
    f32 arr[4];
    struct {
-      vec2 v_xy;
-      vec2 v_zw;
+      vec2 xy;
+      vec2 zw;
    };
    struct {
       f32 x;
       union {
-         vec3 v_yzw;
+         vec2 yz;
+         vec3 yzw;
          struct { f32 y, z, w; };
       };
    };
-   vec3 v_xyz;
+   vec3 xyz;
 } vec4;
 
 typedef vec4 quat;
