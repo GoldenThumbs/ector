@@ -31,6 +31,11 @@ typedef int64_t i64;
 typedef float  f32;
 typedef double f64;
 
+typedef struct frame_t
+{
+   i32 width, height;
+} frame;
+
 typedef union vec2_t
 {
    f32 arr[2];

@@ -30,7 +30,9 @@
 )
 
 #ifndef USE_CUSTOM_MATH
+
 #include <math.h>
+
 #define ECT_SIN32(a) sinf(ECT_TURN32 * (a))
 #define ECT_SIN64(a) sin(ECT_TURN64 * (a))
 
@@ -42,6 +44,9 @@
 
 #define ECT_ATAN32(x) (ECT_TO_TURN32 * atanf(x))
 #define ECT_ATAN64(x) (ECT_TO_TURN64 * atan(x))
+
+#define ECT_SQRT32 sqrtf
+#define ECT_SQRT64 sqrt
 
 #define ECT_SIN(a) _Generic((a), \
    f32: ECT_SIN32((a)), \
@@ -66,15 +71,117 @@
    f64: ECT_ATAN64((x)), \
    default: abort() \
 )
+
+#define ECT_SQRT(x) _Generic((x), \
+   f32: ECT_SQRT32((x)), \
+   f64: ECT_SQRT64((x)), \
+   default: abort() \
+)
 #endif
+
+static inline vec2 EctAddVec2(vec2 a, vec2 b)
+{
+   vec2 res = { 0 };
+   for (i32 i=0; i<2; i++)
+      res.arr[i] = a.arr[i] + b.arr[i];
+   return res;
+}
+
+static inline vec2 EctSubVec2(vec2 a, vec2 b)
+{
+   vec2 res = { 0 };
+   for (i32 i=0; i<2; i++)
+      res.arr[i] = a.arr[i] - b.arr[i];
+   return res;
+}
+
+static inline vec2 EctMulVec2(vec2 a, vec2 b)
+{
+   vec2 res = { 0 };
+   for (i32 i=0; i<2; i++)
+      res.arr[i] = a.arr[i] * b.arr[i];
+   return res;
+}
+
+static inline vec2 EctScaleVec2(vec2 vector, f32 scalar)
+{
+   vec2 res = { 0 };
+   for (i32 i=0; i<2; i++)
+      res.arr[i] = vector.arr[i] * scalar;
+   return res;
+}
+
+static inline vec2 EctNormalizeVec2(vec2 vector)
+{
+   f32 len_sqr = 0.0f;
+   for (i32 i=0; i<2; i++)
+      len_sqr += vector.arr[i] * vector.arr[i];
+   if(len_sqr < 0.00001f)
+      return vector;
+   f32 len_inv = 1.0f / ECT_SQRT(len_sqr);
+   vec2 res = { 0 };
+   for (i32 i=0; i<2; i++)
+      res.arr[i] = vector.arr[i] * len_inv;
+   return res;
+}
+
+static inline vec3 EctAddVec3(vec3 a, vec3 b)
+{
+   vec3 res = { 0 };
+   for (i32 i=0; i<3; i++)
+      res.arr[i] = a.arr[i] + b.arr[i];
+   return res;
+}
+
+static inline vec3 EctSubVec3(vec3 a, vec3 b)
+{
+   vec3 res = { 0 };
+   for (i32 i=0; i<3; i++)
+      res.arr[i] = a.arr[i] - b.arr[i];
+   return res;
+}
+
+static inline vec3 EctMulVec3(vec3 a, vec3 b)
+{
+   vec3 res = { 0 };
+   for (i32 i=0; i<3; i++)
+      res.arr[i] = a.arr[i] * b.arr[i];
+   return res;
+}
+
+static inline vec3 EctScaleVec3(vec3 vector, f32 scalar)
+{
+   vec3 res = { 0 };
+   for (i32 i=0; i<3; i++)
+      res.arr[i] = vector.arr[i] * scalar;
+   return res;
+}
+
+static inline vec3 EctNormalizeVec3(vec3 vector)
+{
+   f32 len_sqr = 0.0f;
+   for (i32 i=0; i<3; i++)
+      len_sqr += vector.arr[i] * vector.arr[i];
+
+   if(len_sqr < 0.00001f)
+      return vector;
+
+   f32 len_inv = 1.0f / ECT_SQRT(len_sqr);
+   vec3 res = { 0 };
+   for (i32 i=0; i<3; i++)
+      res.arr[i] = vector.arr[i] * len_inv;
+
+   return res;
+}
 
 static inline mat4x4 EctMulMat4(mat4x4 a, mat4x4 b)
 {
    mat4x4 res = { 0 };
    for (i32 COL=0; COL<4; COL++)
       for (i32 ROW=0; ROW<4; ROW++)
-            for (i32 k=0; k<4; k++)
-      res.m[COL][ROW] += a.m[k][ROW] * b.m[COL][k];
+         for (i32 k=0; k<4; k++)
+            res.m[COL][ROW] += a.m[k][ROW] * b.m[COL][k];
+
    return res;
 }
 
@@ -83,48 +190,53 @@ static inline mat4x4 EctTransposeMatrix(mat4x4 matrix)
    mat4x4 res = { 0 };
    for (i32 COL=0; COL<4; COL++)
       for (i32 ROW=0; ROW<4; ROW++)
-      res.m[COL][ROW] = matrix.m[ROW][COL];
+         res.m[COL][ROW] = matrix.m[ROW][COL];
+
    return res;
 }
 
 static inline mat4x4 EctViewMatrix(vec3 origin, vec3 euler, f32 distance)
 {
-f32 a = ECT_COS(euler.y);
-f32 b = ECT_SIN(euler.y);
-f32 c = ECT_COS(euler.x);
-f32 d = ECT_SIN(euler.x);
-f32 e = b * d;
-f32 f = b * c;
-f32 g = a * d;
-f32 h = a * c;
+   f32 a = ECT_COS(euler.y);
+   f32 b = ECT_SIN(euler.y);
+   f32 c = ECT_COS(euler.x);
+   f32 d = ECT_SIN(euler.x);
+   f32 e = b * d;
+   f32 f = b * c;
+   f32 g = a * d;
+   f32 h = a * c;
 
-vec3 o = VEC3(
-   origin.x + f * distance,
-   origin.y - d * distance,
-   origin.z + h * distance);
+   vec3 o = VEC3(
+      origin.x + f * distance,
+      origin.y - d * distance,
+      origin.z + h * distance
+   );
 
-f32 x = a * o.x - b * o.z;
-f32 y = e * o.x + c * o.y + g * o.z;
-f32 z = f * o.x - d * o.y + h * o.z;
-return MAT4(
-    a, e, f, 0,
-    0, c,-d, 0,
-   -b, g, h, 0,
-   -x,-y,-z, 1);
+   f32 x = a * o.x - b * o.z;
+   f32 y = e * o.x + c * o.y + g * o.z;
+   f32 z = f * o.x - d * o.y + h * o.z;
+
+   return MAT4(
+       a, e, f, 0,
+       0, c,-d, 0,
+      -b, g, h, 0,
+      -x,-y,-z, 1
+   );
 }
 
 static inline mat4x4 EctPerspectiveMatrix(f32 fov, f32 aspect_ratio, f32 near, f32 far)
 {
-   f32 R = 1.0f / (far - near);
+   f32 R = 1.0f / (near - far);
    f32 Y = 1.0f / ECT_TAN(fov * 0.5f);
    f32 X = Y * aspect_ratio;
-   f32 a = far * R;
-   f32 b = far * near * R;
+   f32 a = (near + far) * R;
+   f32 b = (2.0f * near * far) * R;
+
    return MAT4(
       X, 0, 0, 0,
       0, Y, 0, 0,
-      0, 0,-a,-1,
-      0, 0,-b, 0
+      0, 0, a,-1,
+      0, 0, b, 0
    );
 }
 

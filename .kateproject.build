@@ -8,17 +8,17 @@
             "name": "Target Set",
             "targets": [
                 {
-                    "build_cmd": "make",
+                    "build_cmd": "cmake --build . --target SampleApp",
                     "name": "Build",
                     "run_cmd": ""
                 },
                 {
-                    "build_cmd": "make clean",
+                    "build_cmd": "cmake --build . --target clean",
                     "name": "Clean",
                     "run_cmd": ""
                 },
                 {
-                    "build_cmd": "cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../",
+                    "build_cmd": "cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../ -DCMAKE_C_FLAGS_DEBUG=\"-ggdb\"",
                     "name": "Config",
                     "run_cmd": ""
                 },

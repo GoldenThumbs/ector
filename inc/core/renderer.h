@@ -3,18 +3,39 @@
 
 #include "ect_types.h"
 
-typedef struct EctRenderer_t
+#include <sokol_gfx.h>
+
+typedef struct EctView_t
 {
-   struct {
-      vec4 gui_frame;
-      u32 render_width;
-      u32 render_height;
-      u8 fb_format;
-      u8 gui_fb_format;
-      u8 quality;
-      u8 gui_quality;
-   };
-   void* internal;
-} EctRenderer;
+   mat4x4 view_proj;
+   frame frame_size;
+} EctView;
+
+typedef struct EctBuffer_t
+{
+   const void* data;
+   u32 size;
+   u32 count;
+} EctBuffer;
+
+typedef struct EctGeometry_t
+{
+   sg_bindings bind;
+   u32 vertex_count;
+   u32 vertex_size;
+   u32 index_count;
+   u32 index_size;
+} EctGeometry;
+
+typedef struct EctRenderer_t EctRenderer;
+
+EctRenderer* EctRendererInit(void);
+void EctRendererFree(EctRenderer* renderer);
+
+frame EctRendererGetSize(EctRenderer* renderer);
+sg_swapchain EctRendererGetSwapchain(EctRenderer* renderer);
+
+EctGeometry EctRendererCreateGeometry(const EctBuffer vertices, const EctBuffer indices);
+void EctRendererDrawGeometry(EctGeometry geometry);
 
 #endif

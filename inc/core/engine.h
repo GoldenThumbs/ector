@@ -4,30 +4,46 @@
 #include "ect_types.h"
 
 #include "core/keymap.h"
+#include "core/renderer.h"
 
-typedef struct EctEngine_t
+#include <sokol_gfx.h>
+
+typedef enum EctMouseMode_t
 {
-   const char* app_name;
-   bool quit;
-} EctEngine;
+   ECT_MOUSE_DEFAULT = 0,
+   ECT_MOUSE_HIDE_CURSOR,
+   ECT_MOUSE_DISABLE_CURSOR,
+   ECT_MOUSE_CAPTURE_CURSOR
+} EctMouseMode;
+
+typedef struct EctEngine_t EctEngine;
 
 typedef struct EctEngineDesc_t
 {
-   const char* app_name;
+   char* app_name;
    struct {
-      const char* title;
+      char* title;
       i32 width, height;
    } window;
 } EctEngineDesc;
 
-EctEngine EctInitEngine(EctEngineDesc* desc);
-void EctFreeEngine(void);
+EctEngine* EctInit(EctEngineDesc* desc);
+void EctFree(EctEngine* engine);
 
+void EctQuit(EctEngine* engine);
 bool EctShouldQuit(EctEngine* engine);
+
 bool EctCheckKey(EctKey key, u8 desired_state, bool exclusive);
 bool EctCheckKeyMods(EctKey key, u8 desired_state, u8 modifiers, bool exclusive);
 u8 EctKeyState(EctKey key);
 
-void EctGetFrameSize(i32* width, i32* height);
+void EctSetMouseMode(EctMouseMode mouse_mode);
+
+frame EctGetSize(void);
+vec2 EctGetMousePos(void);
+vec2 EctGetMouseDelta(void);
+
+EctRenderer* EctGetRenderer(EctEngine* engine);
+sg_swapchain EctGetSwapchain(EctEngine* engine);
 
 #endif

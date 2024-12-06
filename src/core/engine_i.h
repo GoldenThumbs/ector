@@ -18,7 +18,7 @@ static struct ECT_EngineGlobal_t
       f64 cursor_pos[2];
       f64 scroll_move_old[2];
       f64 scroll_move[2];
-      i32 text_buffer_n;
+      u32 text_buffer_n;
       u32 text_buffer[ECT_MAX_TEXTBUF];
       u32 _padding;
    } input;
