@@ -188,8 +188,3 @@ EctRenderer* EctGetRenderer(EctEngine* engine)
 {
    return engine->renderer;
 }
-
-sg_swapchain EctGetSwapchain(EctEngine* engine)
-{
-   return EctRendererGetSwapchain(engine->renderer);
-}

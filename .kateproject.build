@@ -5,7 +5,7 @@
             "cmake_config": "",
             "directory": "%B/build",
             "loaded_via_cmake": false,
-            "name": "Target Set",
+            "name": "Debug",
             "targets": [
                 {
                     "build_cmd": "cmake --build . --target SampleApp",
@@ -18,7 +18,7 @@
                     "run_cmd": ""
                 },
                 {
-                    "build_cmd": "cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../ -DCMAKE_C_FLAGS_DEBUG=\"-ggdb\"",
+                    "build_cmd": "cmake -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ../ -DCMAKE_C_FLAGS_DEBUG=\"-g\"",
                     "name": "Config",
                     "run_cmd": ""
                 },

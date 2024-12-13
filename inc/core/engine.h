@@ -6,8 +6,6 @@
 #include "core/keymap.h"
 #include "core/renderer.h"
 
-#include <sokol_gfx.h>
-
 typedef enum EctMouseMode_t
 {
    ECT_MOUSE_DEFAULT = 0,
@@ -15,8 +13,6 @@ typedef enum EctMouseMode_t
    ECT_MOUSE_DISABLE_CURSOR,
    ECT_MOUSE_CAPTURE_CURSOR
 } EctMouseMode;
-
-typedef struct EctEngine_t EctEngine;
 
 typedef struct EctEngineDesc_t
 {
@@ -26,6 +22,8 @@ typedef struct EctEngineDesc_t
       i32 width, height;
    } window;
 } EctEngineDesc;
+
+typedef struct EctEngine_t EctEngine;
 
 EctEngine* EctInit(EctEngineDesc* desc);
 void EctFree(EctEngine* engine);
@@ -44,6 +42,5 @@ vec2 EctGetMousePos(void);
 vec2 EctGetMouseDelta(void);
 
 EctRenderer* EctGetRenderer(EctEngine* engine);
-sg_swapchain EctGetSwapchain(EctEngine* engine);
 
 #endif
