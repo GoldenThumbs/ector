@@ -24,16 +24,6 @@
 #define POP_BACK_ARRAY(ptr) REMOVE_ARRAY(ptr, Util_ArrayLength(ptr) - 1u)
 #define POP_FRONT_ARRAY(ptr) REMOVE_ARRAY(ptr, 0u)
 
-/*#define ARRAY_CREATE_LENGTH(T, length) (T*)(ArrayInitWithLength(alignof(T), (length))->data)
-#define ARRAY_CREATE(T) (T*)(ArrayInit(alignof(T))->data)
-#define ARRAY_FREE(ptr) free(ARRAY_HEADER(ptr))
-#define ARRAY_INSERT(ptr, item, i) (ptr)[ArrayInsert((ptr), (i))] = item
-#define ARRAY_PUSHBACK(ptr, item) (ptr)[ArrayPushBack((ptr))] = item
-#define ARRAY_PUSHFRONT(ptr, item) (ptr)[ArrayPushFront((ptr))] = item
-#define ARRAY_REMOVE(ptr, i) (ptr)[ArrayRemove((ptr), (i))]
-#define ARRAY_POPBACK(ptr) (ptr)[ArrayPopBack((ptr))]
-#define ARRAY_POPFRONT(ptr) (ptr)[ArrayPopFront((ptr))]*/
-
 enum {
    ERR_ARRAY_REALLOC_FAILED = 1
 };
@@ -89,20 +79,5 @@ static inline void Util_ArrayFree(void** array_ptr)
    free(array);
    *array_ptr = NULL;
 }
-
-/*uS ArrayRequiredMemory(uS length);
-uS ArrayRequiredBytes(uS memory, uS size);
-// void ArraySetAt(array* arr, void* item, uS index);
-
-array* ArrayInitWithLength(uS size, uS length);
-array* ArrayInit(uS size);
-
-bool ArrayReallocate(void* arr, uS memory);
-uS ArrayInsert(void* arr, uS index);
-uS ArrayPushBack(void* arr);
-uS ArrayPushFront(void* arr);
-uS ArrayRemove(void* arr, uS index);
-uS ArrayPopBack(void* arr);
-uS ArrayPopFront(void* arr);*/
 
 #endif
