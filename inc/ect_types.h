@@ -18,6 +18,8 @@
 #define MAT3(...) (mat3x3) { { __VA_ARGS__ } }
 #define MAT4(...) (mat4x4) { { __VA_ARGS__ } }
 
+#define REF(ptr) (void**)(&(ptr))
+
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -28,8 +30,29 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
+typedef size_t uS;
+
 typedef float  f32;
 typedef double f64;
+
+enum {
+   ERR_OK = 0,
+   ERR_WARN,
+   ERR_ERROR,
+   ERR_FATAL
+};
+
+#define ERR_EXTRA_NONE ERR_OK
+
+typedef union error_t
+{
+   u32 total_bits;
+   struct {
+       u8 general: 2;
+       u16 flags: 14;
+       u16 extra;
+   };
+} error;
 
 typedef struct frame_t
 {
