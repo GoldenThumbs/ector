@@ -1,46 +1,47 @@
 #ifndef ECT_ENGINE_H
 #define ECT_ENGINE_H
 
-#include "ect_types.h"
+#include "util/types.h"
 
 #include "core/keymap.h"
 #include "core/renderer.h"
 
-typedef enum EctMouseMode_t
+typedef enum MouseMode_t
 {
-   ECT_MOUSE_DEFAULT = 0,
-   ECT_MOUSE_HIDE_CURSOR,
-   ECT_MOUSE_DISABLE_CURSOR,
-   ECT_MOUSE_CAPTURE_CURSOR
-} EctMouseMode;
+   MOUSE_DEFAULT = 0,
+   MOUSE_HIDE_CURSOR,
+   MOUSE_DISABLE_CURSOR,
+   MOUSE_CAPTURE_CURSOR
+} MouseMode;
 
-typedef struct EctEngineDesc_t
+typedef struct EngineDesc_t
 {
    char* app_name;
    struct {
       char* title;
       i32 width, height;
    } window;
-} EctEngineDesc;
+} EngineDesc;
 
-typedef struct EctEngine_t EctEngine;
+typedef struct Engine_t Engine;
 
-EctEngine* EctInit(EctEngineDesc* desc);
-void EctFree(EctEngine* engine);
+Engine* Engine_Init(EngineDesc* desc, RendererDesc* renderer_desc);
+void Engine_Free(Engine* engine);
 
-void EctQuit(EctEngine* engine);
-bool EctShouldQuit(EctEngine* engine);
+void Engine_Quit(Engine* engine);
+bool Engine_ShouldQuit(Engine* engine);
 
-bool EctCheckKey(EctKey key, u8 desired_state, bool exclusive);
-bool EctCheckKeyMods(EctKey key, u8 desired_state, u8 modifiers, bool exclusive);
-u8 EctKeyState(EctKey key);
+bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action);
+bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyModifiers modifiers);
+KeyState Engine_GetKeyState(Engine* engine, Key key);
 
-void EctSetMouseMode(EctMouseMode mouse_mode);
+void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode);
 
-frame EctGetSize(void);
-vec2 EctGetMousePos(void);
-vec2 EctGetMouseDelta(void);
+size2i Engine_GetSize(Engine* engine);
+vec2 Engine_GetMousePos(Engine* engine);
+vec2 Engine_GetMouseDelta(Engine* engine);
 
-EctRenderer* EctGetRenderer(EctEngine* engine);
+Renderer* Engine_GetRenderer(Engine* engine);
+void Engine_Render(Engine* engine, vec4 clear_color, ClearTargets clear_targets);
 
 #endif

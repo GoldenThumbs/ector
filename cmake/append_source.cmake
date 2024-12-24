@@ -1,0 +1,10 @@
+
+function(append_source srcs_outbuffer srcs_inbuffer src_dir)
+   set(internal_buffer "${${srcs_outbuffer}}")
+   foreach(src_file ${srcs_inbuffer})
+      set(current_file "${src_dir}/${src_file}")
+      set(internal_buffer "${internal_buffer}" "${current_file}")
+      # message(STATUS "${current_file}")
+   endforeach()
+   set(${srcs_outbuffer} "${internal_buffer}" PARENT_SCOPE)
+endfunction()

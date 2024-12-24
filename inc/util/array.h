@@ -1,22 +1,23 @@
 #ifndef ECT_ARRAY_H
 #define ECT_ARRAY_H
 
-#include "ect_types.h"
+#include "util/types.h"
 
-#include <stdalign.h>
+// #include <stdalign.h>
 #include <stddef.h>
-#include <stdlib.h>
+// #include <stdlib.h>
 
 #ifndef clz
    //#define clz __builtin_clzll
-   #define clz LeadingZeros
+   #define clz LeadingZeros_uS
 #endif
 
-#define ARRAY_HEADER(ptr) ((Array*)((ptr) - offsetof(Array, data)))
+#define ARRAY_HEADER(ptr) ((Array*)(ptr) - 1)
 
-#define NEW_ARRAY_N(T, N) Util_CreateArrayOfLength(N, alignof(T))
+#define NEW_ARRAY_N(T, N) Util_CreateArrayOfLength(N, sizeof(T))
 #define NEW_ARRAY(T) NEW_ARRAY_N(T, 0u)
-#define FREE_ARRAY(ptr) Util_ArrayFree(REF(ptr))
+#define SET_ARRAY_LENGTH(ptr, N) Util_SetArrayLength(REF(ptr), N)
+#define FREE_ARRAY(ptr) (((ptr) != NULL) ? free(ARRAY_HEADER(ptr)) : ((void)0))
 #define INSERT_ARRAY(ptr, i, item) (Util_InsertArrayIndex(REF(ptr), i), ptr[Util_UsableArrayIndex((ptr), i)] = item)
 #define REMOVE_ARRAY(ptr, i) (Util_RemoveArrayIndex(REF(ptr), i), ptr[Util_ArrayLength(ptr)])
 #define ADD_BACK_ARRAY(ptr, item) INSERT_ARRAY(ptr, Util_ArrayLength(ptr), item)
@@ -39,9 +40,11 @@ typedef struct Array_t
    u8 data[];
 } Array;
 
-uS LeadingZeros(uS x);
-uS Log2i(uS x);
-uS Pow2i(uS x);
+uS LeadingZeros_uS(uS x);
+uS Log2_uS(uS x);
+uS Pow2_uS(uS x);
+
+void Util_SetArrayLength(void** array_ptr, u32 desired_length);
 
 uS Util_ArrayNeededMemory(uS length);
 uS Util_ArrayNeededBytes(uS memory, uS type_size);
@@ -71,13 +74,6 @@ static inline u32 Util_ArrayLength(void* ptr)
 static inline error Util_ArrayError(void* array)
 {
    return ARRAY_HEADER(array)->err;
-}
-
-static inline void Util_ArrayFree(void** array_ptr)
-{
-   Array* array = ARRAY_HEADER(*array_ptr);
-   free(array);
-   *array_ptr = NULL;
 }
 
 #endif

@@ -1,18 +1,20 @@
-#include <ect_types.h>
-#include <ect_math.h>
+#include <util/types.h>
+#include <util/math.h>
 #include <core/keymap.h>
 #include <core/renderer.h>
 #include <core/engine.h>
 
-#include <glad/gl.h>
-
-#include <stdio.h>
-
 int main(int argc, char* argv[])
 {
-   EctEngine* engine = EctInit(&(EctEngineDesc){ 0 });
-
-   glEnable(GL_DEPTH_TEST);
+   Engine* engine = Engine_Init(
+      &(EngineDesc){ 0 },
+      &(RendererDesc){
+         .color_format = PIX_RGBA_8BPC,
+         .depth_format = PIX_DEPTH_STENCIL,
+         .samples = 1,
+         .render_scale = { 0.5f, 0.5f }
+      }
+   );
 
    struct {
       mat4x4 viewproj;
@@ -28,13 +30,13 @@ int main(int argc, char* argv[])
    camera.aspect = 1.0f;
    camera.viewproj = MAT4(0);
 
-   f32 vrt[][6] = {
-      { 0,-1, 0,  0.5f, 0.5f, 1.0f },
-      {-1, 0, 0,  1.0f, 0.5f, 0.5f },
-      { 0, 0, 1,  0.5f, 1.0f, 0.5f },
-      { 0, 1, 0,  0.5f, 0.5f, 0.0f },
-      { 1, 0, 0,  0.0f, 0.5f, 0.5f },
-      { 0, 0,-1,  0.5f, 0.0f, 0.5f }
+   f32 vrt[] = {
+       0,-1, 0,   0,-1, 0,   0.5f, 0.5f, 1.0f,
+      -1, 0, 0,  -1, 0, 0,   1.0f, 0.5f, 0.5f,
+       0, 0, 1,   0, 0, 1,   0.5f, 1.0f, 0.5f,
+       0, 1, 0,   0, 1, 0,   0.5f, 0.5f, 0.0f,
+       1, 0, 0,   1, 0, 0,   0.0f, 0.5f, 0.5f,
+       0, 0,-1,   0, 0,-1,   0.5f, 0.0f, 0.5f
    };
 
    u16 idx[] = {
@@ -48,125 +50,128 @@ int main(int argc, char* argv[])
       3, 1, 5
    };
 
-   EctGeometry geom = EctRendererCreateGeometry(
-      (EctBuffer){ .data = (void*)vrt, .count = 8, .size = sizeof(f32) * 6u },
-      (EctBuffer){ .data = (void*)idx, .count = 24, .size = sizeof(u16) },
-      (EctVertexDesc){
-         .count = 2,
-         .index_type = ECT_IDX_U16,
+   Geometry geom = Renderer_CreateGeometry(
+      (Buffer){ .data = (void*)vrt, .count = 6, .size = sizeof(f32) * 9u },
+      (Buffer){ .data = (void*)idx, .count = 24, .size = sizeof(u16) },
+      (VertexDesc){
+         .count = 3,
+         .index_type = IDX_U16,
          .attribute = {
-            [0] = { .type = ECT_VRT_F32_V3 },
-            [1] = { .type = ECT_VRT_F32_V3, .offset = sizeof(f32) * 3u },
+            [0] = { .format = ATR_F32_V3 },
+            [1] = { .format = ATR_F32_V3, .offset = sizeof(f32) * 3u },
+            [2] = { .format = ATR_F32_V3, .offset = sizeof(f32) * 6u },
          }
       }
    );
 
-   const char* v_shdcode =
+   const char* v_shdsrc =
       "#version 330 core\n"
-      "layout(location=0) in vec3 a_position;\n"
-      "layout(location=1) in vec3 a_color;\n"
+      "layout(location=0) in vec3 vrt_position;\n"
+      "layout(location=1) in vec3 vrt_normal;\n"
+      "layout(location=2) in vec3 vrt_color;\n"
       "uniform mat4 u_mvp;\n"
-      "out vec3 v_color;\n"
-      "out vec3 v_pos;\n"
+      "out vec3 v2f_normal;\n"
+      "out vec3 v2f_color;\n"
       "void main()\n"
       "{\n"
-      "   v_pos = a_position;\n"
-      "   v_color = a_color;\n"
-      "   gl_Position = u_mvp * vec4(a_position, 1.0);\n"
+      "   v2f_color = vrt_color;\n"
+      "   v2f_normal = vrt_normal;\n"
+      "   gl_Position = u_mvp * vec4(vrt_position, 1.0);\n"
       "}\n";
 
-   u32 v_shd = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(v_shd, 1, &v_shdcode, NULL);
-   glCompileShader(v_shd);
-
-   const char* f_shdcode =
+   const char* f_shdsrc =
       "#version 330 core\n"
-      "in vec3 v_color;\n"
-      "in vec3 v_pos;\n"
-      "out vec4 f_color;\n"
+      "in vec3 v2f_normal;\n"
+      "in vec3 v2f_color;\n"
+      "out vec4 frg_color;\n"
       "void main()\n"
       "{\n"
-      "   vec3 n = normalize(cross(dFdx(v_pos), dFdy(v_pos)));\n"
-      "   f_color.rgb = v_color * (0.5 * dot(n, vec3(0.707)) + 0.5);\n"
-      "   f_color.a = 1.0;\n"
+      "   vec3 normal = normalize(v2f_normal);\n"
+      "   float NdL = dot(normal, vec3(0.707)) * 0.5 + 0.5;\n"
+      "   frg_color.rgb = v2f_color * NdL;\n"
+      "   frg_color.a = 1.0;\n"
       "}\n";
 
-   u32 f_shd = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(f_shd, 1, &f_shdcode, NULL);
-   glCompileShader(f_shd);
+   Shader shader = Renderer_CreateShader((ShaderDesc){
+      .stage_src = {
+         [SHD_VERTEX] = v_shdsrc,
+         [SHD_FRAGMENT] = f_shdsrc,
+      }
+   });
 
-   u32 shader = glCreateProgram();
-   glAttachShader(shader, v_shd);
-   glAttachShader(shader, f_shd);
-   glLinkProgram(shader);
+   Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
 
-   i32 shd_success = 0;
-   glGetProgramiv(shader, GL_LINK_STATUS, &shd_success);
-   if (!shd_success)
+   mat4x4 xform = Util_MulMat4(
+      Util_TranslationMatrix(VEC3(5, 0.5f, 1)),
+      Util_ScalingMatrix(VEC3(2, 2, 2))
+   );
+
+   while(!Engine_ShouldQuit(engine))
    {
-      char shd_log[1024];
-      glGetProgramInfoLog(shader, 1024, NULL, shd_log);
-      fprintf(stderr, "%s\n", shd_log);
-   }
+      if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
+         Engine_Quit(engine);
 
-   glDeleteShader(v_shd);
-   glDeleteShader(f_shd);
+      Renderer* renderer = Engine_GetRenderer(engine);
 
-   // EctSetMouseMode(ECT_MOUSE_DISABLE_CURSOR);
-
-   frame size = EctGetSize();
-   glViewport(0, 0, size.width, size.height);
-   while(!EctShouldQuit(engine))
-   {
-      if (EctCheckKey(ECT_KEY_ESCAPE, ECT_KEY_IS_DOWN, false))
-         EctQuit(engine);
-
-      size = EctGetSize();
+      size2i size = Engine_GetSize(engine);
       camera.aspect = (f32)size.height / (f32)size.width;
 
-      vec2 mouse_delta = EctGetMouseDelta();
+      vec2 mouse_delta = Engine_GetMouseDelta(engine);
       camera.euler.y -= mouse_delta.x * 0.02f;
       camera.euler.x -= mouse_delta.y * 0.02f;
 
       vec3 move_dir = { 0 };
 
       {
-         f32 cos_yaw = ECT_COS(camera.euler.y);
-         f32 sin_yaw = ECT_SIN(camera.euler.y);
+         f32 cos_yaw = M_COS(camera.euler.y);
+         f32 sin_yaw = M_SIN(camera.euler.y);
 
-         if (EctCheckKey(ECT_KEY_W, ECT_KEY_IS_DOWN, false))
-            move_dir = EctSubVec3(move_dir, VEC3( sin_yaw, 0, cos_yaw));
-         if (EctCheckKey(ECT_KEY_S, ECT_KEY_IS_DOWN, false))
-            move_dir = EctAddVec3(move_dir, VEC3( sin_yaw, 0, cos_yaw));
-         if (EctCheckKey(ECT_KEY_A, ECT_KEY_IS_DOWN, false))
-            move_dir = EctAddVec3(move_dir, VEC3(-cos_yaw, 0, sin_yaw));
-         if (EctCheckKey(ECT_KEY_D, ECT_KEY_IS_DOWN, false))
-            move_dir = EctAddVec3(move_dir, VEC3( cos_yaw, 0,-sin_yaw));
+         if (Engine_CheckKey(engine, KEY_W, KEY_IS_DOWN))
+            move_dir = Util_SubVec3(move_dir, VEC3( sin_yaw, 0, cos_yaw));
+         if (Engine_CheckKey(engine, KEY_S, KEY_IS_DOWN))
+            move_dir = Util_AddVec3(move_dir, VEC3( sin_yaw, 0, cos_yaw));
+         if (Engine_CheckKey(engine, KEY_A, KEY_IS_DOWN))
+            move_dir = Util_AddVec3(move_dir, VEC3(-cos_yaw, 0, sin_yaw));
+         if (Engine_CheckKey(engine, KEY_D, KEY_IS_DOWN))
+            move_dir = Util_AddVec3(move_dir, VEC3( cos_yaw, 0,-sin_yaw));
       }
 
-      move_dir = EctNormalizeVec3(move_dir);
-      camera.origin = EctAddVec3(camera.origin, EctScaleVec3(move_dir, 0.08f));
+      move_dir = Util_NormalizeVec3(move_dir);
+      camera.origin = Util_AddVec3(camera.origin, Util_ScaleVec3(move_dir, 0.08f));
 
-      camera.viewproj = EctMulMat4(
-         EctPerspectiveMatrix(camera.fov, camera.aspect, 0.25f, 100.0f),
-         EctViewMatrix(camera.origin, camera.euler, 0)
+      camera.viewproj = Util_MulMat4(
+         Util_PerspectiveMatrix(camera.fov, camera.aspect, 0.25f, 100.0f),
+         Util_ViewMatrix(camera.origin, camera.euler, 0)
       );
 
-      glClearColor(0.1f, 0.15f, 0.2f, 1.0f);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      Renderer_SetFrameSize(renderer, size);
+      Renderer_SetViewProjMatrix(renderer, camera.viewproj);
 
-      glUseProgram(shader);
+      Renderer_SubmitDrawCall(renderer, (DrawCall){
+         .uniform_count = 1,
+         .texture_count = 0,
+         .uniforms = {
+            [0] = { .name = "u_mvp", .type = UNI_MATRIX, .datablob = DATABLOB(camera.viewproj.arr) }
+         },
+         .shader = shader,
+         .geometry = geom
+      });
 
-      u32 mvp_loc = glGetUniformLocation(shader, "u_mvp");
-      glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, camera.viewproj.arr);
-      EctRendererDrawGeometry(geom);
+      Renderer_SubmitDrawCall(renderer, (DrawCall){
+         .uniform_count = 1,
+         .texture_count = 0,
+         .uniforms = {
+            [0] = { .name = "u_mvp", .type = UNI_MATRIX, .datablob = DATABLOB(Util_MulMat4(camera.viewproj, xform).arr) }
+         },
+         .shader = shader,
+         .geometry = geom
+      });
 
-      glUseProgram(0);
+      Engine_Render(engine, (vec4){ 0.1f, 0.15f, 0.2f, 1.0f }, (ClearTargets){ .color = true, .depth = true });
    }
 
-   glDeleteShader(shader);
-
-   EctRendererFreeGeometry(&geom);
-   EctFree(engine);
+   Renderer_FreeShader(&shader);
+   Renderer_FreeGeometry(&geom);
+   Engine_Free(engine);
    return 0;
 }

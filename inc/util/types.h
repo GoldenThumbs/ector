@@ -5,11 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Denotes a pointer that is a hashmap.
-#define HM(T) T*
-
-// Denotes a pointer that is a dynamic array.
-#define AR(T) T*
+#define DATABLOB(data) (memblob) { (data), sizeof((data)) }
 
 #define VEC2(...) (vec2)   { { __VA_ARGS__ } }
 #define VEC3(...) (vec3)   { { __VA_ARGS__ } }
@@ -48,16 +44,22 @@ typedef union error_t
 {
    u32 total_bits;
    struct {
-       u8 general: 2;
        u16 flags: 14;
+       u16 general: 2;
        u16 extra;
    };
 } error;
 
-typedef struct frame_t
+typedef struct memblob_t
+{
+   void* data;
+   uS size;
+} memblob;
+
+typedef struct size2i_t
 {
    i32 width, height;
-} frame;
+} size2i;
 
 typedef union vec2_t
 {
@@ -77,6 +79,9 @@ typedef union vec3_t
       };
    };
    vec2 xy;
+   struct {
+      f32 r, g, b;
+   };
 } vec3;
 
 typedef union vec4_t
@@ -95,6 +100,9 @@ typedef union vec4_t
       };
    };
    vec3 xyz;
+   struct {
+      f32 r, g, b, a;
+   };
 } vec4;
 
 typedef vec4 quat;
@@ -112,18 +120,5 @@ typedef union mat4x4_t
    f32 m[4][4];
    vec4 v[4];
 } mat4x4;
-
-typedef struct spatial3d_t
-{
-   vec3 origin;
-   quat rotation;
-   vec3 scale;
-} spatial3d;
-
-typedef struct bbox_t
-{
-   vec3 center;
-   vec3 extents;
-} bbox;
 
 #endif

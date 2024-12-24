@@ -1,5 +1,5 @@
 #include "util/array.h"
-#include "ect_types.h"
+#include "util/types.h"
 
 #include <limits.h>
 #include <stddef.h>
@@ -7,12 +7,16 @@
 #include <string.h>
 #include <stdio.h>
 
-#define ARRAY_PTR_VALID(array_ptr) (((array_ptr) != NULL) && (*(array_ptr) != NULL))
+#define ARR_DATA(array) (&(array)->data)
+#define ARR_PTR_VALID(array_ptr) (((array_ptr) != NULL) && (*(array_ptr) != NULL))
+#define ARR_N_OK(array, offs) ((1u + (array)->length + (offs)) < (u32)(array)->memory)
 
-uS LeadingZeros(uS x)
+uS LeadingZeros_uS(uS x)
 {
-   uS n_bits = (sizeof(x) * 8u);
-   uS mask = (1u << (n_bits - 1u));
+   if (!x)
+      return 0;
+   uS n_bits = sizeof(uS) * CHAR_BIT;
+   uS mask = ((uS)1 << (n_bits - 1u));
 
    uS i = 0;
    while ((i<n_bits) && (((x << i) & mask) != mask))
@@ -21,49 +25,59 @@ uS LeadingZeros(uS x)
    return i;
 }
 
-uS Log2i(uS x)
+uS Log2_uS(uS x)
 {
-   return sizeof(uS) * CHAR_BIT - clz(x) - 1u;
+   return sizeof(uS) * CHAR_BIT - clz(x) - 1;
 }
 
-uS Pow2i(uS x)
+uS Pow2_uS(uS x)
 {
-   return (1u) << x;
+   return (uS)1 << x;
+}
+
+void Util_SetArrayLength(void** array_ptr, u32 desired_length)
+{
+   Array* array = ARRAY_HEADER(*array_ptr);
+
+   u32 length = desired_length;
+   if (array->memory < (uS)length)
+      length = (u32)array->memory;
+
+   array->length = length;
 }
 
 uS Util_ArrayNeededMemory(uS length)
 {
-   if (length == 0u)
-      length = 1u;
-   return Pow2i(Log2i(length) + 1u) + 1u;
+   if (!length)
+      length = 2u;
+   return Pow2_uS(Log2_uS(length) + 1u);
 }
 
 uS Util_ArrayNeededBytes(uS memory, uS type_size)
 {
-   return memory * type_size + sizeof(Array);
+   return (memory * type_size) + sizeof(Array);
 }
 
 void* Util_CreateArrayOfLength(u32 length, uS type_size)
 {
    uS memory = Util_ArrayNeededMemory((uS)length);
    uS num_bytes = Util_ArrayNeededBytes(memory, type_size);
-   Array* result = malloc(num_bytes);
-   if (result == NULL)
+
+   Array* array = calloc(1, num_bytes);
+   if (array == NULL)
       return NULL;
 
-   result->size = type_size;
-   result->memory = memory;
-   result->length = length;
-   result->err = (error){ .total_bits = 0u };
+   array->size = type_size;
+   array->memory = memory;
+   array->length = length;
+   array->err = (error){ .total_bits = 0u };
 
-   memset(result->data, 0, (length + 1u) * type_size);
-
-   return (void*)result->data;
+   return ARR_DATA(array);
 }
 
 void Util_ReallocArray(void** array_ptr, u32 desired_length)
 {
-   if (!ARRAY_PTR_VALID(array_ptr))
+   if (!ARR_PTR_VALID(array_ptr))
       abort();
 
    Array* array = ARRAY_HEADER(*array_ptr);
@@ -83,69 +97,74 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
    array = (Array*)tmp;
    array->memory = memory;
-   *array_ptr = (void*)array->data;
+   *array_ptr = ARR_DATA(array);
 }
 
 void Util_InsertArrayIndex(void** array_ptr, u32 index)
 {
-   if (!ARRAY_PTR_VALID(array_ptr))
+   if (!ARR_PTR_VALID(array_ptr))
       abort();
 
    Array* array = ARRAY_HEADER(*array_ptr);
+   u32 length = array->length;
+   uS size = array->size;
 
-   if ((array->length + 1u) >= (u32)array->memory)
+   if (!ARR_N_OK(array, 1u))
    {
-      Util_ReallocArray(array_ptr, array->length + 1u);
+      Util_ReallocArray(array_ptr, length + 1u);
       array = ARRAY_HEADER(*array_ptr);
 
       if (array->err.general == ERR_ERROR)
          return;
    }
 
-   if (index >= array->length)
+   if (index >= length)
    {
-      array->length = array->length + 1u;
+      array->length = length + 1u;
       return;
    }
 
-   void* ptr_a = *array_ptr + (uS)(index + 1u) * array->size;
-   void* ptr_b = *array_ptr + (uS)(index) * array->size;
-   uS num_bytes = array->size * (uS)(array->length - index);
+   void* ptr_a = *array_ptr + (uS)(index + 1u) * size;
+   void* ptr_b = *array_ptr + (uS)index * size;
+   uS num_bytes = size * (uS)(length - index);
    memmove(ptr_a, ptr_b, num_bytes);
 
-   array->length = array->length + 1u;
+   array->length = length + 1u;
    return;
 }
 
 void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 {
-   if (!ARRAY_PTR_VALID(array_ptr))
+   if (!ARR_PTR_VALID(array_ptr))
       abort();
 
    Array* array = ARRAY_HEADER(*array_ptr);
 
-   if (index >= array->length)
+   u32 length = array->length;
+   uS size = array->size;
+
+   if (index >= length)
    {
       array->err.general = ERR_WARN;
       array->err.flags |= ERR_ARRAY_INDEX_OVER;
-      index = array->length - 1u;
+      index = length - 1u;
 
       fprintf(stderr, "WARNING [ARRAY]: Cannot Remove Index Larger Than Array Length - 1!\nAssuming Last Element.\n");
    }
 
-   if (index < (array->length - 1u))
+   if (index < (length - 1u))
    {
-      void* ptr_a = *array_ptr + (uS)(index) * array->size;
-      void* ptr_b = *array_ptr + (uS)(index + 1u) * array->size;
-      void* ptr_c = *array_ptr + (uS)(array->length) * array->size;
+      void* ptr_a = *array_ptr + (uS)index * size;
+      void* ptr_b = *array_ptr + (uS)(index + 1u) * size;
+      void* ptr_c = *array_ptr + (uS)length * size;
 
-      memcpy(ptr_c, ptr_a, array->size);
+      memcpy(ptr_c, ptr_a, size);
 
-      uS num_bytes = array->size * (uS)(array->length - index + 1u);
+      uS num_bytes = size * (uS)(length - index + 1u);
       memmove(ptr_a, ptr_b, num_bytes);
    }
 
-   array->length = array->length - 1u;
+   array->length = length - 1u;
 }
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index)
@@ -158,6 +177,5 @@ u32 Util_UsableArrayIndex(void* ptr, u32 index)
    if (array->err.general == ERR_ERROR)
       return array->length;
 
-   index = ((index >= array->length) ? (array->length - 1u) : index);
-   return index;
+   return ((index >= array->length) ? (array->length - 1u) : index);
 }

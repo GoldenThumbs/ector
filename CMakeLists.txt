@@ -8,15 +8,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-set(ECTOR_SOURCE
-   "src/util/array.c"
-   "src/core/engine.c"
-   "src/core/renderer.c"
-)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(append_source)
 
 add_subdirectory("external/")
+add_subdirectory("src/")
 
-add_library(Ector STATIC ${ECTOR_SOURCE})
+add_library(Ector STATIC ${EctorSrc})
 target_compile_features(Ector PRIVATE c_std_11)
 target_include_directories(Ector
     PUBLIC
@@ -24,6 +22,6 @@ target_include_directories(Ector
     PRIVATE
         "src/"
 )
-target_link_libraries(Ector PUBLIC external)
+target_link_libraries(Ector PRIVATE external)
 
 add_subdirectory("tools")
