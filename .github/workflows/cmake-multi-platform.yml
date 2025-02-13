@@ -47,7 +47,10 @@ jobs:
     steps:
 
     - uses: actions/checkout@v4
+      with:
+         submodules: 'true'
    
+      
     - name: Dependancies
       shell: bash
       run: |
