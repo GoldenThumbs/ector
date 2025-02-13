@@ -129,8 +129,8 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
       return;
    }
 
-   void* ptr_a = *array_ptr + (uS)(index + 1u) * size;
-   void* ptr_b = *array_ptr + (uS)index * size;
+   u8* ptr_a = (u8*)(*array_ptr) + (uS)(index + 1u) * size;
+   u8* ptr_b = (u8*)(*array_ptr) + (uS)index * size;
    uS num_bytes = size * (uS)(length - index);
    memmove(ptr_a, ptr_b, num_bytes);
 
@@ -159,9 +159,9 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 
    if (index < (length - 1u))
    {
-      void* ptr_a = *array_ptr + (uS)index * size;
-      void* ptr_b = *array_ptr + (uS)(index + 1u) * size;
-      void* ptr_c = *array_ptr + (uS)length * size;
+      u8* ptr_a = (u8*)(*array_ptr) + (uS)index * size;
+      u8* ptr_b = (u8*)(*array_ptr) + (uS)(index + 1u) * size;
+      u8* ptr_c = (u8*)(*array_ptr) + (uS)length * size;
 
       memcpy(ptr_c, ptr_a, size);
 
