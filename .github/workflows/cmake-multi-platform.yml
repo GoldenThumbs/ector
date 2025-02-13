@@ -50,14 +50,13 @@ jobs:
       with:
          submodules: 'true'
    
-      
     - name: Dependancies
       shell: bash
       run: |
          if ["$RUNNER_OS" == "Linux"]; then
             sudo apt-get update -qq
             sudo apt-get install gcc-multilib
-            sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libwayland-bin libxkbcommon-dev
+            sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libwayland-bin libxkbcommon-dev xorg-dev
          fi
 
     - name: Set reusable strings
