@@ -16,6 +16,15 @@
 
 #define REF(ptr) (void**)(&(ptr))
 
+typedef union handle_t
+{
+   u32 id;
+   struct {
+      u32 handle: 16;
+      u32 num: 16;
+   } resource;
+} handle;
+
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -44,9 +53,9 @@ typedef union error_t
 {
    u32 total_bits;
    struct {
-       u16 flags: 14;
-       u16 general: 2;
-       u16 extra;
+       u32 flags: 14;
+       u32 general: 2;
+       u32 extra: 16;
    };
 } error;
 
