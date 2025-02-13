@@ -17,13 +17,11 @@ static eng_EngineGlobal* ENGINE_G;
 
 Engine* Engine_Init(EngineDesc* desc)
 {
-   char* app_name = "Ector App";
-   char* window_title = "Ector Window";
+   char* app_name = (desc->app_name == NULL) ? "Ector App" : desc->app_name;
+   char* window_title = app_name;
    i32 width = 1280;
    i32 height = 720;
 
-   if (desc->app_name != NULL)
-      app_name = desc->app_name;
    if (desc->window.title != NULL)
       window_title = desc->window.title;
    if (desc->window.width > 0)

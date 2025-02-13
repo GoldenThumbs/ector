@@ -6,7 +6,7 @@
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
-      &(EngineDesc){ 0 }
+      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
    );
 
    while(!Engine_ShouldQuit(engine))
@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
       if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
          Engine_Quit(engine);
 
-      Engine_Render(engine);
+         Engine_Present(engine);
    }
 
    Engine_Free(engine);

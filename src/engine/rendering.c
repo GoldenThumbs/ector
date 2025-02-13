@@ -3,7 +3,7 @@
 #include "core/engine.h"
 #include "engine/internal.h"
 
-void Engine_Render(Engine* engine)
+void Engine_Present(Engine* engine)
 {
    eng_EngineGlobal eng_glb = engine->internal;
    
