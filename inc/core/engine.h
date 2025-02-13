@@ -3,8 +3,7 @@
 
 #include "util/types.h"
 
-#include "core/keymap.h"
-#include "core/renderer.h"
+#include "util/keymap.h"
 
 typedef enum MouseMode_t
 {
@@ -25,7 +24,7 @@ typedef struct EngineDesc_t
 
 typedef struct Engine_t Engine;
 
-Engine* Engine_Init(EngineDesc* desc, RendererDesc* renderer_desc);
+Engine* Engine_Init(EngineDesc* desc);
 void Engine_Free(Engine* engine);
 
 void Engine_Quit(Engine* engine);
@@ -41,7 +40,6 @@ size2i Engine_GetSize(Engine* engine);
 vec2 Engine_GetMousePos(Engine* engine);
 vec2 Engine_GetMouseDelta(Engine* engine);
 
-Renderer* Engine_GetRenderer(Engine* engine);
-void Engine_Render(Engine* engine, vec4 clear_color, ClearTargets clear_targets);
+void Engine_Render(Engine* engine);
 
 #endif

@@ -2,11 +2,10 @@
 #include "util/types.h"
 // #include "ect_math.h"
 
-#include "core/keymap.h"
-#include "core/engine_i.h"
-#include "core/renderer_i.h"
-#include "core/renderer.h"
+#include "util/keymap.h"
+
 #include "core/engine.h"
+#include "engine/internal.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -20,13 +19,12 @@ static ENG_EngineGlobal* ENGINE_G;
 struct Engine_t
 {
    char* app_name;
-   Renderer* renderer;
    u64 resize_timer;
    ENG_EngineGlobal internal;
    bool quit;
 };
 
-Engine* Engine_Init(EngineDesc* desc, RendererDesc* renderer_desc)
+Engine* Engine_Init(EngineDesc* desc)
 {
    char* app_name = "Ector App";
    char* window_title = "Ector Window";
@@ -59,7 +57,6 @@ Engine* Engine_Init(EngineDesc* desc, RendererDesc* renderer_desc)
 
    Engine* engine = calloc(1, sizeof(Engine));
    engine->app_name = app_name;
-   engine->renderer = Renderer_Init(renderer_desc);
    engine->quit = false;
 
    engine->internal = (ENG_EngineGlobal){ 0 };
@@ -77,7 +74,6 @@ Engine* Engine_Init(EngineDesc* desc, RendererDesc* renderer_desc)
 
 void Engine_Free(Engine* engine)
 {
-   Renderer_Free(engine->renderer);
    glfwTerminate();
    free(engine);
 }
@@ -213,31 +209,10 @@ vec2 Engine_GetMouseDelta(Engine* engine)
    return res;
 }
 
-Renderer* Engine_GetRenderer(Engine* engine)
-{
-   return engine->renderer;
-}
-
-void Engine_Render(Engine* engine, vec4 clear_color, ClearTargets clear_targets)
+void Engine_Render(Engine* engine)
 {
    ENG_EngineGlobal eng_glb = engine->internal;
-
-   if (eng_glb.resize_time > 0)
-   {
-      if (eng_glb.resize_time == engine->resize_timer)
-      {
-         RNDR_MarkFramebufferDirty(engine->renderer);
-         eng_glb.resize_time = 0;
-         engine->resize_timer = 0;
-      }
-
-      engine->resize_timer = eng_glb.resize_time;
-   }
-   RNDR_BeginFrame(engine->renderer, clear_color, clear_targets);
-
-   RNDR_RenderFrame(engine->renderer);
-
-   RNDR_FinishFrame(engine->renderer, eng_glb.frame_size);
+   
    glfwSwapBuffers(eng_glb.window);
 }
 

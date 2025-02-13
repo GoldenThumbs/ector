@@ -16,15 +16,6 @@
 
 #define REF(ptr) (void**)(&(ptr))
 
-typedef union handle_t
-{
-   u32 id;
-   struct {
-      u32 handle: 16;
-      u32 num: 16;
-   } resource;
-} handle;
-
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
@@ -58,6 +49,15 @@ typedef union error_t
        u32 extra: 16;
    };
 } error;
+
+typedef union handle_t
+{
+   u32 id;
+   struct {
+      u32 handle: 16;
+      u32 num: 16;
+   } resource;
+} handle;
 
 typedef struct memblob_t
 {

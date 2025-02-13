@@ -10,11 +10,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(append_source)
+include(add_module)
 
 add_subdirectory("external/")
 add_subdirectory("src/")
 
-add_library(Ector STATIC ${EctorSrc})
+add_library(Ector STATIC ${ector_src})
 target_compile_features(Ector PRIVATE c_std_11)
 target_include_directories(Ector
     PUBLIC

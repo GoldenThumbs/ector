@@ -1,8 +1,8 @@
-#ifndef ECT_ENGINEI_H
-#define ECT_ENGINEI_H
+#ifndef ENGI_INTERNAL
+#define ENGI_INTERNAL
 
 #include "util/types.h"
-#include "core/keymap.h"
+#include "util/keymap.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>

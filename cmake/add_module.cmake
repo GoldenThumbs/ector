@@ -1,0 +1,5 @@
+macro(add_module file_list)
+   append_source(module_src ${file_list} "${CMAKE_CURRENT_SOURCE_DIR}")
+   list(APPEND ector_src "${module_src}")
+   set(ector_src "${ector_src}" PARENT_SCOPE)
+endmacro()
