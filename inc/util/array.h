@@ -18,7 +18,7 @@
 #define NEW_ARRAY(T) NEW_ARRAY_N(T, 0u)
 #define SET_ARRAY_LENGTH(ptr, N) Util_SetArrayLength(REF(ptr), N)
 #define FREE_ARRAY(ptr) (((ptr) != NULL) ? free(ARRAY_HEADER(ptr)) : ((void)0))
-#define INSERT_ARRAY(ptr, i, item) (Util_InsertArrayIndex(REF(ptr), i), ptr[Util_UsableArrayIndex((ptr), i)] = item)
+#define INSERT_ARRAY(ptr, i, item) (Util_InsertArrayIndex(REF(ptr), i), ptr[Util_UsableArrayIndex((ptr), i)] = (item))
 #define REMOVE_ARRAY(ptr, i) (Util_RemoveArrayIndex(REF(ptr), i), ptr[Util_ArrayLength(ptr)])
 #define ADD_BACK_ARRAY(ptr, item) INSERT_ARRAY(ptr, Util_ArrayLength(ptr), item)
 #define ADD_FRONT_ARRAY(ptr, item) INSERT_ARRAY(ptr, 0u, item)
@@ -44,6 +44,7 @@ uS LeadingZeros_uS(uS x);
 uS Log2_uS(uS x);
 uS Pow2_uS(uS x);
 
+void Util_SetArrayMemory(void** array_ptr, u32 desired_length);
 void Util_SetArrayLength(void** array_ptr, u32 desired_length);
 
 uS Util_ArrayNeededMemory(uS length);

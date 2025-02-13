@@ -35,15 +35,20 @@ uS Pow2_uS(uS x)
    return (uS)1 << x;
 }
 
-void Util_SetArrayLength(void** array_ptr, u32 desired_length)
+void Util_SetArrayMemory(void** array_ptr, u32 desired_length)
 {
    Array* array = ARRAY_HEADER(*array_ptr);
 
-   u32 length = desired_length;
-   if (array->memory < (uS)length)
-      length = (u32)array->memory;
+   if ((uS)desired_length >= array->memory)
+      Util_ReallocArray(array_ptr, desired_length);
+}
 
-   array->length = length;
+void Util_SetArrayLength(void** array_ptr, u32 desired_length)
+{
+   Util_SetArrayMemory(array_ptr, desired_length);
+
+   Array* array = ARRAY_HEADER(*array_ptr);
+   array->length = desired_length;
 }
 
 uS Util_ArrayNeededMemory(uS length)
