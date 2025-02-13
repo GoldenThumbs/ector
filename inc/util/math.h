@@ -4,6 +4,7 @@
 #include "util/types.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef USE_CUSTOM_CONSTS
    #define M_PI32 3.141592f
@@ -11,6 +12,13 @@
    #define M_INVPI32 (1.0f / M_PI32)
    #define M_INVPI64 (1.0 / M_PI64)
 #endif
+
+#define M_FLOAT_FUZZ 0.0001f
+
+#define M_ABS(x) (((x) <= 0) ? (x) : -(x))
+#define M_MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define M_RCP(x, eps) ((M_ABS(x) > (eps)) ? (1.0f / (x)) : 0.0f)
 
 #define M_TURN32 (M_PI32 * 0.02f)
 #define M_TURN64 (M_PI64 * 0.02)
@@ -80,221 +88,119 @@
 
 #endif
 
-#define M_ADD_VECN(N) { \
-   vec##N res = a; \
-   for (i32 i=0; i<N; i++) \
-      res.arr[i] += b.arr[i]; \
-   return res; \
-}
-
-#define M_SUB_VECN(N) { \
-   vec##N res = a; \
-   for (i32 i=0; i<N; i++) \
-      res.arr[i] -= b.arr[i]; \
-      return res; \
-}
-
-#define M_MUL_VECN(N) { \
-   vec##N res = a; \
-   for (i32 i=0; i<N; i++) \
-      res.arr[i] *= b.arr[i]; \
-      return res; \
-}
-
-#define M_SCALE_VECN(N) { \
-   vec##N res = vector; \
-   for (i32 i=0; i<N; i++) \
-      res.arr[i] *= scalar; \
-      return res; \
-}
-
-#define M_NORMALIZE_VECN(N) { \
-   f32 len_sqr = 0.0f; \
-   for (i32 i=0; i<N; i++) \
-      len_sqr += vector.arr[i] * vector.arr[i]; \
-   if(len_sqr < 0.00001f) \
-      return vector; \
-   f32 len_inv = 1.0f / M_SQRT(len_sqr); \
-   vec##N res = vector; \
-   for (i32 i=0; i<N; i++) \
-      res.arr[i] *= len_inv; \
-      return res; \
-}
-#define M_DOT_VECN(N) \
-{ \
-   f32 res = 0.0f; \
-   for (i32 i=0; i<N; i++) \
-      res += a.arr[i] * b.arr[i]; \
-   return res; \
-}
-
-typedef struct Spatial3D_t
+static inline void Util_AddVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
 {
-   vec3 origin;
-   quat rotation;
-   vec3 scale;
-} Spatial3D;
-
-typedef struct BoundingBox_t
-{
-   vec3 center;
-   vec3 extents;
-} BoundingBox;
-
-static inline vec2 Util_AddVec2(vec2 a, vec2 b)
-M_ADD_VECN(2)
-
-static inline vec2 Util_SubVec2(vec2 a, vec2 b)
-M_SUB_VECN(2)
-
-static inline vec2 Util_MulVec2(vec2 a, vec2 b)
-M_MUL_VECN(2)
-
-static inline vec2 Util_ScaleVec2(vec2 vector, f32 scalar)
-M_SCALE_VECN(2)
-
-static inline vec2 Util_NormalizeVec2(vec2 vector)
-M_NORMALIZE_VECN(2)
-
-static inline f32 Util_DotVec2(vec2 a, vec2 b)
-M_DOT_VECN(2)
-
-static inline vec3 Util_AddVec3(vec3 a, vec3 b)
-M_ADD_VECN(3)
-
-static inline vec3 Util_SubVec3(vec3 a, vec3 b)
-M_SUB_VECN(3)
-
-static inline vec3 Util_MulVec3(vec3 a, vec3 b)
-M_MUL_VECN(3)
-
-static inline vec3 Util_ScaleVec3(vec3 vector, f32 scalar)
-M_SCALE_VECN(3)
-
-static inline vec3 Util_NormalizeVec3(vec3 vector)
-M_NORMALIZE_VECN(3)
-
-static inline f32 Util_DotVec3(vec3 a, vec3 b)
-M_DOT_VECN(3)
-
-static inline vec4 Util_AddVec4(vec4 a, vec4 b)
-M_ADD_VECN(4)
-
-static inline vec4 Util_SubVec4(vec4 a, vec4 b)
-M_SUB_VECN(4)
-
-static inline vec4 Util_MulVec4(vec4 a, vec4 b)
-M_MUL_VECN(4)
-
-static inline vec4 Util_ScaleVec4(vec4 vector, f32 scalar)
-M_SCALE_VECN(4)
-
-static inline vec4 Util_NormalizeVec4(vec4 vector)
-M_NORMALIZE_VECN(4)
-
-static inline f32 Util_DotVec4(vec4 a, vec4 b)
-M_DOT_VECN(4)
-
-static inline vec4 Util_MulMat4Vec4(mat4x4 matrix, vec4 vector)
-{
-   vec4 res = { 0 };
-   for (i32 COL=0; COL<4; COL++)
-      res.arr[COL] = Util_DotVec4(matrix.v[COL], vector);
-   return res;
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = a[i] + b[i];
 }
 
-static inline mat4x4 Util_MulMat4(mat4x4 a, mat4x4 b)
+static inline void Util_SubVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
 {
-   mat4x4 res = { 0 };
-   for (i32 COL=0; COL<4; COL++)
-      for (i32 ROW=0; ROW<4; ROW++)
-         for (i32 k=0; k<4; k++)
-            res.m[COL][ROW] += a.m[k][ROW] * b.m[COL][k];
-
-   return res;
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = a[i] - b[i];
 }
 
-static inline mat4x4 Util_TransposeMatrix(mat4x4 matrix)
+static inline void Util_MulVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
 {
-   mat4x4 res = { 0 };
-   for (i32 COL=0; COL<4; COL++)
-      for (i32 ROW=0; ROW<4; ROW++)
-         res.m[COL][ROW] = matrix.m[ROW][COL];
-
-   return res;
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = a[i] * b[i];
 }
 
-static inline mat4x4 Util_TranslationMatrix(vec3 translation)
+static inline void Util_DivVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
 {
-   f32 x = translation.x;
-   f32 y = translation.y;
-   f32 z = translation.z;
-
-   return MAT4(
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      x, y, z, 1
-   );
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = a[i] * M_RCP(b[i], M_FLOAT_FUZZ);
 }
 
-static inline mat4x4 Util_ScalingMatrix(vec3 scale)
+static inline void Util_MulVec_N_Scalar(f32 vector[], f32 scalar, f32* res_vec, const u32 N)
 {
-   f32 x = scale.x;
-   f32 y = scale.y;
-   f32 z = scale.z;
-
-   return MAT4(
-      x, 0, 0, 0,
-      0, y, 0, 0,
-      0, 0, z, 0,
-      0, 0, 0, 1
-   );
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = vector[i] + scalar;
 }
 
-static inline mat4x4 Util_ViewMatrix(vec3 origin, vec3 euler, f32 distance)
+static inline void Util_DotVec_N(f32 a[], f32 b[], f32* res_scalar, const u32 N)
 {
-   f32 a = M_COS(euler.y);
-   f32 b = M_SIN(euler.y);
-   f32 c = M_COS(euler.x);
-   f32 d = M_SIN(euler.x);
-   f32 e = b * d;
-   f32 f = b * c;
-   f32 g = a * d;
-   f32 h = a * c;
-
-   vec3 o = VEC3(
-      origin.x + f * distance,
-      origin.y - d * distance,
-      origin.z + h * distance
-   );
-
-   f32 x = a * o.x - b * o.z;
-   f32 y = e * o.x + c * o.y + g * o.z;
-   f32 z = f * o.x - d * o.y + h * o.z;
-
-   return MAT4(
-       a, e, f, 0,
-       0, c,-d, 0,
-      -b, g, h, 0,
-      -x,-y,-z, 1
-   );
+   for (u32 i=0; i<N; i++)
+      res_scalar[0] += a[i] * b[i];
 }
 
-static inline mat4x4 Util_PerspectiveMatrix(f32 fov, f32 aspect_ratio, f32 near, f32 far)
+static inline void Util_MagVec_N(f32 vector[], f32* res_scalar, const u32 N)
 {
-   f32 R = 1.0f / (near - far);
-   f32 Y = 1.0f / M_TAN(fov * 0.5f);
-   f32 X = Y * aspect_ratio;
-   f32 a = (near + far) * R;
-   f32 b = (2.0f * near * far) * R;
+   for (u32 i=0; i<N; i++)
+      res_scalar[0] += vector[i] * vector[i];
 
-   return MAT4(
-      X, 0, 0, 0,
-      0, Y, 0, 0,
-      0, 0, a,-1,
-      0, 0, b, 0
-   );
+   res_scalar[0] = M_SQRT(res_scalar[0]);
+}
+
+static inline void Util_NormalizedVec_N(f32 vector[], f32* res_vec, const u32 N)
+{
+   f32 mag = 0.0f;
+   Util_MagVec_N(vector, &mag, N);
+
+   Util_MulVec_N_Scalar(vector, M_RCP(mag, M_FLOAT_FUZZ), res_vec, N);
+}
+
+static inline void Util_MinVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
+{
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = M_MIN(a[i], b[i]);
+}
+
+static inline void Util_MaxVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
+{
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = M_MAX(a[i], b[i]);
+}
+
+static inline void Util_AbsVec_N(f32 vector[], f32* res_vec, const u32 N)
+{
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = M_ABS(vector[i]);
+}
+
+static inline void Util_TransposeMat_NxN(f32 matrix[], f32* res_mat, const u32 N)
+{
+   const u32 n_2 = N*N;
+   for (u32 i=0; i<n_2; i++)
+   {
+      u32 COL = i / N;
+      u32 ROW = i - COL;
+
+      res_mat[ROW * N + COL] = matrix[COL * N + ROW];
+   }
+}
+
+static inline void Util_MulMat_NxN(f32 a[], f32 b[], f32* res_mat, const u32 N)
+{
+   const u32 n_2 = N*N;
+   const u32 n_3 = N*N*N;
+   for (u32 i=0; i<n_3; i++)
+   {
+      u32 COL = i / n_2;
+      u32 ROW = i - COL;
+      u32 k = i % N;
+
+      res_mat[COL * N + ROW] += a[k * N + ROW] * b[COL * N + k];
+   }
+}
+
+static inline void Util_MulMat_NxN_Vec_N(f32 matrix[], f32 vector[], f32* res_vec, const u32 N)
+{
+   const u32 n_2 = N*N;
+   for (u32 i=0; i<n_2; i++)
+   {
+      u32 COL = i / N;
+      u32 ROW = i - COL;
+
+      res_vec[ROW] += matrix[COL * N + ROW] * vector[ROW];
+   }
+}
+
+static inline void Util_InverseDiagonalMat_NxN(f32 matrix[], f32* res_mat, const u32 N)
+{
+   memcpy(res_mat, matrix, (uS)(N*N) * sizeof(f32));
+   for (u32 i=0; i<N; i++)
+      res_mat[i * N + i] = M_RCP(matrix[i * N + i], M_FLOAT_FUZZ);
 }
 
 #endif
