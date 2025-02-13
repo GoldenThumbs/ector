@@ -50,7 +50,7 @@ jobs:
       with:
          submodules: 'true'
    
-    - if: 'matrix.os == ubuntu-latest'
+    - if: matrix.os == 'ubuntu-latest'
       name: Linux Dependancies
       shell: bash
       run: |
