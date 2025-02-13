@@ -50,14 +50,13 @@ jobs:
       with:
          submodules: 'true'
    
-    - name: Dependancies
+    - if: 'matrix.os == ubuntu-latest'
+      name: Linux Dependancies
       shell: bash
       run: |
-         if ["$RUNNER_OS" == "Linux"]; then
             sudo apt-get update -qq
             sudo apt-get install gcc-multilib
-            sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libwayland-bin libxkbcommon-dev xorg-dev
-         fi
+            sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev xorg-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libwayland-bin libxkbcommon-dev
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
