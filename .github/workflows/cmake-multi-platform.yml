@@ -53,8 +53,10 @@ jobs:
    
       
     - name: Dependancies
-      run: if ["$RUNNER_OS" == "ubuntu-latest"]; then
-         sudo apt-get -y install libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libwayland-bin libxkbcommon-dev
+      shell: bash
+      run: |
+         if ["$RUNNER_OS" == "Linux"]; then
+            sudo apt-get -y install libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libwayland-bin libxkbcommon-dev
          fi
 
     - name: Set reusable strings
