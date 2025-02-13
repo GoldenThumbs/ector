@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
       if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
          Engine_Quit(engine);
 
-         Engine_Present(engine);
+      Engine_Present(engine);
    }
 
    Engine_Free(engine);
