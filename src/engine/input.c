@@ -105,12 +105,8 @@ vec2 Engine_GetMouseDelta(Engine* engine)
    ENG_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
-   res.x = (f32)(
-      eng_glb.input.mouse.position[0].x - eng_glb.input.mouse.position[1].x
-   );
-   res.y = (f32)(
-      eng_glb.input.mouse.position[0].y - eng_glb.input.mouse.position[1].y
-   );
+   res.x = (f32)(eng_glb.input.mouse.position[0].x - eng_glb.input.mouse.position[1].x);
+   res.y = (f32)(eng_glb.input.mouse.position[0].y - eng_glb.input.mouse.position[1].y);
 
    return res;
 }
