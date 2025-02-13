@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static ENG_EngineGlobal* ENGINE_G;
+static eng_EngineGlobal* ENGINE_G;
 
 Engine* Engine_Init(EngineDesc* desc)
 {
@@ -50,7 +50,7 @@ Engine* Engine_Init(EngineDesc* desc)
    engine->app_name = app_name;
    engine->quit = false;
 
-   engine->internal = (ENG_EngineGlobal){ 0 };
+   engine->internal = (eng_EngineGlobal){ 0 };
    engine->internal.frame_size = (size2i){ width, height };
    engine->internal.window = window;
    ENGINE_G = &engine->internal;
@@ -76,7 +76,7 @@ void Engine_Quit(Engine* engine)
 
 bool Engine_ShouldQuit(Engine* engine)
 {
-   ENG_EngineGlobal* eng_glb = &engine->internal;
+   eng_EngineGlobal* eng_glb = &engine->internal;
 
    eng_glb->input.mouse.position[1] = eng_glb->input.mouse.position[0];
    eng_glb->input.mouse.scroll[1] = eng_glb->input.mouse.scroll[0];

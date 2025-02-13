@@ -8,7 +8,7 @@
 
 bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
 
    KeyState key_state = eng_glb.input.keyboard.key_state[key];
    switch(key_action)
@@ -28,7 +28,7 @@ bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action)
 
 bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyModifiers modifiers)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
 
    bool ignore_mods = false;
    bool mods_true = true;
@@ -73,25 +73,25 @@ bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyM
 
 KeyState Engine_KeyState(Engine* engine, Key key)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
    return eng_glb.input.keyboard.key_state[key];
 }
 
 void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
    glfwSetInputMode(eng_glb.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL + mouse_mode);
 }
 
 size2i Engine_GetSize(Engine* engine)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
    return eng_glb.frame_size;
 }
 
 vec2 Engine_GetMousePos(Engine* engine)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
    res.x = (f32)eng_glb.input.mouse.position[0].x;
@@ -102,7 +102,7 @@ vec2 Engine_GetMousePos(Engine* engine)
 
 vec2 Engine_GetMouseDelta(Engine* engine)
 {
-   ENG_EngineGlobal eng_glb = engine->internal;
+   eng_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
    res.x = (f32)(eng_glb.input.mouse.position[0].x - eng_glb.input.mouse.position[1].x);

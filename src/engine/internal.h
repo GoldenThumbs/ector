@@ -10,7 +10,7 @@
 #define MAX_TEXTBUF 128
 #define MAX_KEYS 512
 
-typedef struct ENG_EngineGlobal_t
+typedef struct eng_EngineGlobal_t
 {
    struct {
       struct {
@@ -34,13 +34,13 @@ typedef struct ENG_EngineGlobal_t
    GLFWwindow* window;
    u64 resize_time;
    size2i frame_size;
-} ENG_EngineGlobal;
+} eng_EngineGlobal;
 
 struct Engine_t
 {
    char* app_name;
    u64 resize_timer;
-   ENG_EngineGlobal internal;
+   eng_EngineGlobal internal;
    bool quit;
 };
 
