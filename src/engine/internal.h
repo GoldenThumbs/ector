@@ -1,5 +1,5 @@
-#ifndef ENGI_INTERNAL
-#define ENGI_INTERNAL
+#ifndef ENG_INTERNAL
+#define ENG_INTERNAL
 
 #include "util/types.h"
 #include "util/keymap.h"
@@ -35,6 +35,14 @@ typedef struct ENG_EngineGlobal_t
    u64 resize_time;
    size2i frame_size;
 } ENG_EngineGlobal;
+
+struct Engine_t
+{
+   char* app_name;
+   u64 resize_timer;
+   ENG_EngineGlobal internal;
+   bool quit;
+};
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);
 static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y);
