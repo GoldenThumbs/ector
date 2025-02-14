@@ -11,35 +11,35 @@
 #define ARR_PTR_VALID(array_ptr) (((array_ptr) != NULL) && (*(array_ptr) != NULL))
 #define ARR_N_OK(array, offs) ((1u + (array)->length + (offs)) < (u32)(array)->memory)
 
-uS LeadingZeros_uS(uS x)
+rU LeadingZeros_uS(rU x)
 {
    if (!x)
       return 0;
-   uS n_bits = sizeof(uS) * CHAR_BIT;
-   uS mask = ((uS)1 << (n_bits - 1u));
+   rU n_bits = sizeof(rU) * CHAR_BIT;
+   rU mask = ((rU)1 << (n_bits - 1u));
 
-   uS i = 0;
+   rU i = 0;
    while ((i<n_bits) && (((x << i) & mask) != mask))
       i++;
 
    return i;
 }
 
-uS Log2_uS(uS x)
+rU Log2_uS(rU x)
 {
-   return sizeof(uS) * CHAR_BIT - clz(x) - 1;
+   return sizeof(rU) * CHAR_BIT - clz(x) - 1;
 }
 
-uS Pow2_uS(uS x)
+rU Pow2_uS(rU x)
 {
-   return (uS)1 << x;
+   return (rU)1 << x;
 }
 
 void Util_SetArrayMemory(void** array_ptr, u32 desired_length)
 {
    Array* array = ARRAY_HEADER(*array_ptr);
 
-   if ((uS)desired_length >= array->memory)
+   if ((rU)desired_length >= array->memory)
       Util_ReallocArray(array_ptr, desired_length);
 }
 
@@ -51,22 +51,22 @@ void Util_SetArrayLength(void** array_ptr, u32 desired_length)
    array->length = desired_length;
 }
 
-uS Util_ArrayNeededMemory(uS length)
+rU Util_ArrayNeededMemory(rU length)
 {
    if (!length)
       length = 2u;
    return Pow2_uS(Log2_uS(length) + 1u);
 }
 
-uS Util_ArrayNeededBytes(uS memory, uS type_size)
+rU Util_ArrayNeededBytes(rU memory, rU type_size)
 {
    return (memory * type_size) + sizeof(Array);
 }
 
-void* Util_CreateArrayOfLength(u32 length, uS type_size)
+void* Util_CreateArrayOfLength(u32 length, rU type_size)
 {
-   uS memory = Util_ArrayNeededMemory((uS)length);
-   uS num_bytes = Util_ArrayNeededBytes(memory, type_size);
+   rU memory = Util_ArrayNeededMemory((rU)length);
+   rU num_bytes = Util_ArrayNeededBytes(memory, type_size);
 
    Array* array = calloc(1, num_bytes);
    if (array == NULL)
@@ -87,8 +87,8 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
    Array* array = ARRAY_HEADER(*array_ptr);
 
-   uS memory = Util_ArrayNeededMemory((uS)desired_length);
-   uS num_bytes = Util_ArrayNeededBytes(memory, array->size);
+   rU memory = Util_ArrayNeededMemory((rU)desired_length);
+   rU num_bytes = Util_ArrayNeededBytes(memory, array->size);
 
    void* tmp = realloc(array, num_bytes);
 
@@ -112,7 +112,7 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
 
    Array* array = ARRAY_HEADER(*array_ptr);
    u32 length = array->length;
-   uS size = array->size;
+   rU size = array->size;
 
    if (!ARR_N_OK(array, 1u))
    {
@@ -129,9 +129,9 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
       return;
    }
 
-   u8* ptr_a = (u8*)(*array_ptr) + (uS)(index + 1u) * size;
-   u8* ptr_b = (u8*)(*array_ptr) + (uS)index * size;
-   uS num_bytes = size * (uS)(length - index);
+   u8* ptr_a = (u8*)(*array_ptr) + (rU)(index + 1u) * size;
+   u8* ptr_b = (u8*)(*array_ptr) + (rU)index * size;
+   rU num_bytes = size * (rU)(length - index);
    memmove(ptr_a, ptr_b, num_bytes);
 
    array->length = length + 1u;
@@ -146,7 +146,7 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
    Array* array = ARRAY_HEADER(*array_ptr);
 
    u32 length = array->length;
-   uS size = array->size;
+   rU size = array->size;
 
    if (index >= length)
    {
@@ -159,13 +159,13 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 
    if (index < (length - 1u))
    {
-      u8* ptr_a = (u8*)(*array_ptr) + (uS)index * size;
-      u8* ptr_b = (u8*)(*array_ptr) + (uS)(index + 1u) * size;
-      u8* ptr_c = (u8*)(*array_ptr) + (uS)length * size;
+      u8* ptr_a = (u8*)(*array_ptr) + (rU)index * size;
+      u8* ptr_b = (u8*)(*array_ptr) + (rU)(index + 1u) * size;
+      u8* ptr_c = (u8*)(*array_ptr) + (rU)length * size;
 
       memcpy(ptr_c, ptr_a, size);
 
-      uS num_bytes = size * (uS)(length - index + 1u);
+      rU num_bytes = size * (rU)(length - index + 1u);
       memmove(ptr_a, ptr_b, num_bytes);
    }
 

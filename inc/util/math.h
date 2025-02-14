@@ -198,7 +198,7 @@ static inline void Util_MulMat_NxN_Vec_N(f32 matrix[], f32 vector[], f32* res_ve
 
 static inline void Util_InverseDiagonalMat_NxN(f32 matrix[], f32* res_mat, const u32 N)
 {
-   memcpy(res_mat, matrix, (uS)(N*N) * sizeof(f32));
+   memcpy(res_mat, matrix, (rU)(N*N) * sizeof(f32));
    for (u32 i=0; i<N; i++)
       res_mat[i * N + i] = M_RCP(matrix[i * N + i], M_FLOAT_FUZZ);
 }
