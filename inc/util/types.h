@@ -26,7 +26,7 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
-typedef size_t uS;
+typedef size_t rU;
 
 typedef float  f32;
 typedef double f64;
@@ -62,7 +62,7 @@ typedef union handle_t
 typedef struct memblob_t
 {
    void* data;
-   uS size;
+   rU size;
 } memblob;
 
 typedef struct size2i_t

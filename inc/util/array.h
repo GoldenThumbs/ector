@@ -33,36 +33,36 @@ enum {
 
 typedef struct Array_t
 {
-   uS size;
-   uS memory;
+   rU size;
+   rU memory;
    u32 length;
    error err;
    u8 data[];
 } Array;
 
-uS LeadingZeros_uS(uS x);
-uS Log2_uS(uS x);
-uS Pow2_uS(uS x);
+rU LeadingZeros_uS(rU x);
+rU Log2_uS(rU x);
+rU Pow2_uS(rU x);
 
 void Util_SetArrayMemory(void** array_ptr, u32 desired_length);
 void Util_SetArrayLength(void** array_ptr, u32 desired_length);
 
-uS Util_ArrayNeededMemory(uS length);
-uS Util_ArrayNeededBytes(uS memory, uS type_size);
+rU Util_ArrayNeededMemory(rU length);
+rU Util_ArrayNeededBytes(rU memory, rU type_size);
 
-void* Util_CreateArrayOfLength(u32 length, uS type_size);
+void* Util_CreateArrayOfLength(u32 length, rU type_size);
 void Util_ReallocArray(void** array_ptr, u32 desired_length);
 void Util_InsertArrayIndex(void** array_ptr, u32 index);
 void Util_RemoveArrayIndex(void** array_ptr, u32 index);
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index);
 
-static inline uS Util_ArrayTypeSize(void* ptr)
+static inline rU Util_ArrayTypeSize(void* ptr)
 {
    return ARRAY_HEADER(ptr)->size;
 }
 
-static inline uS Util_ArrayMemory(void* ptr)
+static inline rU Util_ArrayMemory(void* ptr)
 {
    return ARRAY_HEADER(ptr)->memory;
 }
