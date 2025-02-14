@@ -1,7 +1,7 @@
 #include <util/types.h>
 #include <util/math.h>
 #include <util/keymap.h>
-#include <core/engine.h>
+#include <engine.h>
 
 int main(int argc, char* argv[])
 {

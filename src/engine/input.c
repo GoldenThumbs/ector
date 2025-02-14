@@ -1,7 +1,7 @@
 #include "util/types.h"
 #include "util/keymap.h"
 
-#include "core/engine.h"
+#include "engine.h"
 #include "engine/internal.h"
 
 #include <GLFW/glfw3.h>
