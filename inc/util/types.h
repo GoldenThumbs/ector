@@ -54,8 +54,8 @@ typedef union handle_t
 {
    u32 id;
    struct {
-      u32 handle: 16;
-      u32 num: 16;
+      u16 handle;
+      u16 num;
    } resource;
 } handle;
 

@@ -68,9 +68,11 @@ void* Util_CreateArrayOfLength(u32 length, uS type_size)
    uS memory = Util_ArrayNeededMemory((uS)length);
    uS num_bytes = Util_ArrayNeededBytes(memory, type_size);
 
-   Array* array = calloc(1, num_bytes);
+   Array* array = malloc(num_bytes);
    if (array == NULL)
       return NULL;
+   
+   memset(array, 0, num_bytes);
 
    array->size = type_size;
    array->memory = memory;
@@ -111,6 +113,7 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
       abort();
 
    Array* array = ARRAY_HEADER(*array_ptr);
+
    u32 length = array->length;
    uS size = array->size;
 
@@ -135,7 +138,6 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
    memmove(ptr_a, ptr_b, num_bytes);
 
    array->length = length + 1u;
-   return;
 }
 
 void Util_RemoveArrayIndex(void** array_ptr, u32 index)
