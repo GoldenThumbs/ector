@@ -33,8 +33,8 @@ Engine* Engine_Init(EngineDesc* desc)
       abort();
 
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+   // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
    GLFWwindow* window = glfwCreateWindow(width, height, window_title, NULL, NULL);
    if (window == NULL)
@@ -43,6 +43,8 @@ Engine* Engine_Init(EngineDesc* desc)
       abort();
    }
    glfwMakeContextCurrent(window);
+
+   assert(ENG_InitGL(window).total_bits == 0);
 
    Engine* engine = calloc(1, sizeof(Engine));
    engine->app_name = app_name;

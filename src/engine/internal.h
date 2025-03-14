@@ -5,10 +5,15 @@
 #include "util/keymap.h"
 
 #define GLFW_INCLUDE_NONE
+
 #include <GLFW/glfw3.h>
 
 #define MAX_TEXTBUF 128
 #define MAX_KEYS 512
+
+enum {
+   ERR_ENG_RNDR_OPENGL_FAILED = 1
+};
 
 typedef struct eng_EngineGlobal_t
 {
@@ -43,6 +48,8 @@ struct Engine_t
    eng_EngineGlobal internal;
    bool quit;
 };
+
+error ENG_InitGL(GLFWwindow* window);
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);
 static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y);
