@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define ECT_STRINGIFY(x) ECT_STRINGIFY_2(x)
+#define ECT_STRINGIFY_2(x) #x
+
 #define DATABLOB(data) (memblob) { (data), sizeof((data)) }
 
 #define VEC2(...) (vec2)   { { __VA_ARGS__ } }
@@ -31,6 +34,15 @@ typedef size_t uS;
 typedef float  f32;
 typedef double f64;
 
+typedef union color8_t
+{
+   u8 arr[4];
+   u32 hex;
+   struct {
+      u8 r, g, b, a;
+   };
+} color8;
+
 enum {
    ERR_OK = 0,
    ERR_WARN,
@@ -55,8 +67,8 @@ typedef union handle_t
    u32 id;
    struct {
       u16 handle;
-      u16 num;
-   } resource;
+      u16 ref;
+   };
 } handle;
 
 typedef struct memblob_t

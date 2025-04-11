@@ -40,6 +40,8 @@ size2i Engine_GetSize(Engine* engine);
 vec2 Engine_GetMousePos(Engine* engine);
 vec2 Engine_GetMouseDelta(Engine* engine);
 
+f64 Engine_GetFrameDelta(Engine* engine);
+
 void Engine_Present(Engine* engine);
 
 #endif

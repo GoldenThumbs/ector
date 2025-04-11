@@ -3,6 +3,7 @@
 
 #include "util/types.h"
 #include "util/keymap.h"
+#include "graphics.h"
 
 #define GLFW_INCLUDE_NONE
 
@@ -10,10 +11,6 @@
 
 #define MAX_TEXTBUF 128
 #define MAX_KEYS 512
-
-enum {
-   ERR_ENG_RNDR_OPENGL_FAILED = 1
-};
 
 typedef struct eng_EngineGlobal_t
 {
@@ -37,19 +34,19 @@ typedef struct eng_EngineGlobal_t
    } input;
 
    GLFWwindow* window;
-   u64 resize_time;
+   f64 up_time;
+   f64 frame_delta;
    size2i frame_size;
 } eng_EngineGlobal;
 
 struct Engine_t
 {
    char* app_name;
-   u64 resize_timer;
    eng_EngineGlobal internal;
    bool quit;
-};
 
-error ENG_InitGL(GLFWwindow* window);
+   GraphicsContext* graphics_context;
+};
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);
 static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y);

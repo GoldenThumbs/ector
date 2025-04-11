@@ -20,10 +20,10 @@
 #define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define M_RCP(x, eps) ((M_ABS(x) > (eps)) ? (1.0f / (x)) : 0.0f)
 
-#define M_TURN32 (M_PI32 * 0.02f)
-#define M_TURN64 (M_PI64 * 0.02)
-#define M_TO_TURN32 (50.0f * M_INVPI32)
-#define M_TO_TURN64 (50.0 * M_INVPI64)
+#define M_TURN32 (M_PI32 * 0.01f)
+#define M_TURN64 (M_PI64 * 0.01)
+#define M_TO_TURN32 (100.0f * M_INVPI32)
+#define M_TO_TURN64 (100.0 * M_INVPI64)
 
 #define M_TURN(a) _Generic((a), \
    f32: (M_TURN32 * (a)), \
@@ -115,7 +115,7 @@ static inline void Util_DivVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
 static inline void Util_MulVec_N_Scalar(f32 vector[], f32 scalar, f32* res_vec, const u32 N)
 {
    for (u32 i=0; i<N; i++)
-      res_vec[i] = vector[i] + scalar;
+      res_vec[i] = vector[i] * scalar;
 }
 
 static inline void Util_DotVec_N(f32 a[], f32 b[], f32* res_scalar, const u32 N)
@@ -160,39 +160,29 @@ static inline void Util_AbsVec_N(f32 vector[], f32* res_vec, const u32 N)
 
 static inline void Util_TransposeMat_NxN(f32 matrix[], f32* res_mat, const u32 N)
 {
-   const u32 n_2 = N*N;
-   for (u32 i=0; i<n_2; i++)
+   for (u32 ROW=0; ROW<N; ROW++)
+   for (u32 COL=0; COL<N; COL++)
    {
-      u32 COL = i / N;
-      u32 ROW = i - COL;
-
       res_mat[ROW * N + COL] = matrix[COL * N + ROW];
    }
 }
 
 static inline void Util_MulMat_NxN(f32 a[], f32 b[], f32* res_mat, const u32 N)
 {
-   const u32 n_2 = N*N;
-   const u32 n_3 = N*N*N;
-   for (u32 i=0; i<n_3; i++)
+   for (u32 ROW=0; ROW<N; ROW++)
+   for (u32 COL=0; COL<N; COL++)
+   for (u32 k=0; k<N; k++)
    {
-      u32 COL = i / n_2;
-      u32 ROW = i - COL;
-      u32 k = i % N;
-
       res_mat[COL * N + ROW] += a[k * N + ROW] * b[COL * N + k];
    }
 }
 
 static inline void Util_MulMat_NxN_Vec_N(f32 matrix[], f32 vector[], f32* res_vec, const u32 N)
 {
-   const u32 n_2 = N*N;
-   for (u32 i=0; i<n_2; i++)
+   for (u32 ROW=0; ROW<N; ROW++)
+   for (u32 COL=0; COL<N; COL++)
    {
-      u32 COL = i / N;
-      u32 ROW = i - COL;
-
-      res_vec[ROW] += matrix[COL * N + ROW] * vector[ROW];
+      res_vec[ROW] += matrix[COL * N + ROW] * vector[COL];
    }
 }
 

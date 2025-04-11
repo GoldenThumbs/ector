@@ -4,7 +4,7 @@
 #include "util/types.h"
 #include "util/math.h"
 
-#define M_VEC4_LEN 2
+#define M_VEC4_LEN 4
 
 static inline vec4 Util_FillVec4(f32 scalar)
 {
@@ -91,9 +91,9 @@ static inline f32 Util_DotVec4(vec4 a, vec4 b)
    return res;
 }
 
-static inline vec3 Util_MulMat4Vec4(mat4x4 matrix, vec4 vector)
+static inline vec4 Util_MulMat4Vec4(mat4x4 matrix, vec4 vector)
 {
-   vec3 res = { 0 };
+   vec4 res = { 0 };
 
    Util_MulMat_NxN_Vec_N(matrix.arr, vector.arr, res.arr, M_VEC4_LEN);
    return res;

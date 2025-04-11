@@ -1,4 +1,6 @@
 add_subdirectory("util")
+add_subdirectory("graphics")
+add_subdirectory("mesh")
 add_subdirectory("engine")
 
 set(ector_src "${ector_src}" PARENT_SCOPE)

@@ -1,8 +1,8 @@
 
 #include "util/types.h"
-// #include "ect_math.h"
-
+// #include "util/math.h"
 #include "util/keymap.h"
+#include "module_glue.h"
 
 #include "engine.h"
 #include "engine/internal.h"
@@ -34,24 +34,25 @@ Engine* Engine_Init(EngineDesc* desc)
 
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-   // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
    GLFWwindow* window = glfwCreateWindow(width, height, window_title, NULL, NULL);
+
    if (window == NULL)
    {
       glfwTerminate();
       abort();
    }
+
    glfwMakeContextCurrent(window);
 
-   assert(ENG_InitGL(window).total_bits == 0);
-
-   Engine* engine = calloc(1, sizeof(Engine));
+   Engine* engine = malloc(sizeof(Engine));
    engine->app_name = app_name;
    engine->quit = false;
 
    engine->internal = (eng_EngineGlobal){ 0 };
    engine->internal.frame_size = (size2i){ width, height };
+   engine->internal.up_time = 0.0;
    engine->internal.window = window;
    ENGINE_G = &engine->internal;
 
@@ -59,6 +60,15 @@ Engine* Engine_Init(EngineDesc* desc)
    glfwSetCursorPosCallback(window, ENG_CursorCallback);
    glfwSetScrollCallback(window, ENG_ScrollCallback);
    glfwSetKeyCallback(window, ENG_KeyCallback);
+
+   error err = { 0 };
+   engine->graphics_context = MOD_InitGraphics(&err);
+
+   if (err.general == ERR_FATAL)
+   {
+      glfwTerminate();
+      abort();
+   }
 
    return engine;
 }
@@ -86,6 +96,10 @@ bool Engine_ShouldQuit(Engine* engine)
       eng_glb->input.keyboard.key_state[key].was_down = eng_glb->input.keyboard.key_state[key].is_down;
    }
 
+   f64 new_time = glfwGetTime();
+   eng_glb->frame_delta = new_time - eng_glb->up_time;
+   eng_glb->up_time = new_time;
+
    glfwPollEvents();
 
    return (glfwWindowShouldClose(eng_glb->window) || engine->quit);
@@ -95,7 +109,6 @@ void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height)
 {
    ENGINE_G->frame_size.width = width;
    ENGINE_G->frame_size.height = height;
-   ENGINE_G->resize_time += 1;
 }
 
 static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y)

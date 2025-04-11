@@ -3,7 +3,7 @@
 
 #include "util/types.h"
 #include "util/math.h"
-// #include "util/vec3.h"
+#include "util/vec3.h"
 #include "util/vec4.h"
 
 #define M_MAT3X3_DIMENSION 3
@@ -66,8 +66,8 @@ static inline mat3x3 Util_QuatToMat3(quat quaternion)
 
    return MAT3(
       1.0f-(y*y + z*z) * s, (x*y - w*z) * s, (x*z + w*y) * s,
-               (x*y + w*z) * s, 1.0f-(x*x + z*z) * s, (y*z - w*x) * s,
-               (x*z - w*y) * s, (y*z + w*x) * s, 1.0f-(x*x + y*y) * s
+      (x*y + w*z) * s, 1.0f-(x*x + z*z) * s, (y*z - w*x) * s,
+      (x*z - w*y) * s, (y*z + w*x) * s, 1.0f-(x*x + y*y) * s
    );
 }
 
@@ -106,6 +106,27 @@ static inline mat4x4 Util_TranslationMatrix(vec3 translation)
       0, 1, 0, 0,
       0, 0, 1, 0,
       x, y, z, 1
+   );
+}
+
+static inline mat4x4 Util_RotationMatrix(vec3 axis, f32 angle)
+{
+   f32 c = M_COS(angle);
+   f32 s = M_SIN(angle);
+
+   vec3 ca = Util_ScaleVec3(axis, 1.0 - c);
+   vec3 v1 = Util_MulVec3(axis, ca);
+   vec3 v2 = Util_MulVec3(VEC3(axis.y, axis.z, axis.z), VEC3(ca.x, ca.x, ca.y));
+
+   f32 x = axis.x * s;
+   f32 y = axis.y * s;
+   f32 z = axis.z * s;
+
+   return MAT4(
+      v1.x + c, v2.x - z, v2.y + y, 0,
+      v2.x + z, v1.y + c, v2.z - x, 0,
+      v2.y - y, v2.z + x, v1.z + c, 0,
+      0, 0, 0, 1
    );
 }
 

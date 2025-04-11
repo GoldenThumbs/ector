@@ -5,7 +5,7 @@
 
 // #include <stdalign.h>
 #include <stddef.h>
-// #include <stdlib.h>
+#include <stdlib.h>
 
 #ifndef clz
    //#define clz __builtin_clzll
@@ -20,8 +20,8 @@
 #define FREE_ARRAY(ptr) (((ptr) != NULL) ? free(ARRAY_HEADER(ptr)) : ((void)0))
 #define INSERT_ARRAY(ptr, i, item) (Util_InsertArrayIndex(REF(ptr), i), ptr[Util_UsableArrayIndex((ptr), i)] = (item))
 #define REMOVE_ARRAY(ptr, i) (Util_RemoveArrayIndex(REF(ptr), i), ptr[Util_ArrayLength(ptr)])
-#define ADD_BACK_ARRAY(ptr, item) INSERT_ARRAY(ptr, Util_ArrayLength(ptr), item)
-#define ADD_FRONT_ARRAY(ptr, item) INSERT_ARRAY(ptr, 0u, item)
+#define ADD_BACK_ARRAY(ptr, item) INSERT_ARRAY(ptr, Util_ArrayLength(ptr), (item))
+#define ADD_FRONT_ARRAY(ptr, item) INSERT_ARRAY(ptr, 0u, (item))
 #define POP_BACK_ARRAY(ptr) REMOVE_ARRAY(ptr, Util_ArrayLength(ptr) - 1u)
 #define POP_FRONT_ARRAY(ptr) REMOVE_ARRAY(ptr, 0u)
 

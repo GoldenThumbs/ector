@@ -1,0 +1,88 @@
+#ifndef ECT_GRAPHICS_H
+#define ECT_GRAPHICS_H
+
+#include "util/types.h"
+#include "mesh.h"
+
+typedef handle Shader;
+typedef handle StorageBuffer;
+typedef handle Geometry;
+
+enum {
+   ERR_GFX_CONTEXT_FAILED = 1
+};
+
+enum {
+   GFX_DRAWMODE_STATIC = 0,
+   GFX_DRAWMODE_DYNAMIC,
+   GFX_DRAWMODE_STATIC_READ,
+   GFX_DRAWMODE_STATIC_COPY,
+   GFX_DRAWMODE_DYNAMIC_READ,
+   GFX_DRAWMODE_DYNAMIC_COPY
+};
+
+enum {
+   GFX_FACECULL_BACK = 0,
+   GFX_FACECULL_FRONT,
+   GFX_FACECULL_NONE
+};
+
+enum {
+   GFX_PRIMITIVE_POINT = 0,
+   GFX_PRIMITIVE_LINE,
+   GFX_PRIMITIVE_TRIANGLE
+};
+
+enum {
+   GFX_ATTRIBUTE_NULL = 0,
+
+   GFX_ATTRIBUTE_F32_1X,
+   GFX_ATTRIBUTE_F32_2X,
+   GFX_ATTRIBUTE_F32_3X,
+   GFX_ATTRIBUTE_F32_4X,
+
+   GFX_ATTRIBUTE_U8_4X_NORM,
+};
+
+enum {
+   GFX_UNIFORMTYPE_F32_1X = 0,
+   GFX_UNIFORMTYPE_F32_2X,
+   GFX_UNIFORMTYPE_F32_3X,
+   GFX_UNIFORMTYPE_F32_4X,
+   GFX_UNIFORMTYPE_MAT3,
+   GFX_UNIFORMTYPE_MAT4,
+   GFX_UNIFORMTYPE_U32_1X,
+   GFX_UNIFORMTYPE_U32_2X,
+   GFX_UNIFORMTYPE_U32_3X,
+   GFX_UNIFORMTYPE_U32_4X,
+   GFX_UNIFORMTYPE_TEX_SLOT
+};
+
+typedef struct Uniform_t
+{
+   u16 uniform_type;
+   u16 location;
+   void* data;
+} Uniform;
+
+typedef struct GraphicsContext_t GraphicsContext;
+
+Shader Graphics_CreateShader(GraphicsContext* context, const char* vertex_shader, const char* fragment_shader);
+Shader Graphics_CreateComputeShader(GraphicsContext* context, const char* compute_shader);
+void Graphics_FreeShader(GraphicsContext* context, Shader res_shader);
+u32 Graphics_GetUniformLocation(GraphicsContext* context, Shader res_shader, const char* name);
+void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, u32 uniform_count, const Uniform* uniforms);
+void Graphics_DispatchBarrier(void);
+
+StorageBuffer Graphics_CreateStorageBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, u8 draw_mode);
+void Graphics_FreeStorageBuffer(GraphicsContext* context, StorageBuffer res_buffer);
+void Graphics_UpdateStorageBuffer(GraphicsContext* context, StorageBuffer res_buffer, void* data, u32 length, uS type_size);
+void Graphics_UseStorageBuffer(GraphicsContext* context, StorageBuffer res_buffer, u32 slot);
+
+Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mode);
+void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry);
+
+void Graphics_Viewport(size2i size);
+void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 uniform_count, const Uniform* uniforms);
+
+#endif

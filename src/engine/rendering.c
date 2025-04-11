@@ -6,22 +6,15 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
-void Engine_Present(Engine* engine)
+f64 Engine_GetFrameDelta(Engine* engine)
 {
-   eng_EngineGlobal eng_glb = engine->internal;
-   
-   glfwSwapBuffers(eng_glb.window);
+   eng_EngineGlobal* eng_glb = &engine->internal;
+
+   return eng_glb->frame_delta;
 }
 
-error ENG_InitGL(GLFWwindow* window)
+void Engine_Present(Engine* engine)
 {
-   error res = { 0 };
-
-   if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
-   {
-      res.general = ERR_FATAL;
-      res.extra = ERR_ENG_RNDR_OPENGL_FAILED;
-   }
-
-   return res;
+   eng_EngineGlobal* eng_glb = &engine->internal;
+   glfwSwapBuffers(eng_glb->window);
 }
