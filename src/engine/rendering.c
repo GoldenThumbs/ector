@@ -1,4 +1,5 @@
 #include "util/types.h"
+#include "graphics.h"
 
 #include "engine.h"
 #include "engine/internal.h"
@@ -17,4 +18,9 @@ void Engine_Present(Engine* engine)
 {
    eng_EngineGlobal* eng_glb = &engine->internal;
    glfwSwapBuffers(eng_glb->window);
+}
+
+GraphicsContext* Engine_GraphicsContext(Engine* engine)
+{
+   return engine->graphics_context;
 }

@@ -76,6 +76,7 @@ Engine* Engine_Init(EngineDesc* desc)
 void Engine_Free(Engine* engine)
 {
    glfwTerminate();
+   MOD_FreeGraphics(engine->graphics_context);
    free(engine);
 }
 

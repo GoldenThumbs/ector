@@ -2,8 +2,8 @@
 #define ECT_ENGINE_H
 
 #include "util/types.h"
-
 #include "util/keymap.h"
+#include "graphics.h"
 
 typedef enum MouseMode_t
 {
@@ -43,5 +43,7 @@ vec2 Engine_GetMouseDelta(Engine* engine);
 f64 Engine_GetFrameDelta(Engine* engine);
 
 void Engine_Present(Engine* engine);
+
+GraphicsContext* Engine_GraphicsContext(Engine* engine);
 
 #endif

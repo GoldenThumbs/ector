@@ -82,7 +82,8 @@ void Graphics_UseStorageBuffer(GraphicsContext* context, StorageBuffer res_buffe
 Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mode);
 void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry);
 
-void Graphics_Viewport(size2i size);
+void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color);
+void Graphics_Viewport(GraphicsContext* context, size2i size);
 void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 uniform_count, const Uniform* uniforms);
 
 #endif

@@ -46,6 +46,12 @@ struct GraphicsContext_t
    gfx_StorageBuffer* storage_buffers;
    gfx_Geometry* geometries;
    u16 ref;
+   struct {
+      u16 color: 1;
+      u16 depth: 1;
+      u16 stencil: 1;
+   } clear_buffers;
+   color8 clear_color;
 };
 
 u32 GFX_AttributeType(u8 attribute);

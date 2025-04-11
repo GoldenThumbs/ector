@@ -26,8 +26,16 @@ GraphicsContext* MOD_InitGraphics(error* err)
    context->storage_buffers = NEW_ARRAY_N(gfx_StorageBuffer, 8);
    context->geometries = NEW_ARRAY_N(gfx_Geometry, 8);
    context->ref = 0;
+   context->clear_buffers.color = 1;
+   context->clear_buffers.depth = 0;
+   context->clear_buffers.stencil = 0;
+   context->clear_color.hex = 0;
+
+   Graphics_SetClearColor(context, (color8){ 127, 127, 127, 255 });
 
    glEnable(GL_CULL_FACE);
+   glEnable(GL_DEPTH_TEST);
+   glDepthFunc(GL_LESS);
 
    return context;
 }
@@ -38,20 +46,33 @@ void MOD_FreeGraphics(GraphicsContext* context)
    FREE_ARRAY(context->storage_buffers);
    FREE_ARRAY(context->geometries);
    context->ref = 0;
+   free(context);
 }
 
-void Viewport(size2i size)
+void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color)
+{
+   context->clear_color = clear_color;
+
+   const f32 rcp_byte = 1.0f / 255.0f;
+   f32 r = (f32)clear_color.r * rcp_byte;
+   f32 g = (f32)clear_color.g * rcp_byte;
+   f32 b = (f32)clear_color.b * rcp_byte;
+   f32 a = (f32)clear_color.a * rcp_byte;
+
+   glClearColor(r, g, b, a);
+}
+
+void Graphics_Viewport(GraphicsContext* context, size2i size)
 {
    glViewport(0, 0, size.width, size.height);
-
-   glEnable(GL_DEPTH_TEST);
-   glDepthFunc(GL_LESS);
-
-   glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   glClear(
+      ((context->clear_buffers.color) ? GL_COLOR_BUFFER_BIT : 0) |
+      ((context->clear_buffers.depth) ? GL_DEPTH_BUFFER_BIT : 0) |
+      ((context->clear_buffers.stencil) ? GL_STENCIL_BUFFER_BIT : 0)
+   );
 }
 
-void Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 uniform_count, const Uniform* uniforms)
+void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 uniform_count, const Uniform* uniforms)
 {
    gfx_Shader shader = context->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
