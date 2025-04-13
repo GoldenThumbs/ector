@@ -18,13 +18,6 @@ void Mesh_Free(Mesh* mesh)
       mesh->index_buffer = NULL;
    }
 
-   if (mesh->attributes != NULL)
-   {
-      free(mesh->attributes);
-      mesh->attributes = NULL;
-   }
-
    mesh->vertex_count = 0;
    mesh->index_count = 0;
-   mesh->attribute_count = 0;
 }

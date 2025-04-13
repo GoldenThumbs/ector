@@ -22,20 +22,17 @@ GraphicsContext* MOD_InitGraphics(error* err)
    }
 
    GraphicsContext* context = malloc(sizeof(GraphicsContext));
-   context->shaders = NEW_ARRAY_N(gfx_Shader, 8);
-   context->storage_buffers = NEW_ARRAY_N(gfx_StorageBuffer, 8);
-   context->geometries = NEW_ARRAY_N(gfx_Geometry, 8);
+   context->shaders = NEW_ARRAY(gfx_Shader);
+   context->buffers = NEW_ARRAY(gfx_Buffer);
+   context->geometries = NEW_ARRAY(gfx_Geometry);
    context->ref = 0;
    context->clear_buffers.color = 1;
-   context->clear_buffers.depth = 0;
+   context->clear_buffers.depth = 1;
    context->clear_buffers.stencil = 0;
    context->clear_color.hex = 0;
 
    Graphics_SetClearColor(context, (color8){ 127, 127, 127, 255 });
-
    glEnable(GL_CULL_FACE);
-   glEnable(GL_DEPTH_TEST);
-   glDepthFunc(GL_LESS);
 
    return context;
 }
@@ -43,7 +40,7 @@ GraphicsContext* MOD_InitGraphics(error* err)
 void MOD_FreeGraphics(GraphicsContext* context)
 {
    FREE_ARRAY(context->shaders);
-   FREE_ARRAY(context->storage_buffers);
+   FREE_ARRAY(context->buffers);
    FREE_ARRAY(context->geometries);
    context->ref = 0;
    free(context);
@@ -65,11 +62,13 @@ void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color)
 void Graphics_Viewport(GraphicsContext* context, size2i size)
 {
    glViewport(0, 0, size.width, size.height);
-   glClear(
-      ((context->clear_buffers.color) ? GL_COLOR_BUFFER_BIT : 0) |
-      ((context->clear_buffers.depth) ? GL_DEPTH_BUFFER_BIT : 0) |
-      ((context->clear_buffers.stencil) ? GL_STENCIL_BUFFER_BIT : 0)
-   );
+   glEnable(GL_DEPTH_TEST);
+   glDepthFunc(GL_LESS);
+
+   u32 color_bit = context->clear_buffers.color * GL_COLOR_BUFFER_BIT;
+   u32 depth_bit = context->clear_buffers.depth * GL_DEPTH_BUFFER_BIT;
+   u32 stencil_bit = context->clear_buffers.stencil * GL_STENCIL_BUFFER_BIT;
+   glClear(color_bit | depth_bit | stencil_bit);
 }
 
 void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 uniform_count, const Uniform* uniforms)
@@ -106,8 +105,11 @@ void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geo
    glBindVertexArray(geometry.id.vao);
    if (geometry.id.i_buf == 0)
       glDrawArrays(prim, 0, geometry.element_count);
-   else
+   else {
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry.id.i_buf);
       glDrawElements(prim, geometry.element_count, GL_UNSIGNED_SHORT, (void*)0);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+   }
 
    glBindVertexArray(0);
    glUseProgram(0);
@@ -237,52 +239,65 @@ u32 GFX_DrawMode(u8 draw_mode)
    }
 }
 
+u32 GFX_BufferType(u8 buffer_type)
+{
+   switch (buffer_type) {
+      case GFX_BUFFERTYPE_UNIFORM:
+         return GL_UNIFORM_BUFFER;
+      case GFX_BUFFERTYPE_STORAGE:
+         return GL_SHADER_STORAGE_BUFFER;
+      
+      default:
+         return GL_UNIFORM_BUFFER;
+   }
+}
+
 void GFX_SetUniform(Uniform uniform)
 {
    switch (uniform.uniform_type)
    {
       case GFX_UNIFORMTYPE_F32_1X:
-         glUniform1fv(uniform.location, 1, uniform.data);
+         glUniform1fv(uniform.location, 1, uniform.as_float);
       break;
       
       case GFX_UNIFORMTYPE_F32_2X:
-         glUniform2fv(uniform.location, 1, uniform.data);
+         glUniform2fv(uniform.location, 1, uniform.as_float);
       break;
 
       case GFX_UNIFORMTYPE_F32_3X:
-         glUniform3fv(uniform.location, 1, uniform.data);
+         glUniform3fv(uniform.location, 1, uniform.as_float);
       break;
 
       case GFX_UNIFORMTYPE_F32_4X:
-         glUniform4fv(uniform.location, 1, uniform.data);
+         glUniform4fv(uniform.location, 1, uniform.as_float);
       break;
 
       case GFX_UNIFORMTYPE_MAT3:
-         glUniformMatrix3fv(uniform.location, 1, GL_FALSE, uniform.data);
+         glUniformMatrix3fv(uniform.location, 1, GL_FALSE, uniform.as_float);
       break;
       
       case GFX_UNIFORMTYPE_MAT4:
-         glUniformMatrix4fv(uniform.location, 1, GL_FALSE, uniform.data);
+         glUniformMatrix4fv(uniform.location, 1, GL_FALSE, uniform.as_float);
       break;
 
       case GFX_UNIFORMTYPE_U32_1X:
-         glUniform1uiv(uniform.location, 1, uniform.data);
+         glUniform1uiv(uniform.location, 1, uniform.as_uint);
       break;
 
       case GFX_UNIFORMTYPE_U32_2X:
-         glUniform2uiv(uniform.location, 1, uniform.data);
+         glUniform2uiv(uniform.location, 1, uniform.as_uint);
       break;
 
       case GFX_UNIFORMTYPE_U32_3X:
-         glUniform3uiv(uniform.location, 1, uniform.data);
+         glUniform3uiv(uniform.location, 1, uniform.as_uint);
       break;
 
       case GFX_UNIFORMTYPE_U32_4X:
-         glUniform4uiv(uniform.location, 1, uniform.data);
+         glUniform4uiv(uniform.location, 1, uniform.as_uint);
       break;
 
       case GFX_UNIFORMTYPE_TEX_SLOT:
-         glUniform1iv(uniform.location, 1, uniform.data);
+         glUniform1i(uniform.location, uniform.texslot);
       break;
       
       default:

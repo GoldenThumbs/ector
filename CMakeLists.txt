@@ -16,7 +16,9 @@ add_subdirectory("external/")
 add_subdirectory("src/")
 
 add_library(Ector STATIC ${ector_src})
-target_compile_features(Ector PRIVATE c_std_11)
+# target_compile_features(Ector PRIVATE c_std_11)
+# target_compile_options(Ector PRIVATE "-fsanitize=address")
+target_link_options(Ector PRIVATE "-fsanitize=address")
 target_include_directories(Ector
     PUBLIC
         "inc/"

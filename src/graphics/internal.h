@@ -16,14 +16,16 @@ typedef struct gfx_Shader_t
    handle compare;
 } gfx_Shader;
 
-typedef struct gfx_StorageBuffer_t
+typedef struct gfx_Buffer_t
 {
    struct {
       u32 buf;
    } id;
 
+   u8 type;
+
    handle compare;
-} gfx_StorageBuffer;
+} gfx_Buffer;
 
 typedef struct gfx_Geometry_t
 {
@@ -43,7 +45,7 @@ typedef struct gfx_Geometry_t
 struct GraphicsContext_t
 {
    gfx_Shader* shaders;
-   gfx_StorageBuffer* storage_buffers;
+   gfx_Buffer* buffers;
    gfx_Geometry* geometries;
    u16 ref;
    struct {
@@ -62,6 +64,7 @@ uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count);
 
 u32 GFX_Primitive(u8 primitive_type);
 u32 GFX_DrawMode(u8 draw_mode);
+u32 GFX_BufferType(u8 buffer_type);
 void GFX_SetUniform(Uniform uniform);
 
 #endif

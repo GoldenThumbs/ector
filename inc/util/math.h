@@ -3,7 +3,6 @@
 
 #include "util/types.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #ifndef USE_CUSTOM_CONSTS
@@ -15,7 +14,7 @@
 
 #define M_FLOAT_FUZZ 0.0001f
 
-#define M_ABS(x) (((x) <= 0) ? (x) : -(x))
+#define M_ABS(x) (((x) > 0) ? (x) : -(x))
 #define M_MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define M_RCP(x, eps) ((M_ABS(x) > (eps)) ? (1.0f / (x)) : 0.0f)
@@ -28,13 +27,13 @@
 #define M_TURN(a) _Generic((a), \
    f32: (M_TURN32 * (a)), \
    f64: (M_TURN64 * (a)), \
-   default: abort() \
+   default: (a) \
 )
 
 #define M_TO_TURN(a) _Generic((a), \
    f32: (M_TO_TURN32 * (a)), \
    f64: (M_TO_TURN64 * (a)), \
-   default: abort() \
+   default: (a) \
 )
 
 #ifndef USE_CUSTOM_MATH
@@ -59,31 +58,31 @@
    #define M_SIN(a) _Generic((a), \
       f32: M_SIN32((a)), \
       f64: M_SIN64((a)), \
-      default: abort() \
+      default: (f32)(a) \
    )
 
    #define M_COS(a) _Generic((a), \
       f32: M_COS32((a)), \
       f64: M_COS64((a)), \
-      default: abort() \
+      default: (f32)(a) \
    )
 
    #define M_TAN(a) _Generic((a), \
       f32: M_TAN32((a)), \
       f64: M_TAN64((a)), \
-      default: abort() \
+      default: (f32)(a) \
    )
 
    #define M_ATAN(x) _Generic((x), \
       f32: M_ATAN32((x)), \
       f64: M_ATAN64((x)), \
-      default: abort() \
+      default: (f32)(x) \
    )
 
    #define M_SQRT(x) _Generic((x), \
       f32: M_SQRT32((x)), \
       f64: M_SQRT64((x)), \
-      default: abort() \
+      default: (f32)(x) \
    )
 
 #endif

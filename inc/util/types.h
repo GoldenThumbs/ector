@@ -36,11 +36,11 @@ typedef double f64;
 
 typedef union color8_t
 {
-   u8 arr[4];
-   u32 hex;
    struct {
       u8 r, g, b, a;
    };
+   u8 arr[4];
+   u32 hex;
 } color8;
 
 enum {
@@ -84,14 +84,13 @@ typedef struct size2i_t
 
 typedef union vec2_t
 {
-   f32 arr[2];
    struct
    { f32 x, y; };
+   f32 arr[2];
 } vec2;
 
 typedef union vec3_t
 {
-   f32 arr[3];
    struct {
       f32 x;
       union {
@@ -99,15 +98,15 @@ typedef union vec3_t
          struct { f32 y, z; };
       };
    };
-   vec2 xy;
    struct {
       f32 r, g, b;
    };
+   vec2 xy;
+   f32 arr[3];
 } vec3;
 
 typedef union vec4_t
 {
-   f32 arr[4];
    struct {
       vec2 xy;
       vec2 zw;
@@ -120,26 +119,51 @@ typedef union vec4_t
          struct { f32 y, z, w; };
       };
    };
-   vec3 xyz;
    struct {
       f32 r, g, b, a;
    };
+   vec3 xyz;
+   f32 arr[4];
 } vec4;
 
 typedef vec4 quat;
 
 typedef union mat3x3_t
 {
-   f32 arr[9];
-   f32 m[3][3];
    vec3 v[3];
+   f32 m[3][3];
+   f32 arr[9];
 } mat3x3;
 
 typedef union mat4x4_t
 {
-   f32 arr[16];
-   f32 m[4][4];
    vec4 v[4];
+   f32 m[4][4];
+   f32 arr[16];
 } mat4x4;
+
+static inline vec3 Util_VecF32Vec3(vec2 xy, f32 z)
+{
+   vec3 res = { 0 };
+   res.xy = xy;
+   res.z = z;
+   return res;
+}
+
+static inline vec4 Util_VecVecVec4(vec2 xy, vec2 zw)
+{
+   vec4 res = { 0 };
+   res.xy = xy;
+   res.zw = zw;
+   return res;
+}
+
+static inline vec4 Util_VecF32Vec4(vec3 xyz, f32 w)
+{
+   vec4 res = { 0 };
+   res.xyz = xyz;
+   res.w = w;
+   return res;
+}
 
 #endif

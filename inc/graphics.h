@@ -5,7 +5,7 @@
 #include "mesh.h"
 
 typedef handle Shader;
-typedef handle StorageBuffer;
+typedef handle Buffer;
 typedef handle Geometry;
 
 enum {
@@ -19,6 +19,11 @@ enum {
    GFX_DRAWMODE_STATIC_COPY,
    GFX_DRAWMODE_DYNAMIC_READ,
    GFX_DRAWMODE_DYNAMIC_COPY
+};
+
+enum {
+   GFX_BUFFERTYPE_UNIFORM = 0,
+   GFX_BUFFERTYPE_STORAGE
 };
 
 enum {
@@ -62,7 +67,17 @@ typedef struct Uniform_t
 {
    u16 uniform_type;
    u16 location;
-   void* data;
+   union {
+      f32 as_float[16];
+      vec2 as_vec2;
+      vec3 as_vec3;
+      vec4 as_vec4;
+      mat3x3 as_mat3;
+      mat4x4 as_mat4;
+
+      u32 as_uint[4];
+      i32 texslot;
+   };
 } Uniform;
 
 typedef struct GraphicsContext_t GraphicsContext;
@@ -74,10 +89,10 @@ u32 Graphics_GetUniformLocation(GraphicsContext* context, Shader res_shader, con
 void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, u32 uniform_count, const Uniform* uniforms);
 void Graphics_DispatchBarrier(void);
 
-StorageBuffer Graphics_CreateStorageBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, u8 draw_mode);
-void Graphics_FreeStorageBuffer(GraphicsContext* context, StorageBuffer res_buffer);
-void Graphics_UpdateStorageBuffer(GraphicsContext* context, StorageBuffer res_buffer, void* data, u32 length, uS type_size);
-void Graphics_UseStorageBuffer(GraphicsContext* context, StorageBuffer res_buffer, u32 slot);
+Buffer Graphics_CreateBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
+void Graphics_FreeBuffer(GraphicsContext* context, Buffer res_buffer);
+void Graphics_UpdateBuffer(GraphicsContext* context, Buffer res_buffer, void* data, u32 length, uS type_size);
+void Graphics_UseBuffer(GraphicsContext* context, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mode);
 void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry);

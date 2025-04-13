@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
    );
 
    GraphicsContext* gfx = Engine_GraphicsContext(engine);
-   Graphics_SetClearColor(gfx, (color8){ 127, 127, 255, 255 });
+   Graphics_SetClearColor(gfx, (color8){ 15, 15, 15, 255 });
 
    while(!Engine_ShouldQuit(engine))
    {
