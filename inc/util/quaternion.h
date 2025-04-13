@@ -33,4 +33,13 @@ static inline quat Util_MulQuat(quat a, quat b)
    return res;
 }
 
+// TODO: too lazy to properly write this out so this is perfectly functional but not optimal
+static inline quat Util_MakeQuatEuler(vec3 euler)
+{
+   quat yaw = Util_MakeQuat(VEC3(0, 1, 0), euler.y);
+   quat pitch = Util_MakeQuat(VEC3(1, 0, 0), euler.x);
+   quat roll = Util_MakeQuat(VEC3(0, 0, 1), euler.z);
+   return Util_MulQuat(roll, Util_MulQuat(pitch, yaw));
+}
+
 #endif

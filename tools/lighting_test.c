@@ -24,6 +24,8 @@ typedef struct CameraData_t
    u32 screen_height;
 } CameraData;
 
+void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y);
+
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
@@ -74,14 +76,29 @@ int main(int argc, char* argv[])
    const u32 clusters_z = 64;
    const u32 cluster_count = clusters_x * clusters_y * clusters_z;
 
-   Light* light_array = NEW_ARRAY_N(Light, 1);
+   Light* light_array = NEW_ARRAY_N(Light, 2);
    
    // Our sun is the first light in the array
-   light_array[0].rotation = Util_MakeQuat(VEC3(-1, 0, 0), 28);
+   light_array[0].rotation = Util_MakeQuatEuler(VEC3(-28,-50, 0));
    light_array[0].light_type = LIGHT_DIR;
    light_array[0].color = (color8){ 255, 230, 205, 255 };
-   light_array[0].intensity = 1.5f;
+   light_array[0].intensity = 0.5f;
    light_array[0].softness = 0;
+
+   // Our spotlight is second
+   light_array[1].origin = VEC3(4, 2,-4);
+   light_array[1].radius = 10;
+   light_array[1].rotation = Util_MakeQuatEuler(VEC3(-20,27, 0));
+   light_array[1].light_type = LIGHT_SPOT;
+   light_array[1].color = (color8){ 255, 255, 255, 255 };
+   light_array[1].intensity = 5;
+   light_array[1].softness = 0.2f;
+   light_array[1].cos_half_angle = Renderer_SpotAngle(25);
+   light_array[1].importance_bias = 1;
+   light_array[1].importance_scale = 2.5f;
+
+   // Everything else is random
+   CreateRandomLights(&light_array, 32, 32);
 
    Mesh floor_mesh = Mesh_CreatePlane(1, 1, VEC2(32, 32));
    Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
@@ -190,7 +207,7 @@ int main(int argc, char* argv[])
       Graphics_Dispatch(gfx, cull_shader, cluster_count / 128, 1, 1, 2, (Uniform[]){
          [0].uniform_type = GFX_UNIFORMTYPE_F32_1X,
          [0].location = Graphics_GetUniformLocation(gfx, cull_shader, "u_light_cutoff"),
-         [0].as_float[0] = 0.05f,
+         [0].as_float[0] = 0.01f,
 
          [1].uniform_type = GFX_UNIFORMTYPE_F32_1X,
          [1].location = Graphics_GetUniformLocation(gfx, cull_shader, "u_fade_speed"),
@@ -256,4 +273,47 @@ int main(int argc, char* argv[])
 
    Engine_Free(engine);
    return 0;
+}
+
+u32 Hash(u32 x)
+{
+   x ^= (x << 13);
+   x ^= (x >> 17);
+   x ^= (x <<  5);
+   return x;
+}
+
+void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y)
+{
+   u32 start_count = Util_ArrayLength(*light_array);
+   u32 light_count = count_x * count_y;
+   Util_SetArrayLength((void**)light_array, start_count + light_count);
+
+   const u32 bit_mask = (1u << 16) - 1;
+   u32 seed = 12;
+   for (u32 i=0; i<count_y; i++)
+   {
+      for (u32 j=0; j<count_x; j++)
+      {
+         Light light = { 0 };
+
+         f32 x = ((f32)j / (f32)M_MAX(count_x-1, 1) * 2 - 1) * 32.0f;
+         f32 y = ((f32)i / (f32)M_MAX(count_y-1, 1) * 2 - 1) * 32.0f;
+
+         seed = Hash(seed);
+
+         x += -1 + 2 * (f32)(seed & bit_mask) / (f32)bit_mask;
+         y += -1 + 2 * (f32)((seed >> 16) & bit_mask) / (f32)bit_mask;
+
+         light.origin = VEC3(x, 1, y);
+         light.radius = (f32)(Hash(seed + 1) % 128) / 16.0f + 1.0f;
+         light.rotation =QUAT(0, 0, 0, 1);
+         light.light_type = LIGHT_POINT;
+         light.color = (color8){ .hex = Hash(seed + 2) };
+         light.intensity = (f32)(Hash(seed + 1) % 128) / 64.0f;
+
+         u32 index = start_count + i * count_x + j;
+         (*light_array)[index] = light;
+      }
+   }
 }
