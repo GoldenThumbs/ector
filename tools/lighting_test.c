@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
    
    // Our sun is the first light in the array
    light_array[0].rotation = Util_MakeQuatEuler(VEC3(-28,-50, 0));
-   light_array[0].light_type = LIGHT_DIR;
+   light_array[0].light_type = RNDR_LIGHT_DIR;
    light_array[0].color = (color8){ 255, 230, 205, 255 };
    light_array[0].intensity = 0.5f;
    light_array[0].softness = 0;
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
    light_array[1].origin = VEC3(4, 2,-4);
    light_array[1].radius = 10;
    light_array[1].rotation = Util_MakeQuatEuler(VEC3(-20,27, 0));
-   light_array[1].light_type = LIGHT_SPOT;
+   light_array[1].light_type = RNDR_LIGHT_SPOT;
    light_array[1].color = (color8){ 255, 255, 255, 255 };
    light_array[1].intensity = 5;
    light_array[1].softness = 0.2f;
@@ -107,10 +107,10 @@ int main(int argc, char* argv[])
    Graphics_UseBuffer(gfx, cam_buf, 1);
 
    Buffer cluster_buf = Graphics_CreateBuffer(gfx, NULL, cluster_count, sizeof(Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
-   Graphics_UseBuffer(gfx, cluster_buf, 2);
+   Graphics_UseBuffer(gfx, cluster_buf, 1);
 
    Buffer light_buf = Graphics_CreateBuffer(gfx, light_array, Util_ArrayLength(light_array), sizeof(Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
-   Graphics_UseBuffer(gfx, light_buf, 3);
+   Graphics_UseBuffer(gfx, light_buf, 2);
 
    Geometry floor_geo = Graphics_CreateGeometry(gfx, floor_mesh, GFX_DRAWMODE_STATIC);
    Geometry box_geo = Graphics_CreateGeometry(gfx, box_mesh, GFX_DRAWMODE_STATIC);
@@ -308,7 +308,7 @@ void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y)
          light.origin = VEC3(x, 1, y);
          light.radius = (f32)(Hash(seed + 1) % 128) / 16 + 1;
          light.rotation =QUAT(0, 0, 0, 1);
-         light.light_type = LIGHT_POINT;
+         light.light_type = RNDR_LIGHT_POINT;
          light.color = (color8){ .hex = Hash(seed + 2) };
          light.intensity = (f32)(Hash(seed + 1) % 128) / 64;
 

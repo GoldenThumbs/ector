@@ -15,9 +15,11 @@ typedef struct Cluster_t
    u32 indices[LIGHTS_PER_CLUSTER];
 } Cluster;
 
-#define LIGHT_DIR   0
-#define LIGHT_POINT 1
-#define LIGHT_SPOT  2
+enum {
+   RNDR_LIGHT_DIR = 0,
+   RNDR_LIGHT_POINT,
+   RNDR_LIGHT_SPOT
+};
 
 typedef struct Light_t
 {
@@ -63,7 +65,7 @@ Shader Renderer_CullShader(GraphicsContext *context);
 "   uint count;\n" \
 "   uint indices[LIGHTS_PER_CLUSTER];\n" \
 "};\n" \
-"layout(std430, binding=2) restrict buffer ClusterSSBO\n" \
+"layout(std430, binding=1) restrict buffer ClusterSSBO\n" \
 "{\n" \
 "   Cluster clusters[];\n" \
 "};\n"
@@ -82,10 +84,10 @@ Shader Renderer_CullShader(GraphicsContext *context);
 "   float importance_scale;\n" \
 "   float fade_weight;\n" \
 "};\n" \
-"#define LIGHT_DIR "ECT_STRINGIFY(LIGHT_DIR)"\n" \
-"#define LIGHT_POINT "ECT_STRINGIFY(LIGHT_POINT)"\n" \
-"#define LIGHT_SPOT "ECT_STRINGIFY(LIGHT_SPOT)"\n" \
-"layout(std430, binding=3) restrict buffer LightSSBO\n" \
+"#define LIGHT_DIR 0\n" \
+"#define LIGHT_POINT 1\n" \
+"#define LIGHT_SPOT 2\n" \
+"layout(std430, binding=2) restrict buffer LightSSBO\n" \
 "{\n" \
 "   Light lights[];\n" \
 "};\n"
