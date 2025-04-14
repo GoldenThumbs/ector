@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
       .inv_view = Util_IdentityMat4(),
       .inv_proj = Util_IdentityMat4(),
       .near_clip = 0.25f,
-      .far_clip = 100.0f,
+      .far_clip = 100,
       .screen_width = (u32)Engine_GetSize(engine).width,
       .screen_height = (u32)Engine_GetSize(engine).height
    };
@@ -60,10 +60,10 @@ int main(int argc, char* argv[])
       const Key key_left;
       const Key key_right;
    } player = {
-      VEC3(0.0f, 0.7f, 3.0f),
-      VEC3(0.0f, 0.0f, 0.0f),
-      50.0f,
-      15.0f,
+      VEC3(0, 0.7f, 3),
+      VEC3(0, 0, 0),
+      50,
+      15,
       0.15f,
       KEY_W,
       KEY_S,
@@ -181,8 +181,8 @@ int main(int argc, char* argv[])
 
       f32 aspect_ratio = (f32)size.height / (f32)size.width;
 
-      cam_data.view = Util_ViewMatrix(player.origin, player.euler, 0.0f);
-      cam_data.proj = Util_PerspectiveMatrix(50.0f, aspect_ratio, cam_data.near_clip, cam_data.far_clip);
+      cam_data.view = Util_ViewMatrix(player.origin, player.euler, 0);
+      cam_data.proj = Util_PerspectiveMatrix(50, aspect_ratio, cam_data.near_clip, cam_data.far_clip);
       cam_data.inv_view = Util_InverseViewMatrix(cam_data.view);
       cam_data.inv_proj = Util_InversePerspectiveMatrix(cam_data.proj);
       cam_data.screen_width = size.width;
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
 
          [1].uniform_type = GFX_UNIFORMTYPE_F32_1X,
          [1].location = Graphics_GetUniformLocation(gfx, cull_shader, "u_fade_speed"),
-         [1].as_float[0] = 5.0f
+         [1].as_float[0] = 5
       });
       Graphics_DispatchBarrier();
 
@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 
          [3].uniform_type = GFX_UNIFORMTYPE_F32_3X,
          [3].location = Graphics_GetUniformLocation(gfx, lit_shader, "u_color"),
-         [3].as_vec3 = VEC3(1.0f, 0.2f, 0.2f)
+         [3].as_vec3 = VEC3(1, 0.2f, 0.2f)
       });
       
       Engine_Present(engine);
@@ -297,8 +297,8 @@ void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y)
       {
          Light light = { 0 };
 
-         f32 x = ((f32)j / (f32)M_MAX(count_x-1, 1) * 2 - 1) * 32.0f;
-         f32 y = ((f32)i / (f32)M_MAX(count_y-1, 1) * 2 - 1) * 32.0f;
+         f32 x = ((f32)j / (f32)M_MAX(count_x - 1, 1) * 2 - 1) * 32;
+         f32 y = ((f32)i / (f32)M_MAX(count_y - 1, 1) * 2 - 1) * 32;
 
          seed = Hash(seed);
 
@@ -306,11 +306,11 @@ void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y)
          y += -1 + 2 * (f32)((seed >> 16) & bit_mask) / (f32)bit_mask;
 
          light.origin = VEC3(x, 1, y);
-         light.radius = (f32)(Hash(seed + 1) % 128) / 16.0f + 1.0f;
+         light.radius = (f32)(Hash(seed + 1) % 128) / 16 + 1;
          light.rotation =QUAT(0, 0, 0, 1);
          light.light_type = LIGHT_POINT;
          light.color = (color8){ .hex = Hash(seed + 2) };
-         light.intensity = (f32)(Hash(seed + 1) % 128) / 64.0f;
+         light.intensity = (f32)(Hash(seed + 1) % 128) / 64;
 
          u32 index = start_count + i * count_x + j;
          (*light_array)[index] = light;
