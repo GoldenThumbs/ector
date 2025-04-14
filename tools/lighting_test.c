@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
       mat4x4 box_mat = Util_IdentityMat4();
 
       Graphics_UpdateBuffer(gfx, cam_buf, &cam_data, 1, sizeof(CameraData));
-      // Graphics_UpdateBuffer(gfx, light_buf, light_array, Util_ArrayLength(light_array), sizeof(CameraData));
+      // Graphics_UpdateBuffer(gfx, light_buf, light_array, Util_ArrayLength(light_array), sizeof(Light));
       // Uncomment line about to update lights on the gpu
 
       Graphics_Dispatch(gfx, cluster_shader, clusters_x, clusters_y, clusters_z, 1, (Uniform[]){
