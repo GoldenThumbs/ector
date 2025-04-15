@@ -18,6 +18,7 @@ GraphicsContext* MOD_InitGraphics(error* err)
    {
       err->general = ERR_FATAL;
       err->extra = ERR_GFX_CONTEXT_FAILED;
+      err->flags = ERR_FLAG_GRAPHICS_FAILED;
       return NULL;
    }
 
@@ -225,6 +226,8 @@ u32 GFX_DrawMode(u8 draw_mode)
          return GL_STATIC_DRAW;
       case GFX_DRAWMODE_DYNAMIC:
          return GL_DYNAMIC_DRAW;
+      case GFX_DRAWMODE_STREAM:
+         return GL_STREAM_DRAW;
       case GFX_DRAWMODE_STATIC_READ:
          return GL_STATIC_READ;
       case GFX_DRAWMODE_STATIC_COPY:
@@ -233,9 +236,13 @@ u32 GFX_DrawMode(u8 draw_mode)
          return GL_DYNAMIC_READ;
       case GFX_DRAWMODE_DYNAMIC_COPY:
          return GL_DYNAMIC_COPY;
+      case GFX_DRAWMODE_STREAM_READ:
+         return GL_STREAM_READ;
+      case GFX_DRAWMODE_STREAM_COPY:
+         return GL_STREAM_COPY;
       
       default:
-         return GL_STATIC_DRAW;
+         return GL_DYNAMIC_DRAW;
    }
 }
 
