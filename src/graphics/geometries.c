@@ -81,4 +81,8 @@ void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry)
       glDeleteBuffers(1, &geometry.id.v_buf);
    if (geometry.id.i_buf != 0)
       glDeleteBuffers(1, &geometry.id.i_buf);
+
+   geometry.id.vao = 0;
+   geometry.id.v_buf = 0;
+   geometry.id.i_buf = 0;
 }

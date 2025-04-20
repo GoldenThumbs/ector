@@ -2,48 +2,57 @@
 #define ECT_RENDERER_H
 
 #include "util/types.h"
-#include "util/math.h"
+#include "util/extra_types.h"
+// #include "util/math.h"
 #include "graphics.h"
+
+typedef handle Object;
+typedef handle Light;
+
+enum {
+   RNDR_LIGHT_DIR = 1,
+   RNDR_LIGHT_POINT,
+   RNDR_LIGHT_SPOT,
+   RNDR_NULL_LIGHT = 0
+};
+
+typedef struct ObjectDesc_t
+{
+   Shader shader;
+   Geometry geometry;
+   BBox bounds;
+} ObjectDesc;
+
+typedef struct LightDesc_t
+{
+   u32 light_type;
+   vec3 origin;
+   f32 radius;
+   vec3 color;
+   f32 strength;
+   quat rotation;
+   f32 cone_angle;
+   f32 softness_fac;
+   struct {
+      f32 bias;
+      f32 scale;
+   } importance;
+} LightDesc;
 
 #define LIGHTS_PER_CLUSTER 127
 
-typedef struct Cluster_t
-{
-   vec4 bounds_min;
-   vec4 bounds_max;
-   u32 count;
-   u32 indices[LIGHTS_PER_CLUSTER];
-} Cluster;
+typedef struct Renderer_t Renderer;
 
-enum {
-   RNDR_LIGHT_DIR = 0,
-   RNDR_LIGHT_POINT,
-   RNDR_LIGHT_SPOT
-};
+void Renderer_SetView(Renderer* renderer, mat4x4 view);
+void Renderer_RenderLit(Renderer* renderer, size2i size);
 
-typedef struct Light_t
-{
-   vec3 origin;
-   f32 radius;
-   quat rotation;
-   u32 light_type;
-   color8 color;
-   f32 intensity;
-   f32 softness;
-   f32 cos_half_angle;
-   f32 importance_bias;
-   f32 importance_scale;
-   f32 fade_weight;
-} Light;
+Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D transform);
+void Renderer_RemoveObject(Renderer* renderer, Object object);
 
-static inline f32 Renderer_SpotAngle(f32 angle)
-{
-   return M_COS(angle * 0.5f) * 0.5f + 0.5f;
-}
+Light Renderer_AddLight(Renderer* renderer, LightDesc* desc);
+void Renderer_RemoveLight(Renderer* renderer, Light res_light);
 
-Shader Renderer_LitShader(GraphicsContext *context);
-Shader Renderer_ClusterShader(GraphicsContext *context);
-Shader Renderer_CullShader(GraphicsContext *context);
+Shader Renderer_LitShader(GraphicsContext* graphics_context);
 
 #define RNDR_CAMERA_GLSL \
 "layout(std140, binding=1) uniform CameraUBO\n" \
@@ -54,6 +63,14 @@ Shader Renderer_CullShader(GraphicsContext *context);
 "   mat4 mat_invproj;\n" \
 "   vec2 u_near_far;\n" \
 "   uvec2 u_screen_size;\n" \
+"};\n"
+
+#define RNDR_MODEL_GLSL \
+"layout(std140, binding=2) uniform ModelUBO\n" \
+"{\n" \
+"   mat4 mat_model;\n" \
+"   mat4 mat_invmodel;\n" \
+"   mat3x4 mat_normal_model;\n" \
 "};\n"
 
 #define RNDR_CLUSTER_GLSL \
@@ -75,21 +92,50 @@ Shader Renderer_CullShader(GraphicsContext *context);
 "{\n" \
 "   vec4 origin;\n" \
 "   vec4 rotation;\n" \
-"   uint light_type;\n" \
 "   uint color;\n" \
-"   float intensity;\n" \
-"   float softness;\n" \
-"   float cos_half_angle;\n" \
-"   float importance_bias;\n" \
-"   float importance_scale;\n" \
-"   float fade_weight;\n" \
+"   uint params;\n" \
+"   vec2 importance;\n" \
 "};\n" \
-"#define LIGHT_DIR 0\n" \
-"#define LIGHT_POINT 1\n" \
-"#define LIGHT_SPOT 2\n" \
+"#define LIGHT_DIR 1\n" \
+"#define LIGHT_POINT 2\n" \
+"#define LIGHT_SPOT 3\n" \
+"#define NULL_LIGHT 0\n" \
 "layout(std430, binding=2) restrict buffer LightSSBO\n" \
 "{\n" \
 "   Light lights[];\n" \
-"};\n"
+"};\n" \
+"void SetFadeWeight(uint index, float fade_weight)\n" \
+"{\n" \
+"   const uint byte_mask = 255u;\n" \
+"   const uint byte_ofs = 16u;\n" \
+"   const uint param_mask = (byte_mask << byte_ofs);\n" \
+"   uint i_w = uint(fade_weight * 255.0);\n" \
+"   lights[index].params &= ~param_mask;\n" \
+"   lights[index].params |= (i_w << byte_ofs) & param_mask;\n" \
+"}\n" \
+"vec4 DecodeParameters(uint params)\n" \
+"{\n" \
+"   const uint byte_mask = (1u << 8) - 1;\n" \
+"   const float rcp_maxbyte = 1.0 / float(byte_mask);\n" \
+"   return vec4(\n" \
+"      rcp_maxbyte * ((params >>  0) & byte_mask),\n" \
+"      rcp_maxbyte * ((params >>  8) & byte_mask),\n" \
+"      rcp_maxbyte * ((params >> 16) & byte_mask),\n" \
+"      (params >> 24) & byte_mask\n" \
+"   );\n" \
+"}\n" \
+"vec3 DecodeColor(uint rgbe_color)\n" \
+"{\n" \
+"   const uint byte_mask = 255u;\n" \
+"   if (rgbe_color == 0) return vec3(0.0);\n" \
+"   uvec4 v = uvec4(\n" \
+"      (rgbe_color >>  0) & byte_mask,\n" \
+"      (rgbe_color >>  8) & byte_mask,\n" \
+"      (rgbe_color >> 16) & byte_mask,\n" \
+"      (rgbe_color >> 24) & byte_mask\n" \
+"   );\n" \
+"   float f = pow(2.0, float(v.w) - 136.0)\n;" \
+"   return vec3(v.xyz) * f;\n" \
+"}\n"
 
 #endif

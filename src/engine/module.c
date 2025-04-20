@@ -63,6 +63,7 @@ Engine* Engine_Init(EngineDesc* desc)
 
    error err = { 0 };
    engine->graphics_context = MOD_InitGraphics(&err);
+   engine->renderer = MOD_InitRenderer(&err, engine->graphics_context);
 
    if (err.general == ERR_FATAL)
    {
@@ -75,8 +76,9 @@ Engine* Engine_Init(EngineDesc* desc)
 
 void Engine_Free(Engine* engine)
 {
-   glfwTerminate();
+   MOD_FreeRenderer(engine->renderer);
    MOD_FreeGraphics(engine->graphics_context);
+   glfwTerminate();
    free(engine);
 }
 

@@ -4,6 +4,7 @@
 #include "util/types.h"
 #include "util/keymap.h"
 #include "graphics.h"
+#include "renderer.h"
 
 #define GLFW_INCLUDE_NONE
 
@@ -46,6 +47,7 @@ struct Engine_t
    bool quit;
 
    GraphicsContext* graphics_context;
+   Renderer* renderer;
 };
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);

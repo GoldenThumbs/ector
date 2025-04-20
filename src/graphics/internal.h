@@ -5,6 +5,8 @@
 
 #include "graphics.h"
 
+#include <stdalign.h>
+
 typedef struct gfx_Shader_t
 {
    struct {
@@ -23,6 +25,7 @@ typedef struct gfx_Buffer_t
    } id;
 
    u8 type;
+   u8 draw_mode;
 
    handle compare;
 } gfx_Buffer;
@@ -47,13 +50,15 @@ struct GraphicsContext_t
    gfx_Shader* shaders;
    gfx_Buffer* buffers;
    gfx_Geometry* geometries;
-   u16 ref;
-   struct {
-      u16 color: 1;
-      u16 depth: 1;
-      u16 stencil: 1;
-   } clear_buffers;
-   color8 clear_color;
+   alignas(uS) struct {
+      color8 clear_color;
+      u16 ref;
+      struct {
+         u16 color: 1;
+         u16 depth: 1;
+         u16 stencil: 1;
+      } clear_buffers;
+   };
 };
 
 u32 GFX_AttributeType(u8 attribute);

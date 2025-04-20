@@ -93,8 +93,11 @@ void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, 
 void Graphics_DispatchBarrier(void);
 
 Buffer Graphics_CreateBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
+Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS total_size, u8 draw_mode, u8 buffer_type);
+void Graphics_ReuseBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, Buffer res_buffer);
 void Graphics_FreeBuffer(GraphicsContext* context, Buffer res_buffer);
 void Graphics_UpdateBuffer(GraphicsContext* context, Buffer res_buffer, void* data, u32 length, uS type_size);
+void Graphics_UpdateBufferRange(GraphicsContext* context, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size);
 void Graphics_UseBuffer(GraphicsContext* context, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mode);

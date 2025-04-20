@@ -109,6 +109,7 @@ void Graphics_FreeShader(GraphicsContext* context, Shader res_shader)
       return;
 
    glDeleteProgram(shader.id.program);
+   shader.id.program = 0;
 }
 
 u32 Graphics_GetUniformLocation(GraphicsContext* context, Shader res_shader, const char* name)

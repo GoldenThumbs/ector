@@ -11,6 +11,16 @@ static inline vec3 Util_FillVec3(f32 scalar)
    return VEC3(scalar, scalar, scalar);
 }
 
+static inline f32 Util_MinElmVec3(vec3 vector)
+{
+   return M_MIN(vector.z, M_MIN(vector.y, vector.x));
+}
+
+static inline f32 Util_MaxElmVec3(vec3 vector)
+{
+   return M_MAX(vector.z, M_MAX(vector.y, vector.x));
+}
+
 static inline vec3 Util_MinVec3(vec3 a, vec3 b)
 {
    vec3 res = { 0 };

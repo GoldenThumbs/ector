@@ -11,6 +11,16 @@ static inline vec4 Util_FillVec4(f32 scalar)
    return VEC4(scalar, scalar);
 }
 
+static inline f32 Util_MinElmVec4(vec4 vector)
+{
+   return M_MIN(M_MIN(vector.w, vector.z), M_MIN(vector.y, vector.x));
+}
+
+static inline f32 Util_MaxElmVec4(vec4 vector)
+{
+   return M_MAX(M_MAX(vector.w, vector.z), M_MAX(vector.y, vector.x));
+}
+
 static inline vec4 Util_MinVec4(vec4 a, vec4 b)
 {
    vec4 res = { 0 };

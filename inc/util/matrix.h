@@ -57,7 +57,7 @@ static inline mat3x3 Util_InverseDiagonalMat3(mat3x3 matrix)
 static inline mat3x3 Util_QuatToMat3(quat quaternion)
 {
    f32 n = Util_DotVec4(quaternion, quaternion);
-   f32 s = (n > 0.0001f) ? (2.0f / n) : 0.0f;
+   f32 s = 2.0f * M_RCP(n, M_FLOAT_FUZZ);
 
    f32 x = quaternion.x;
    f32 y = quaternion.y;

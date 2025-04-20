@@ -3,7 +3,6 @@
 
 #include "util/types.h"
 #include "util/keymap.h"
-#include "graphics.h"
 
 typedef enum MouseMode_t
 {
@@ -44,6 +43,7 @@ f64 Engine_GetFrameDelta(Engine* engine);
 
 void Engine_Present(Engine* engine);
 
-GraphicsContext* Engine_GraphicsContext(Engine* engine);
+struct GraphicsContext_t* Engine_GraphicsContext(Engine* engine);
+struct Renderer_t* Engine_Renderer(Engine* engine);
 
 #endif

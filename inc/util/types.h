@@ -19,6 +19,8 @@
 
 #define REF(ptr) (void**)(&(ptr))
 
+#define TOBYTE(x) ((u8)((x) * 255.0f))
+
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

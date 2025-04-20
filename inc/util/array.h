@@ -15,7 +15,7 @@
 #define ARRAY_HEADER(ptr) ((Array*)(ptr) - 1)
 
 #define NEW_ARRAY_N(T, N) Util_CreateArrayOfLength(N, sizeof(T))
-#define NEW_ARRAY(T) NEW_ARRAY_N(T, 0u)
+#define NEW_ARRAY(T) NEW_ARRAY_N(T, 2u)
 #define SET_ARRAY_LENGTH(ptr, N) Util_SetArrayLength(REF(ptr), N)
 #define FREE_ARRAY(ptr) (((ptr) != NULL) ? free(ARRAY_HEADER(ptr)) : ((void)0))
 #define INSERT_ARRAY(ptr, i, item) (Util_InsertArrayIndex(REF(ptr), i), ptr[Util_UsableArrayIndex((ptr), i)] = (item))

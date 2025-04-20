@@ -13,4 +13,7 @@ enum {
 GraphicsContext* MOD_InitGraphics(error* err);
 void MOD_FreeGraphics(GraphicsContext* context);
 
+Renderer* MOD_InitRenderer(error* err, GraphicsContext* graphics_context);
+void MOD_FreeRenderer(Renderer* renderer);
+
 #endif

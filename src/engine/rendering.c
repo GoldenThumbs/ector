@@ -1,8 +1,9 @@
 #include "util/types.h"
-#include "graphics.h"
 
 #include "engine.h"
 #include "engine/internal.h"
+#include "graphics.h"
+#include "renderer.h"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -23,4 +24,9 @@ void Engine_Present(Engine* engine)
 GraphicsContext* Engine_GraphicsContext(Engine* engine)
 {
    return engine->graphics_context;
+}
+
+Renderer* Engine_Renderer(Engine* engine)
+{
+   return engine->renderer;
 }

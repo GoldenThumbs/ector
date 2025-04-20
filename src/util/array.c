@@ -76,7 +76,7 @@ void* Util_CreateArrayOfLength(u32 length, uS type_size)
 
    array->size = type_size;
    array->memory = memory;
-   array->length = length;
+   array->length = 0;
    array->err = (error){ .total_bits = 0u };
 
    return ARR_DATA(array);
@@ -89,8 +89,10 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
    Array* array = ARRAY_HEADER(*array_ptr);
 
+   uS size = array->size;
    uS memory = Util_ArrayNeededMemory((uS)desired_length);
-   uS num_bytes = Util_ArrayNeededBytes(memory, array->size);
+   uS num_bytes = Util_ArrayNeededBytes(memory, size);
+   uS old_memory = array->memory;
 
    void* tmp = realloc(array, num_bytes);
 
@@ -102,9 +104,15 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
       return;
    }
 
+   uS offset = size * (old_memory);
+   uS diff = size * (memory - old_memory);
+
    array = (Array*)tmp;
    array->memory = memory;
    *array_ptr = ARR_DATA(array);
+
+   u8* ptr_end = (u8*)(*array_ptr) + offset;
+   memset(ptr_end, 0, diff);
 }
 
 void Util_InsertArrayIndex(void** array_ptr, u32 index)

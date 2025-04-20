@@ -2,6 +2,7 @@
 #define ECT_EXTRA_TYPES_H
 
 #include "util/types.h"
+#include "util/math.h"
 #include "util/vec3.h"
 
 typedef struct BBox_t
@@ -9,6 +10,13 @@ typedef struct BBox_t
    vec3 center;
    vec3 extents;
 } BBox;
+
+typedef struct Transform3D_t
+{
+   vec3 origin;
+   quat rotation;
+   vec3 scale;
+} Transform3D;
 
 static inline u64 Util_MakeID(u32 a, u32 b)
 {
@@ -28,6 +36,23 @@ static inline u64 Util_MakeID(u32 a, u32 b)
    res = ((u64)id_a.words[3] + (u64)id_b.words[3]) + (m * res);
 
    return res;
+}
+
+static inline color8 Util_MakeRGBE(vec3 hdr_color)
+{
+   i32 e = 0;
+   f32 max_elm = Util_MaxElmVec3(hdr_color);
+   if (max_elm < M_FLOAT_FUZZ)
+      return (color8){ .hex = 0 };
+
+   max_elm = frexpf(max_elm, &e) * 256.0f / max_elm;
+   vec3 scaled = Util_ScaleVec3(hdr_color, max_elm);
+   return (color8){
+      (u8)scaled.r,
+      (u8)scaled.g,
+      (u8)scaled.b,
+      (u8)(e + 128)
+   };
 }
 
 static inline f32 Util_AreaBBox(BBox bbox)

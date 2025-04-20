@@ -1,4 +1,4 @@
-#include "util/array.h"
+// #include "util/array.h"
 #include "util/math.h"
 #include "util/vec3.h"
 #include <util/quaternion.h>
@@ -10,21 +10,9 @@
 #include <mesh.h>
 #include <renderer.h>
 
-#include <stdio.h>
+// #include <stdio.h>
 
-typedef struct CameraData_t
-{
-   mat4x4 view;
-   mat4x4 proj;
-   mat4x4 inv_view;
-   mat4x4 inv_proj;
-   f32 near_clip;
-   f32 far_clip;
-   u32 screen_width;
-   u32 screen_height;
-} CameraData;
-
-void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y);
+void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y);
 
 int main(int argc, char* argv[])
 {
@@ -35,24 +23,14 @@ int main(int argc, char* argv[])
    Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
    
    GraphicsContext* gfx = Engine_GraphicsContext(engine);
-   Graphics_SetClearColor(gfx, (color8){ 100, 100, 100, 255 });
-   
-   CameraData cam_data = {
-      .view = Util_IdentityMat4(),
-      .proj = Util_IdentityMat4(),
-      .inv_view = Util_IdentityMat4(),
-      .inv_proj = Util_IdentityMat4(),
-      .near_clip = 0.25f,
-      .far_clip = 100,
-      .screen_width = (u32)Engine_GetSize(engine).width,
-      .screen_height = (u32)Engine_GetSize(engine).height
-   };
+   Graphics_SetClearColor(gfx, (color8){ 10, 10, 10, 255 });
+
+   Renderer* rndr = Engine_Renderer(engine);
 
    // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
    struct {
       vec3 origin;
       vec3 euler;
-      const f32 fov;
       const f32 move_speed;
       const f32 look_speed;
       const Key key_forward;
@@ -60,9 +38,8 @@ int main(int argc, char* argv[])
       const Key key_left;
       const Key key_right;
    } player = {
-      VEC3(0, 0.7f, 3),
+      VEC3(0, 1, 3),
       VEC3(0, 0, 0),
-      50,
       15,
       0.15f,
       KEY_W,
@@ -71,53 +48,60 @@ int main(int argc, char* argv[])
       KEY_D
    };
 
-   const u32 clusters_x = 16;
-   const u32 clusters_y = 24;
-   const u32 clusters_z = 64;
-   const u32 cluster_count = clusters_x * clusters_y * clusters_z;
+   Renderer_AddLight(rndr, &(LightDesc){
+      .light_type = RNDR_LIGHT_DIR,
+      .rotation = Util_MakeQuatEuler(VEC3(-32, 20, 0)),
+      .color = VEC3(1.0f, 0.9f, 0.6f),
+      .strength = 0.5f
+   });
 
-   Light* light_array = NEW_ARRAY_N(Light, 2);
-   
-   // Our sun is the first light in the array
-   light_array[0].rotation = Util_MakeQuatEuler(VEC3(-28,-50, 0));
-   light_array[0].light_type = RNDR_LIGHT_DIR;
-   light_array[0].color = (color8){ 255, 230, 205, 255 };
-   light_array[0].intensity = 0.5f;
-   light_array[0].softness = 0;
-
-   // Our spotlight is second
-   light_array[1].origin = VEC3(4, 2,-4);
-   light_array[1].radius = 10;
-   light_array[1].rotation = Util_MakeQuatEuler(VEC3(-20,27, 0));
-   light_array[1].light_type = RNDR_LIGHT_SPOT;
-   light_array[1].color = (color8){ 255, 255, 255, 255 };
-   light_array[1].intensity = 5;
-   light_array[1].softness = 0.2f;
-   light_array[1].cos_half_angle = Renderer_SpotAngle(25);
-   light_array[1].importance_bias = 1;
-   light_array[1].importance_scale = 2.5f;
+   Renderer_AddLight(rndr, &(LightDesc){
+      .light_type = RNDR_LIGHT_SPOT,
+      .radius = 10.0f,
+      .origin = VEC3(-2, 3,-2),
+      .cone_angle = 30,
+      .softness_fac = 0.2f,
+      .importance.bias = 0.25f,
+      .importance.scale = 2.0f,
+      .rotation = Util_MakeQuatEuler(VEC3(-28, -24, 0)),
+      .color = VEC3(0.9f, 0.9f, 1.0f),
+      .strength = 2.0f
+   });
 
    // Everything else is random
-   CreateRandomLights(&light_array, 32, 32);
+   CreateRandomLights(rndr, 16, 16);
 
-   Mesh floor_mesh = Mesh_CreatePlane(1, 1, VEC2(32, 32));
-   Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
-
-   Buffer cam_buf = Graphics_CreateBuffer(gfx, NULL, 1, sizeof(CameraData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
-   Graphics_UseBuffer(gfx, cam_buf, 1);
-
-   Buffer cluster_buf = Graphics_CreateBuffer(gfx, NULL, cluster_count, sizeof(Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
-   Graphics_UseBuffer(gfx, cluster_buf, 1);
-
-   Buffer light_buf = Graphics_CreateBuffer(gfx, light_array, Util_ArrayLength(light_array), sizeof(Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
-   Graphics_UseBuffer(gfx, light_buf, 2);
+   Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
+   Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 1, 2));
 
    Geometry floor_geo = Graphics_CreateGeometry(gfx, floor_mesh, GFX_DRAWMODE_STATIC);
    Geometry box_geo = Graphics_CreateGeometry(gfx, box_mesh, GFX_DRAWMODE_STATIC);
 
    Shader lit_shader = Renderer_LitShader(gfx);
-   Shader cluster_shader = Renderer_ClusterShader(gfx);
-   Shader cull_shader = Renderer_CullShader(gfx);
+
+   Object floor_obj = Renderer_AddObject(rndr, &(ObjectDesc){
+         .shader = lit_shader,
+         .geometry = floor_geo,
+         .bounds = { .extents = VEC3(16, 1, 16) }
+      },
+      (Transform3D){
+         .origin = VEC3(0, 0, 0),
+         .rotation = Util_IdentityQuat(),
+         .scale = VEC3(1, 1, 1)
+      }
+   );
+
+   Object box_obj = Renderer_AddObject(rndr, &(ObjectDesc){
+         .shader = lit_shader,
+         .geometry = box_geo,
+         .bounds = { .extents = VEC3(1, 1, 1) }
+      },
+      (Transform3D){
+         .origin = VEC3(0, 0.25f, 0),
+         .rotation = Util_MakeQuatEuler(VEC3(0, 20, 0)),
+         .scale = VEC3(1, 1, 1)
+      }
+   );
 
    while(!Engine_ShouldQuit(engine))
    {
@@ -177,99 +161,15 @@ int main(int argc, char* argv[])
       }
       
       size2i size = Engine_GetSize(engine);
-      Graphics_Viewport(gfx, size);
 
-      f32 aspect_ratio = (f32)size.height / (f32)size.width;
-
-      cam_data.view = Util_ViewMatrix(player.origin, player.euler, 0);
-      cam_data.proj = Util_PerspectiveMatrix(50, aspect_ratio, cam_data.near_clip, cam_data.far_clip);
-      cam_data.inv_view = Util_InverseViewMatrix(cam_data.view);
-      cam_data.inv_proj = Util_InversePerspectiveMatrix(cam_data.proj);
-      cam_data.screen_width = size.width;
-      cam_data.screen_height = size.height;
-
-      mat4x4 floor_mat = Util_TranslationMatrix(VEC3(0,-1, 0));
-      mat4x4 box_mat = Util_IdentityMat4();
-
-      Graphics_UpdateBuffer(gfx, cam_buf, &cam_data, 1, sizeof(CameraData));
-      // Graphics_UpdateBuffer(gfx, light_buf, light_array, Util_ArrayLength(light_array), sizeof(Light));
-      // Uncomment line about to update lights on the gpu
-
-      Graphics_Dispatch(gfx, cluster_shader, clusters_x, clusters_y, clusters_z, 1, (Uniform[]){
-         [0].uniform_type = GFX_UNIFORMTYPE_U32_3X,
-         [0].location = Graphics_GetUniformLocation(gfx, cluster_shader, "u_clusters"),
-         [0].as_uint[0] = clusters_x,
-         [0].as_uint[1] = clusters_y,
-         [0].as_uint[2] = clusters_z
-      });
-      Graphics_DispatchBarrier();
-
-      Graphics_Dispatch(gfx, cull_shader, cluster_count / 128, 1, 1, 2, (Uniform[]){
-         [0].uniform_type = GFX_UNIFORMTYPE_F32_1X,
-         [0].location = Graphics_GetUniformLocation(gfx, cull_shader, "u_light_cutoff"),
-         [0].as_float[0] = 0.01f,
-
-         [1].uniform_type = GFX_UNIFORMTYPE_F32_1X,
-         [1].location = Graphics_GetUniformLocation(gfx, cull_shader, "u_fade_speed"),
-         [1].as_float[0] = 5
-      });
-      Graphics_DispatchBarrier();
-
-      Graphics_Draw(gfx, lit_shader, floor_geo, 4, (Uniform[]){
-         [0].uniform_type = GFX_UNIFORMTYPE_MAT4,
-         [0].location = Graphics_GetUniformLocation(gfx, lit_shader, "mat_model"),
-         [0].as_mat4 = floor_mat,
-
-         [1].uniform_type = GFX_UNIFORMTYPE_MAT4,
-         [1].location = Graphics_GetUniformLocation(gfx, lit_shader, "mat_normal_model"),
-         [1].as_mat4 = Util_TransposeMat4(Util_InverseMat4(floor_mat)),
-
-         [2].uniform_type = GFX_UNIFORMTYPE_U32_3X,
-         [2].location = Graphics_GetUniformLocation(gfx, lit_shader, "u_clusters"),
-         [2].as_uint[0] = clusters_x,
-         [2].as_uint[1] = clusters_y,
-         [2].as_uint[2] = clusters_z,
-
-         [3].uniform_type = GFX_UNIFORMTYPE_F32_3X,
-         [3].location = Graphics_GetUniformLocation(gfx, lit_shader, "u_color"),
-         [3].as_vec3 = VEC3(0.3f, 0.3f, 0.3f)
-      });
-
-      Graphics_Draw(gfx, lit_shader, box_geo, 4, (Uniform[]){
-         [0].uniform_type = GFX_UNIFORMTYPE_MAT4,
-         [0].location = Graphics_GetUniformLocation(gfx, lit_shader, "mat_model"),
-         [0].as_mat4 = box_mat,
-
-         [1].uniform_type = GFX_UNIFORMTYPE_MAT4,
-         [1].location = Graphics_GetUniformLocation(gfx, lit_shader, "mat_normal_model"),
-         [1].as_mat4 = Util_TransposeMat4(Util_InverseMat4(box_mat)),
-
-         [2].uniform_type = GFX_UNIFORMTYPE_U32_3X,
-         [2].location = Graphics_GetUniformLocation(gfx, lit_shader, "u_clusters"),
-         [2].as_uint[0] = clusters_x,
-         [2].as_uint[1] = clusters_y,
-         [2].as_uint[2] = clusters_z,
-
-         [3].uniform_type = GFX_UNIFORMTYPE_F32_3X,
-         [3].location = Graphics_GetUniformLocation(gfx, lit_shader, "u_color"),
-         [3].as_vec3 = VEC3(1, 0.2f, 0.2f)
-      });
+      Renderer_SetView(rndr, Util_ViewMatrix(player.origin, player.euler, 0));
+      Renderer_RenderLit(rndr, size);
       
       Engine_Present(engine);
    }
 
    Mesh_Free(&floor_mesh);
    Mesh_Free(&box_mesh);
-   FREE_ARRAY(light_array);
-
-   Graphics_FreeBuffer(gfx, cam_buf);
-   Graphics_FreeBuffer(gfx, cluster_buf);
-   Graphics_FreeBuffer(gfx, light_buf);
-   Graphics_FreeGeometry(gfx, floor_geo);
-   Graphics_FreeGeometry(gfx, box_geo);
-   Graphics_FreeShader(gfx, lit_shader);
-   Graphics_FreeShader(gfx, cluster_shader);
-   Graphics_FreeShader(gfx, cull_shader);
 
    Engine_Free(engine);
    return 0;
@@ -283,37 +183,29 @@ u32 Hash(u32 x)
    return x;
 }
 
-void CreateRandomLights(Light** light_array, u32 count_x, u32 count_y)
+void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y)
 {
-   u32 start_count = Util_ArrayLength(*light_array);
-   u32 light_count = count_x * count_y;
-   Util_SetArrayLength((void**)light_array, start_count + light_count);
-
-   const u32 bit_mask = (1u << 16) - 1;
    u32 seed = 12;
    for (u32 i=0; i<count_y; i++)
    {
+      f32 y = 2 * ((f32)i - (f32)count_y * 0.5f + 0.5f);
       for (u32 j=0; j<count_x; j++)
       {
          Light light = { 0 };
 
-         f32 x = ((f32)j / (f32)M_MAX(count_x - 1, 1) * 2 - 1) * 32;
-         f32 y = ((f32)i / (f32)M_MAX(count_y - 1, 1) * 2 - 1) * 32;
+         f32 x = 2 * ((f32)j - (f32)count_x * 0.5f + 0.5);
 
          seed = Hash(seed);
 
-         x += -1 + 2 * (f32)(seed & bit_mask) / (f32)bit_mask;
-         y += -1 + 2 * (f32)((seed >> 16) & bit_mask) / (f32)bit_mask;
-
-         light.origin = VEC3(x, 1, y);
-         light.radius = (f32)(Hash(seed + 1) % 128) / 16 + 1;
-         light.rotation =QUAT(0, 0, 0, 1);
-         light.light_type = RNDR_LIGHT_POINT;
-         light.color = (color8){ .hex = Hash(seed + 2) };
-         light.intensity = (f32)(Hash(seed + 1) % 128) / 64;
-
-         u32 index = start_count + i * count_x + j;
-         (*light_array)[index] = light;
+         LightDesc desc = { 0 };
+         desc.origin = VEC3(x, 1, y);
+         desc.radius = (f32)(Hash(seed + 2) % 128) / 32 + 2;
+         desc.light_type = RNDR_LIGHT_POINT;
+         desc.color.r = (f32)(Hash(seed + 23) % 512) / 512.0f;
+         desc.color.g = (f32)(Hash(seed + 22) % 512) / 512.0f;
+         desc.color.b = (f32)(Hash(seed + 21) % 512) / 512.0f;
+         desc.strength = (f32)(Hash(seed + 1) % 128) / 150.0f;
+         Renderer_AddLight(renderer, &desc);
       }
    }
 }

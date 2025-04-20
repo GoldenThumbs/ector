@@ -40,8 +40,27 @@ GraphicsContext* MOD_InitGraphics(error* err)
 
 void MOD_FreeGraphics(GraphicsContext* context)
 {
-   FREE_ARRAY(context->shaders);
-   FREE_ARRAY(context->buffers);
+   if (context == NULL)
+      return;
+   
+   for (u32 i=0; i<Util_ArrayLength(context->shaders); i++)
+      glDeleteProgram(context->shaders[i].id.program);
+
+   for (u32 i=0; i<Util_ArrayLength(context->buffers); i++)
+      glDeleteBuffers(1, &context->buffers[i].id.buf);
+
+   for (u32 i=0; i<Util_ArrayLength(context->buffers); i++)
+   {
+      if (context->geometries[i].id.vao == 0)
+         continue;
+      
+      glDeleteVertexArrays(1, &context->geometries[i].id.vao);
+
+      if (context->geometries[i].id.v_buf != 0)
+         glDeleteBuffers(1, &context->geometries[i].id.v_buf);
+      if (context->geometries[i].id.i_buf != 0)
+         glDeleteBuffers(1, &context->geometries[i].id.i_buf);
+   }
    FREE_ARRAY(context->geometries);
    context->ref = 0;
    free(context);

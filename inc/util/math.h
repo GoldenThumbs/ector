@@ -12,11 +12,12 @@
    #define M_INVPI64 (1.0 / M_PI64)
 #endif
 
-#define M_FLOAT_FUZZ 0.0001f
+#define M_FLOAT_FUZZ (1e-32)
 
 #define M_ABS(x) (((x) > 0) ? (x) : -(x))
 #define M_MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define M_CLAMP(x, x_min, x_max) M_MAX(x_min, M_MIN(x, x_max))
 #define M_RCP(x, eps) ((M_ABS(x) > (eps)) ? (1.0f / (x)) : 0.0f)
 
 #define M_TURN32 (M_PI32 * 0.01f)

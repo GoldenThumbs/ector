@@ -53,7 +53,7 @@ RNDR_CLUSTER_GLSL
 "}\n"
 ;
 
-const char* rndr_CULL_SHADER_GLSL =
+const char* rndr_CULLING_SHADER_GLSL =
 "#version 430 core\n"
 "#define CLUSTERS_X 128\n"
 "layout(local_size_x=CLUSTERS_X, local_size_y=1, local_size_z=1) in;\n"
@@ -74,11 +74,19 @@ RNDR_LIGHT_GLSL
 "bool LightTest(uint light_id, Cluster cluster)\n"
 "{\n"
 "   Light light = lights[light_id];\n"
-"   if (light.light_type == LIGHT_DIR)\n"
+
+"   vec4 light_props = DecodeParameters(light.params);\n"
+"   float lum = dot( DecodeColor(light.color), vec3(0.299, 0.587, 0.114));\n"
+"   uint light_type = uint(light_props.w);\n"
+
+"   if (light_type == LIGHT_DIR)\n"
 "   {\n"
-"      lights[light_id].fade_weight = 1.0;\n"
+"      SetFadeWeight(light_id, 1.0);\n"
 "      return true;\n"
 "   }\n"
+
+"   if (light_type == NULL_LIGHT)\n"
+"      return false;\n"
 
 "   vec3 s_origin = (mat_view * vec4(light.origin.xyz, 1.0)).xyz;\n"
 "   float s_radius = light.origin.w;\n"
@@ -89,10 +97,11 @@ RNDR_LIGHT_GLSL
 "   vec3 extent = abs(bounds_min - bounds_max);\n"
 "   float bounds_sqr = dot(extent, extent) * abs(s_origin.z);\n"
 
-"   float importance = max(1.0 + light.importance_bias, s_radius * light.intensity * light.importance_scale) / abs(s_origin.z);\n"
-"   lights[light_id].fade_weight = clamp((importance - u_light_cutoff) * u_fade_speed, 0.0, 1.0);\n"
+"   float importance = max(1.0 + light.importance.x, lum * s_radius * light.importance.y) / abs(s_origin.z);\n"
+"   float fade_weight = clamp((importance - u_light_cutoff) * u_fade_speed, 0.0, 1.0);\n"
+"   SetFadeWeight(light_id, fade_weight);\n"
 
-"   return SphereTest(s_origin, s_radius, bounds_min, bounds_max) && (importance >= u_light_cutoff);\n"
+"   return SphereTest(s_origin, s_radius, bounds_min, bounds_max) && (importance > u_light_cutoff);\n"
 "}\n"
 
 "void main()\n"
@@ -123,9 +132,7 @@ const char* rndr_LIT_VRTSHADER_GLSL =
 "layout(location=1) in vec3 vrt_normal;\n"
 
 RNDR_CAMERA_GLSL
-
-"uniform mat4 mat_model;\n"
-"uniform mat4 mat_normal_model;\n"
+RNDR_MODEL_GLSL
 
 "out vec3 v2f_position;\n"
 "out vec3 v2f_normal;\n"
@@ -173,28 +180,6 @@ RNDR_LIGHT_GLSL
 "   return MulQuat(MulQuat(vec4(-rotation.xyz, rotation.w), vec4(point, 0.0)), rotation).xyz;\n"
 "}\n"
 
-"vec4 DecodeColor(uint packed_color)\n"
-"{\n"
-"   const uint byte_mask = (1u << 8) - 1;\n"
-"   const float rcp_maxbyte = 1.0 / float(byte_mask);\n"
-"   return vec4(\n"
-"      (packed_color >>  0) & byte_mask,\n"
-"      (packed_color >>  8) & byte_mask,\n"
-"      (packed_color >> 16) & byte_mask,\n"
-"      (packed_color >> 24) & byte_mask\n"
-"   ) * rcp_maxbyte;\n"
-"}\n"
-
-"uint EncodeColor(vec4 color)\n"
-"{\n"
-"   const uint byte_mask = (1u << 8) - 1;\n"
-"   return\n"
-"      (uint(color.r * byte_mask) <<  0) |\n"
-"      (uint(color.g * byte_mask) <<  8) |\n"
-"      (uint(color.b * byte_mask) << 16) |\n"
-"      (uint(color.a * byte_mask) << 24);\n"
-"}\n"
-
 "float PointAttenution(vec3 light_pos)\n"
 "{\n"
 "   return pow(clamp(1.0 - dot(light_pos, light_pos), 0.0, 1.0), 4.0);\n"
@@ -211,11 +196,13 @@ RNDR_LIGHT_GLSL
 "   const vec3 forward = vec3(0.0, 0.0,-1.0);\n"
 "   vec3 light_vec;\n"
 
-"   vec4 light_color = DecodeColor(light.color);\n"
-"   light_color.rgb *= light.intensity * light.fade_weight;\n"
+"   vec4 light_props = DecodeParameters(light.params);\n"
+"   vec3 light_color = DecodeColor(light.color);\n"
+"   light_color.rgb *= light_props.z;\n"
 
+"   uint light_type = uint(light_props.w);\n"
 "   float atten = 1.0;\n"
-"   if (light.light_type == LIGHT_DIR)\n"
+"   if (light_type == LIGHT_DIR)\n"
 "   {\n"
 "      light_vec = (mat_view * vec4(RotPointByQuat(light.rotation, forward), 0)).xyz;\n"
 "   } else {\n"
@@ -223,10 +210,10 @@ RNDR_LIGHT_GLSL
 "      vec3 light_pos = (origin - surface.position) / light.origin.w;\n"
 "      light_vec = normalize(light_pos);\n"
 "      atten = PointAttenution(light_pos);\n"
-"      if (light.light_type == LIGHT_SPOT)\n"
+"      if (light_type == LIGHT_SPOT)\n"
 "      {\n"
 "         vec3 light_dir = (mat_view * vec4(RotPointByQuat(light.rotation, forward), 0)).xyz;\n"
-"         atten *= SpotAttenuation(light_vec, light_dir, light.cos_half_angle, light.softness);\n"
+"         atten *= SpotAttenuation(light_vec, light_dir, light_props.x, light_props.y);\n"
 "      }\n"
 "   }\n"
 "   vec3 halfway = normalize(light_vec + surface.view);\n"
@@ -245,7 +232,7 @@ RNDR_LIGHT_GLSL
 
 "   vec2 tile_size = (vec2(u_screen_size) / vec2(u_clusters.xy));\n"
 
-"   uint z_id = uint((log(abs(v2f_position.z) / u_near_far.x) * u_clusters.z) / log(u_near_far.y / u_near_far.x));\n"
+"   uint z_id = uint((log(abs(surface.position.z) / u_near_far.x) * u_clusters.z) / log(u_near_far.y / u_near_far.x));\n"
 
 "   uvec3 tile = uvec3(gl_FragCoord.xy / tile_size, z_id);\n"
 "   uint tile_id = (tile.y * u_clusters.x) + (tile.z * u_clusters.x * u_clusters.y) + tile.x;\n"

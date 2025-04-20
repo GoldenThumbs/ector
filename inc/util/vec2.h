@@ -11,6 +11,16 @@ static inline vec2 Util_FillVec2(f32 scalar)
    return VEC2(scalar, scalar);
 }
 
+static inline f32 Util_MinElmVec2(vec2 vector)
+{
+   return M_MIN(vector.y, vector.x);
+}
+
+static inline f32 Util_MaxElmVec2(vec2 vector)
+{
+   return M_MAX(vector.y, vector.x);
+}
+
 static inline vec2 Util_MinVec2(vec2 a, vec2 b)
 {
    vec2 res = { 0 };
