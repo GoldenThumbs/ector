@@ -42,6 +42,9 @@
 *.idb
 *.pdb
 
+*.log
+log.*
+
 # Kernel Module Compile Results
 *.mod*
 *.cmd
@@ -51,7 +54,9 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# VS Code
 build/
 .cache/
 .vscode/
 compile_commands.json
+
