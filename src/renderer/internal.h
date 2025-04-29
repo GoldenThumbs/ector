@@ -17,6 +17,7 @@ struct rndr_CameraData_s
    f32 far;
    u32 width;
    u32 height;
+   u32 cluster_size[4];
 };
 
 struct rndr_ModelData_s
@@ -28,8 +29,8 @@ struct rndr_ModelData_s
 
 typedef struct rndr_Cluster_t
 {
-   vec4 bounds_min;
-   vec4 bounds_max;
+   vec4 center;
+   vec4 extents;
    u32 count;
    u32 indices[LIGHTS_PER_CLUSTER];
 } rndr_Cluster;
@@ -38,6 +39,7 @@ typedef struct rndr_Object_t
 {
    Shader shader;
    Geometry geometry;
+   Uniforms uniforms;
 
    struct {
       mat4x4 model;
@@ -108,6 +110,7 @@ struct Renderer_t
    struct {
       Buffer camera_ubo;
       Buffer model_ubo;
+      Buffer culling_ubo;
       Buffer cluster_ssbo;
       Buffer light_ssbo;
 

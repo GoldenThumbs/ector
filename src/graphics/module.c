@@ -91,7 +91,7 @@ void Graphics_Viewport(GraphicsContext* context, size2i size)
    glClear(color_bit | depth_bit | stencil_bit);
 }
 
-void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 uniform_count, const Uniform* uniforms)
+void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, Uniforms uniforms)
 {
    gfx_Shader shader = context->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
@@ -118,8 +118,8 @@ void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geo
    }
 
    glUseProgram(shader.id.program);
-   for (u32 i=0; i<uniform_count; i++)
-      GFX_SetUniform(uniforms[i]);
+   for (u32 i=0; i<uniforms.count; i++)
+      Graphics_UseBuffer(context, uniforms.blocks[i].ubo, uniforms.blocks[i].binding);
 
    u32 prim = GFX_Primitive(geometry.primitive);
    glBindVertexArray(geometry.id.vao);

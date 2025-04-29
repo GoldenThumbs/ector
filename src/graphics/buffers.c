@@ -33,7 +33,7 @@ Buffer Graphics_CreateBuffer(GraphicsContext* context, void* data, u32 length, u
    return Util_AddResource(&context->ref, REF(context->buffers), &buffer);
 }
 
-Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS total_size, u8 draw_mode, u8 buffer_type)
+Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS size, u8 draw_mode, u8 buffer_type)
 {
    gfx_Buffer buffer = { 0 };
    buffer.type = buffer_type;
@@ -47,14 +47,13 @@ Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS to
 
    glBufferData(
       gl_target,
-      total_size,
+      size,
       data,
       GFX_DrawMode(buffer.draw_mode)
    );
    if (data == NULL)
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
-   //glBindBuffer(gl_target, 0);
    return Util_AddResource(&context->ref, REF(context->buffers), &buffer);
 }
 

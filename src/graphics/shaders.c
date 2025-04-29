@@ -121,7 +121,7 @@ u32 Graphics_GetUniformLocation(GraphicsContext* context, Shader res_shader, con
    return glGetUniformLocation(shader.id.program, name);
 }
 
-void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, u32 uniform_count, const Uniform* uniforms)
+void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, Uniforms uniforms)
 {
    gfx_Shader shader = context->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
@@ -130,8 +130,8 @@ void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, 
       return;
 
    glUseProgram(shader.id.program);
-   for (u32 i=0; i<uniform_count; i++)
-      GFX_SetUniform(uniforms[i]);
+   for (u32 i=0; i<uniforms.count; i++)
+      Graphics_UseBuffer(context, uniforms.blocks[i].ubo, uniforms.blocks[i].binding);
 
    glDispatchCompute(size_x, size_y, size_z);
 

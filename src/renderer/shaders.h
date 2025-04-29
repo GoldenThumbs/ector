@@ -11,8 +11,6 @@ const char* rndr_CLUSTER_SHADER_GLSL =
 RNDR_CAMERA_GLSL
 RNDR_CLUSTER_GLSL
 
-"uniform uvec3 u_clusters;\n"
-
 "vec3 ToViewSpace(vec2 point_ss)\n"
 "{\n"
 "   // conversion to normalized device coordinates\n"
@@ -32,14 +30,14 @@ RNDR_CLUSTER_GLSL
 
 "void main()\n"
 "{\n"
-"   uint tile_id = (gl_WorkGroupID.y * u_clusters.x) + (gl_WorkGroupID.z * u_clusters.x * u_clusters.y) + gl_WorkGroupID.x;\n"
-"   vec2 tile_size = (vec2(u_screen_size) / vec2(u_clusters.xy));\n"
+"   uint tile_id = (gl_WorkGroupID.y * u_cluster_count.x) + (gl_WorkGroupID.z * u_cluster_count.x * u_cluster_count.y) + gl_WorkGroupID.x;\n"
+"   vec2 tile_size = (vec2(u_screen_size) / vec2(u_cluster_count.xy));\n"
 
 "   vec3 tile_min = ToViewSpace(vec2(gl_WorkGroupID.xy) * tile_size);\n"
 "   vec3 tile_max = ToViewSpace(vec2(gl_WorkGroupID.xy+1) * tile_size);\n"
 
-"   float z_min = u_near_far.x * pow(u_near_far.y / u_near_far.x, float(gl_WorkGroupID.z) / float(u_clusters.z));\n"
-"   float z_max = u_near_far.x * pow(u_near_far.y / u_near_far.x, float(gl_WorkGroupID.z + 1) / float(u_clusters.z));\n"
+"   float z_min = u_near_far.x * pow(u_near_far.y / u_near_far.x, float(gl_WorkGroupID.z) / float(u_cluster_count.z));\n"
+"   float z_max = u_near_far.x * pow(u_near_far.y / u_near_far.x, float(gl_WorkGroupID.z + 1) / float(u_cluster_count.z));\n"
 
 "   vec3 points[4] = vec3[4](\n"
 "      LineIntersect(vec3(0.0), tile_min, z_min),\n"
@@ -48,8 +46,11 @@ RNDR_CLUSTER_GLSL
 "      LineIntersect(vec3(0.0), tile_max, z_max)\n"
 "   );\n"
 
-"   clusters[tile_id].bounds_min = vec4(min(points[1], points[0]), 0);\n"
-"   clusters[tile_id].bounds_max = vec4(max(points[3], points[2]), 0);\n"
+"   vec3 b_min = min(points[1], points[0]);\n"
+"   vec3 b_max = max(points[3], points[2]);\n"
+
+"   clusters[tile_id].center = vec4(0.5 * (b_min + b_max), 0);\n"
+"   clusters[tile_id].extents = vec4(b_max - clusters[tile_id].center.xyz, 0);\n"
 "}\n"
 ;
 
@@ -62,12 +63,29 @@ RNDR_CAMERA_GLSL
 RNDR_CLUSTER_GLSL
 RNDR_LIGHT_GLSL
 
-"uniform float u_light_cutoff;\n"
-"uniform float u_fade_speed;"
-
-"bool SphereTest(vec3 s_origin, float s_radius, vec3 bounds_min, vec3 bounds_max)\n"
+"layout(std140, binding=3) uniform SettingsUBO\n"
 "{\n"
-"   vec3 diff = clamp(s_origin, bounds_min, bounds_max) - s_origin;\n"
+"   float u_light_cutoff;\n"
+"   float u_fade_speed;\n"
+"   vec2 padding;\n"
+"};\n"
+
+"vec4 MulQuat(vec4 a, vec4 b)\n"
+"{\n"
+"   vec4 res_q = vec4(0.0);\n"
+"   res_q.xyz = b.xyz * a.w + a.xyz * b.w + cross(a.xyz, b.xyz);\n"
+"   res_q.w = a.w * b.w - dot(a.xyz, b.xyz);\n"
+"   return res_q;\n"
+"}\n"
+
+"vec3 RotPointByQuat(vec4 rotation, vec3 point)\n"
+"{\n"
+"   return MulQuat(MulQuat(vec4(-rotation.xyz, rotation.w), vec4(point, 0.0)), rotation).xyz;\n"
+"}\n"
+
+"bool SphereTest(vec3 s_origin, float s_radius, vec3 center, vec3 extents)\n"
+"{\n"
+"   vec3 diff = max(vec3(0.0), abs(center - s_origin) - extents);\n"
 "   return (dot(diff, diff) <= s_radius * s_radius);\n"
 "}\n"
 
@@ -91,17 +109,16 @@ RNDR_LIGHT_GLSL
 "   vec3 s_origin = (mat_view * vec4(light.origin.xyz, 1.0)).xyz;\n"
 "   float s_radius = light.origin.w;\n"
 
-"   vec3 bounds_min = cluster.bounds_min.xyz;\n"
-"   vec3 bounds_max = cluster.bounds_max.xyz;\n"
-
-"   vec3 extent = abs(bounds_min - bounds_max);\n"
-"   float bounds_sqr = dot(extent, extent) * abs(s_origin.z);\n"
+"   vec3 center = cluster.center.xyz;\n"
+"   vec3 extents = cluster.extents.xyz;\n"
 
 "   float importance = max(1.0 + light.importance.x, lum * s_radius * light.importance.y) / abs(s_origin.z);\n"
 "   float fade_weight = clamp((importance - u_light_cutoff) * u_fade_speed, 0.0, 1.0);\n"
 "   SetFadeWeight(light_id, fade_weight);\n"
 
-"   return SphereTest(s_origin, s_radius, bounds_min, bounds_max) && (importance > u_light_cutoff);\n"
+"   bool test = SphereTest(s_origin, s_radius, center, extents);\n"
+
+"   return test && (importance > u_light_cutoff);\n"
 "}\n"
 
 "void main()\n"
@@ -153,19 +170,34 @@ const char* rndr_LIT_FRGSHADER_GLSL =
 "   vec3 position;\n"
 "   vec3 normal;\n"
 "   vec3 view;\n"
-"   vec4 albedo;\n"
+"   vec4 color;\n"
+"   float metallic;\n"
+"   float inv_m;\n"
+"   float roughness;\n"
+"   float r_sqr;\n"
+"   vec3 albedo;\n"
+"   vec3 f0;\n"
 "};\n"
 
 RNDR_CAMERA_GLSL
 RNDR_CLUSTER_GLSL
 RNDR_LIGHT_GLSL
 
-"uniform uvec3 u_clusters;\n"
-"uniform vec3 u_color;\n"
+"layout(std140, binding=3) uniform SurfaceUBO\n"
+"{\n"
+"   vec4 u_color;\n"
+"   float u_metallic;\n"
+"   float u_roughness;\n"
+"   float u_ambient;\n"
+"};\n"
 
 "in vec3 v2f_position;\n"
 "in vec3 v2f_normal;\n"
 "out vec4 frg_out;\n"
+
+"const float M_EPSILON = 1e-8;\n"
+"const float M_PI = 3.141592;\n"
+"const float M_INVPI = 1.0 / M_PI;\n"
 
 "vec4 MulQuat(vec4 a, vec4 b)\n"
 "{\n"
@@ -189,6 +221,27 @@ RNDR_LIGHT_GLSL
 "{\n"
 "   float spot_dist = dot(light_vec, light_dir) * 0.5 + 0.5;\n"
 "   return smoothstep(cos_half_angle, cos_half_angle + (1.0 - cos_half_angle) * softness, spot_dist);\n"
+"}\n"
+
+"vec3 Fresnel(vec3 f0, float cos_theta)\n"
+"{\n"
+"   return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);\n"
+"}\n"
+
+"float Visibility(float nDl, float nDv, float r)\n"
+"{\n"
+"   // float r_sqr = r * r;\n"
+"   // float l = nDv * sqrt((nDl - nDl * r_sqr) * nDl + r_sqr);\n"
+"   // float v = nDl * sqrt((nDv - nDv * r_sqr) * nDv + r_sqr);\n"
+"   return max(0.5 / mix(2.0 * nDl * nDv, nDl + nDv, r), M_EPSILON);\n"
+"}\n"
+
+"float Distribution(float nDh, float r)\n"
+"{\n"
+"   float inv_sqrmag = 1.0 - nDh * nDh;\n"
+"   float a = r * nDh;\n"
+"   float k = r / (inv_sqrmag + a * a);\n"
+"   return max(k * k * M_INVPI, M_EPSILON);\n"
 "}\n"
 
 "vec3 CalcLight(FragSurface surface, Light light)\n"
@@ -219,7 +272,14 @@ RNDR_LIGHT_GLSL
 "   vec3 halfway = normalize(light_vec + surface.view);\n"
 "   float nDl = max(0.0, dot(surface.normal, light_vec));\n"
 "   float nDh = max(0.0, dot(surface.normal, halfway));\n"
-"   return (surface.albedo.rgb + pow(nDh, 42.0)) * (nDl * atten) * light_color.rgb;\n"
+"   float nDv = abs(dot(surface.normal, surface.view)) + M_EPSILON;\n"
+"   float lDh = max(0.0, dot(light_vec, halfway));\n"
+
+"   vec3 f = Fresnel(surface.f0, lDh);\n"
+"   float d = Distribution(nDh, surface.r_sqr);\n"
+"   float v = Visibility(nDl, nDv, surface.r_sqr);\n"
+
+"   return (surface.albedo.rgb * M_INVPI + f * d * v) * (nDl * atten) * light_color.rgb;\n"
 "}\n"
 
 "void main()\n"
@@ -228,18 +288,24 @@ RNDR_LIGHT_GLSL
 "   surface.position = v2f_position;\n"
 "   surface.normal = normalize(v2f_normal);\n"
 "   surface.view = normalize(-v2f_position);\n"
-"   surface.albedo = vec4(u_color, 1.0);\n"
+"   surface.color = u_color;\n"
+"   surface.metallic = u_metallic;\n"
+"   surface.inv_m = 1.0 - surface.metallic;\n"
+"   surface.roughness = u_roughness;\n"
+"   surface.r_sqr = surface.roughness * surface.roughness;\n"
+"   surface.albedo = surface.color.rgb * surface.inv_m;\n"
+"   surface.f0 = 0.04 * surface.inv_m + surface.color.rgb * surface.metallic;\n"
 
-"   vec2 tile_size = (vec2(u_screen_size) / vec2(u_clusters.xy));\n"
+"   vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_count.xy);\n"
 
-"   uint z_id = uint((log(abs(surface.position.z) / u_near_far.x) * u_clusters.z) / log(u_near_far.y / u_near_far.x));\n"
+"   uint z_id = uint((log(abs(surface.position.z) / u_near_far.x) * u_cluster_count.z) / log(u_near_far.y / u_near_far.x));\n"
 
 "   uvec3 tile = uvec3(gl_FragCoord.xy / tile_size, z_id);\n"
-"   uint tile_id = (tile.y * u_clusters.x) + (tile.z * u_clusters.x * u_clusters.y) + tile.x;\n"
+"   uint tile_id = (tile.y * u_cluster_count.x) + (tile.z * u_cluster_count.x * u_cluster_count.y) + tile.x;\n"
 
 "   uint light_count = clusters[tile_id].count;\n"
 
-"   vec3 color = surface.albedo.rgb * 0.25;\n"
+"   vec3 color = surface.albedo.rgb * u_ambient;\n"
 "   for (uint i=0; i<light_count; i++)\n"
 "   {\n"
 "      uint idx = clusters[tile_id].indices[i];\n"
@@ -248,10 +314,10 @@ RNDR_LIGHT_GLSL
 "   }\n"
 
 "   const float rcp_gamma = 1.0 / 2.2;\n"
-"   frg_out.rgb = pow(color, vec3(rcp_gamma));\n"
+"   frg_out.rgb = color;\n"
 "   frg_out.a = 1.0;\n"
 
-"   // #define DEBUG_CLUSTERS\n"
+"   #define DEBUG_CLUSTERS\n"
 
 "   #ifdef DEBUG_CLUSTERS\n"
 "   float light_fac = 10*2.0 * float(light_count) / float(LIGHTS_PER_CLUSTER);\n"

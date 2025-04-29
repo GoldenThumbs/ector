@@ -18,7 +18,11 @@ typedef struct EngineDesc_t
    struct {
       char* title;
       i32 width, height;
+      bool hidden;
    } window;
+   struct {
+      bool enabled;
+   } renderer;
 } EngineDesc;
 
 typedef struct Engine_t Engine;

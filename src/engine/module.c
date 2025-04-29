@@ -36,6 +36,9 @@ Engine* Engine_Init(EngineDesc* desc)
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+   if (desc->window.hidden)
+      glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
    GLFWwindow* window = glfwCreateWindow(width, height, window_title, NULL, NULL);
 
    if (window == NULL)
@@ -63,7 +66,9 @@ Engine* Engine_Init(EngineDesc* desc)
 
    error err = { 0 };
    engine->graphics_context = MOD_InitGraphics(&err);
-   engine->renderer = MOD_InitRenderer(&err, engine->graphics_context);
+
+   if (desc->renderer.enabled)
+      engine->renderer = MOD_InitRenderer(&err, engine->graphics_context);
 
    if (err.general == ERR_FATAL)
    {
@@ -76,8 +81,12 @@ Engine* Engine_Init(EngineDesc* desc)
 
 void Engine_Free(Engine* engine)
 {
-   MOD_FreeRenderer(engine->renderer);
-   MOD_FreeGraphics(engine->graphics_context);
+   if (engine->renderer != NULL)
+      MOD_FreeRenderer(engine->renderer);
+
+   if (engine->graphics_context != NULL)
+      MOD_FreeGraphics(engine->graphics_context);
+
    glfwTerminate();
    free(engine);
 }

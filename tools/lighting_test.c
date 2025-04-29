@@ -12,18 +12,26 @@
 
 // #include <stdio.h>
 
+struct SurfaceDef_s
+{
+   vec4 color;
+   f32 metallic;
+   f32 roughness;
+   f32 ambient;
+};
+
 void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y);
 
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
-      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
+      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window", .renderer.enabled = true }
    );
 
    Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
    
    GraphicsContext* gfx = Engine_GraphicsContext(engine);
-   Graphics_SetClearColor(gfx, (color8){ 10, 10, 10, 255 });
+   Graphics_SetClearColor(gfx, (color8){ 100, 160, 220, 255 });
 
    Renderer* rndr = Engine_Renderer(engine);
 
@@ -58,31 +66,52 @@ int main(int argc, char* argv[])
    Renderer_AddLight(rndr, &(LightDesc){
       .light_type = RNDR_LIGHT_SPOT,
       .radius = 10.0f,
-      .origin = VEC3(-2, 3,-2),
+      .origin = VEC3(-2, 1.5f,-2),
       .cone_angle = 30,
       .softness_fac = 0.2f,
       .importance.bias = 0.25f,
       .importance.scale = 2.0f,
-      .rotation = Util_MakeQuatEuler(VEC3(-28, -24, 0)),
+      .rotation = Util_MakeQuatEuler(VEC3(0, 0, 0)),
       .color = VEC3(0.9f, 0.9f, 1.0f),
       .strength = 2.0f
    });
 
    // Everything else is random
-   CreateRandomLights(rndr, 16, 16);
+   // CreateRandomLights(rndr, 16, 16);
 
    Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
-   Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 1, 2));
+   Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
 
    Geometry floor_geo = Graphics_CreateGeometry(gfx, floor_mesh, GFX_DRAWMODE_STATIC);
    Geometry box_geo = Graphics_CreateGeometry(gfx, box_mesh, GFX_DRAWMODE_STATIC);
 
    Shader lit_shader = Renderer_LitShader(gfx);
 
+   struct SurfaceDef_s floor_surf = {
+      .color = VEC4(0.5f, 0.5f, 0.5f, 1),
+      .metallic = 0,
+      .roughness = 0.3f,
+      .ambient = 0.6f
+   };
+
+   struct SurfaceDef_s box_surf = {
+      .color = VEC4(1.0f, 0.3f, 0.3f, 1),
+      .metallic = 0,
+      .roughness = 0.6f,
+      .ambient = 0.6f
+   };
+
    Object floor_obj = Renderer_AddObject(rndr, &(ObjectDesc){
          .shader = lit_shader,
          .geometry = floor_geo,
-         .bounds = { .extents = VEC3(16, 1, 16) }
+         .bounds = { .extents = VEC3(16, 1, 16) },
+         .uniforms = (Uniforms){
+            .count = 1,
+            .blocks[0] = {
+               .binding = 3,
+               .ubo = Graphics_CreateBuffer(gfx, (void*)&floor_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
+            }
+         }
       },
       (Transform3D){
          .origin = VEC3(0, 0, 0),
@@ -94,10 +123,17 @@ int main(int argc, char* argv[])
    Object box_obj = Renderer_AddObject(rndr, &(ObjectDesc){
          .shader = lit_shader,
          .geometry = box_geo,
-         .bounds = { .extents = VEC3(1, 1, 1) }
+         .bounds = { .extents = VEC3(1, 1, 1) },
+         .uniforms = (Uniforms){
+            .count = 1,
+            .blocks[0] = {
+               .binding = 3,
+               .ubo = Graphics_CreateBuffer(gfx, (void*)&box_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
+            }
+         }
       },
       (Transform3D){
-         .origin = VEC3(0, 0.25f, 0),
+         .origin = VEC3(0, 1.5f, 0),
          .rotation = Util_MakeQuatEuler(VEC3(0, 20, 0)),
          .scale = VEC3(1, 1, 1)
       }

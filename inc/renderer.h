@@ -21,6 +21,7 @@ typedef struct ObjectDesc_t
    Shader shader;
    Geometry geometry;
    BBox bounds;
+   Uniforms uniforms;
 } ObjectDesc;
 
 typedef struct LightDesc_t
@@ -63,6 +64,7 @@ Shader Renderer_LitShader(GraphicsContext* graphics_context);
 "   mat4 mat_invproj;\n" \
 "   vec2 u_near_far;\n" \
 "   uvec2 u_screen_size;\n" \
+"   uvec4 u_cluster_count;\n" \
 "};\n"
 
 #define RNDR_MODEL_GLSL \
@@ -77,8 +79,8 @@ Shader Renderer_LitShader(GraphicsContext* graphics_context);
 "#define LIGHTS_PER_CLUSTER "ECT_STRINGIFY(LIGHTS_PER_CLUSTER)"\n" \
 "struct Cluster\n" \
 "{\n" \
-"   vec4 bounds_min;\n" \
-"   vec4 bounds_max;\n" \
+"   vec4 center;\n" \
+"   vec4 extents;\n" \
 "   uint count;\n" \
 "   uint indices[LIGHTS_PER_CLUSTER];\n" \
 "};\n" \

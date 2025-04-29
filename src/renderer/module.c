@@ -39,8 +39,12 @@ Renderer* MOD_InitRenderer(error* err, GraphicsContext* graphics_context)
    renderer->camera.near = 0.1f;
    renderer->camera.far  = 150.0f;
 
+   u32 cluster_size[3] = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z };
+   f32 cull_cfg[2] = { 0.01f, 5.0f };
+
    renderer->gfx.camera_ubo   = Graphics_CreateBuffer(graphics_context, NULL, 1, sizeof(struct rndr_CameraData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
    renderer->gfx.model_ubo    = Graphics_CreateBuffer(graphics_context, NULL, 1, sizeof(struct rndr_ModelData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
+   renderer->gfx.culling_ubo  = Graphics_CreateBuffer(graphics_context, cull_cfg, 1, sizeof(cull_cfg), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_UNIFORM);
 
    renderer->gfx.cluster_ssbo = Graphics_CreateBuffer(graphics_context, NULL, RNDR_CLUSTER_COUNT, sizeof(rndr_Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
 
@@ -64,6 +68,7 @@ void MOD_FreeRenderer(Renderer* renderer)
    Graphics_FreeShader(renderer->graphics_context, renderer->gfx.culling_comp);
    Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.camera_ubo);
    Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.model_ubo);
+   Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.culling_ubo);
    Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.cluster_ssbo);
    Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.light_ssbo);
 
@@ -102,32 +107,19 @@ void Renderer_RenderLit(Renderer* renderer, size2i size)
       .near = renderer->camera.near,
       .far = renderer->camera.far,
       .width = (u32)size.width,
-      .height = (u32)size.height
+      .height = (u32)size.height,
+      .cluster_size = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, 0 }
    };
 
    Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.camera_ubo, (void*)&cam_data, 1, sizeof(struct rndr_CameraData_s));
 
-   Graphics_Dispatch(renderer->graphics_context, renderer->gfx.cluster_comp, RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, 1, (Uniform[]){
-      [0] = {
-         .uniform_type = GFX_UNIFORMTYPE_U32_3X,
-         .location = Graphics_GetUniformLocation(renderer->graphics_context, renderer->gfx.cluster_comp, "u_clusters"),
-         .as_uint = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, 0 }
-      }
-   });
+   Graphics_Dispatch(renderer->graphics_context, renderer->gfx.cluster_comp, RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, (Uniforms){ .count = 0 });
    Graphics_DispatchBarrier();
 
    Graphics_Dispatch(renderer->graphics_context, renderer->gfx.culling_comp, RNDR_CLUSTER_COUNT / 128u, 1, 1,
-      2, (Uniform[]){
-         [0] = {
-            .uniform_type = GFX_UNIFORMTYPE_F32_1X,
-            .location = Graphics_GetUniformLocation(renderer->graphics_context, renderer->gfx.culling_comp, "u_light_cutoff"),
-            .as_float[0] = 0.01f
-         },
-         [1] = {
-            .uniform_type = GFX_UNIFORMTYPE_F32_1X,
-            .location = Graphics_GetUniformLocation(renderer->graphics_context, renderer->gfx.culling_comp, "u_fade_speed"),
-            .as_float[0] = 5.0f
-         }
+      (Uniforms){
+         .blocks[0] = { .binding = 3, renderer->gfx.culling_ubo },
+         .count = 1
    });
    Graphics_DispatchBarrier();
 
@@ -147,18 +139,7 @@ void Renderer_RenderLit(Renderer* renderer, size2i size)
       };
       Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.model_ubo, (void*)&model_data, 1, sizeof(struct rndr_ModelData_s));
 
-      Graphics_Draw(renderer->graphics_context, object.shader, object.geometry, 2, (Uniform[]){
-         [0] = {
-            .uniform_type = GFX_UNIFORMTYPE_F32_3X,
-            .location = Graphics_GetUniformLocation(renderer->graphics_context, object.shader, "u_color"),
-            .as_vec3 = VEC3(1, 1, 1)
-         },
-         [1] = {
-            .uniform_type = GFX_UNIFORMTYPE_U32_3X,
-            .location = Graphics_GetUniformLocation(renderer->graphics_context, object.shader, "u_clusters"),
-            .as_uint = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, 0 }
-         }
-      });
+      Graphics_Draw(renderer->graphics_context, object.shader, object.geometry, object.uniforms);
    }
 }
 
@@ -193,6 +174,7 @@ Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D tran
    object.compare.ref = renderer->ref;
    object.shader = desc->shader;
    object.geometry = desc->geometry;
+   object.uniforms = desc->uniforms;
    object.bounds = desc->bounds;
    object.aabb = Util_ResizeBBox(desc->bounds, rot);
 
