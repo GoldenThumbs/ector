@@ -149,7 +149,7 @@ static inline mat4x4 Util_RotationMatrix(vec3 axis, f32 angle)
    f32 c = M_COS(angle);
    f32 s = M_SIN(angle);
 
-   vec3 ca = Util_ScaleVec3(axis, 1.0 - c);
+   vec3 ca = Util_ScaleVec3(axis, 1.0f - c);
    vec3 v1 = Util_MulVec3(axis, ca);
    vec3 v2 = Util_MulVec3(VEC3(axis.y, axis.z, axis.z), VEC3(ca.x, ca.x, ca.y));
 

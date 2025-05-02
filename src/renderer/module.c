@@ -45,7 +45,7 @@ Renderer* Renderer_Init(GraphicsContext* graphics_context)
 
    renderer->gfx.cluster_ssbo = Graphics_CreateBuffer(graphics_context, NULL, RNDR_CLUSTER_COUNT, sizeof(rndr_Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
 
-   renderer->gfx.light_ssbo   = Graphics_CreateBuffer(graphics_context, renderer->lights, Util_ArrayMemory(renderer->lights), sizeof(rndr_Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
+   renderer->gfx.light_ssbo   = Graphics_CreateBuffer(graphics_context, renderer->lights, (u32)Util_ArrayMemory(renderer->lights), sizeof(rndr_Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
 
    renderer->gfx.cluster_comp = Graphics_CreateComputeShader(graphics_context, rndr_CLUSTER_SHADER_GLSL);
    renderer->gfx.culling_comp = Graphics_CreateComputeShader(graphics_context, rndr_CULLING_SHADER_GLSL);
@@ -230,7 +230,7 @@ Light Renderer_AddLight(Renderer* renderer, LightDesc* desc)
       Graphics_ReuseBuffer(
          renderer->graphics_context,
          renderer->lights,
-         Util_ArrayMemory(renderer->lights),
+         (u32)Util_ArrayMemory(renderer->lights),
          sizeof(rndr_Light),
          renderer->gfx.light_ssbo
       );

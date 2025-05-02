@@ -18,26 +18,6 @@ typedef struct Transform3D_t
    vec3 scale;
 } Transform3D;
 
-static inline u64 Util_MakeID(u32 a, u32 b)
-{
-   union {
-      u32 id;
-      u8 words[4];
-   } id_a, id_b;
-   const u64 m = 37;
-
-   id_a.id = a;
-   id_b.id = b;
-
-   u32 res = 0;
-   res = ((u64)id_a.words[0] + (u64)id_b.words[0]);
-   res = ((u64)id_a.words[1] + (u64)id_b.words[1]) + (m * res);
-   res = ((u64)id_a.words[2] + (u64)id_b.words[2]) + (m * res);
-   res = ((u64)id_a.words[3] + (u64)id_b.words[3]) + (m * res);
-
-   return res;
-}
-
 static inline color8 Util_MakeRGBE(vec3 hdr_color)
 {
    i32 e = 0;

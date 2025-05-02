@@ -5,8 +5,6 @@
 
 #include "graphics.h"
 
-#include <stdalign.h>
-
 typedef struct gfx_Shader_t
 {
    struct {
@@ -50,7 +48,7 @@ struct GraphicsContext_t
    gfx_Shader* shaders;
    gfx_Buffer* buffers;
    gfx_Geometry* geometries;
-   alignas(uS) struct {
+   struct {
       color8 clear_color;
       u16 ref;
       struct {

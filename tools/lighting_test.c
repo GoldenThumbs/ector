@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
          move_vec = Util_NormalizeVec3(move_vec);
          player.origin = Util_AddVec3(
             player.origin,
-            Util_ScaleVec3(move_vec, player.move_speed * frame_delta)
+            Util_ScaleVec3(move_vec, player.move_speed * (f32)frame_delta)
          );
       }
       
@@ -229,7 +229,7 @@ void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y)
       {
          Light light = { 0 };
 
-         f32 x = 2 * ((f32)j - (f32)count_x * 0.5f + 0.5);
+         f32 x = 2 * ((f32)j - (f32)count_x * 0.5f + 0.5f);
 
          seed = XorShift(seed);
 
