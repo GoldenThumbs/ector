@@ -44,6 +44,9 @@ typedef struct LightDesc_t
 
 typedef struct Renderer_t Renderer;
 
+Renderer* Renderer_Init(GraphicsContext* graphics_context);
+void Renderer_Free(Renderer* renderer);
+
 void Renderer_SetView(Renderer* renderer, mat4x4 view);
 void Renderer_RenderLit(Renderer* renderer, resolution2d size);
 

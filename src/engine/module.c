@@ -1,17 +1,17 @@
 
 #include "util/types.h"
-// #include "util/math.h"
+#include "util/array.h"
 #include "util/keymap.h"
-#include "module_glue.h"
+#include "module/glue.h"
 
 #include "engine.h"
 #include "engine/internal.h"
 
 #include <GLFW/glfw3.h>
 
-#include <assert.h>
+//#include <assert.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <string.h>
 
 static eng_EngineGlobal* ENGINE_G;
 
@@ -51,10 +51,12 @@ Engine* Engine_Init(EngineDesc* desc)
 
    Engine* engine = malloc(sizeof(Engine));
    engine->app_name = app_name;
-   engine->quit = false;
+   engine->exit_requested = false;
+
+   engine->modules = NEW_ARRAY_N(Module, 2);
 
    engine->internal = (eng_EngineGlobal){ 0 };
-   engine->internal.frame_size = (size2i){ width, height };
+   engine->internal.frame_size = (resolution2d){ width, height };
    engine->internal.up_time = 0.0;
    engine->internal.window = window;
    ENGINE_G = &engine->internal;
@@ -64,28 +66,25 @@ Engine* Engine_Init(EngineDesc* desc)
    glfwSetScrollCallback(window, ENG_ScrollCallback);
    glfwSetKeyCallback(window, ENG_KeyCallback);
 
-   error err = { 0 };
-   engine->graphics_context = MOD_InitGraphics(&err);
-
-   if (desc->renderer.enabled)
-      engine->renderer = MOD_InitRenderer(&err, engine->graphics_context);
-
-   if (err.general == ERR_FATAL)
-   {
-      glfwTerminate();
-      abort();
-   }
+   MOD_DefaultModules(engine);
 
    return engine;
 }
 
 void Engine_Free(Engine* engine)
 {
-   if (engine->renderer != NULL)
-      MOD_FreeRenderer(engine->renderer);
+   u32 module_count = Util_ArrayLength(engine->modules);
+   for (u32 i=0; i<module_count; i++)
+   {
+      Module* m = engine->modules + (uS)i;
+      if (m == NULL)
+         break;
 
-   if (engine->graphics_context != NULL)
-      MOD_FreeGraphics(engine->graphics_context);
+      error err = m->mod_free(m, engine);
+      if (err.general != ERR_OK)
+         abort();
+   }
+   FREE_ARRAY(engine->modules);
 
    glfwTerminate();
    free(engine);
@@ -115,6 +114,32 @@ bool Engine_CheckExitConditions(Engine* engine)
    glfwPollEvents();
 
    return (glfwWindowShouldClose(eng_glb->window) || engine->exit_requested);
+}
+
+void* Engine_FetchModule(Engine* engine, const char* name)
+{
+   u32 module_count = Util_ArrayLength(engine->modules);
+   for (u32 i=0; i<module_count; i++)
+   {
+      Module* m = engine->modules + (uS)i;
+      if (m == NULL)
+         break;
+
+      if (strncmp(m->name, name, 64) == 0)
+      {
+         return m->data;
+      }
+   }
+   return NULL;
+}
+
+void Engine_RegisterModule(Engine* engine, Module module)
+{
+   ADD_BACK_ARRAY(engine->modules, module);
+   Module* m = engine->modules + (uS)(Util_ArrayLength(engine->modules) - 1);
+   error err = module.mod_init(m, engine);
+   if (err.general != ERR_OK)
+      abort();
 }
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height)

@@ -2,8 +2,6 @@
 
 #include "engine.h"
 #include "engine/internal.h"
-#include "graphics.h"
-#include "renderer.h"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -25,14 +23,4 @@ void Engine_Present(Engine* engine)
 {
    eng_EngineGlobal* eng_glb = &engine->internal;
    glfwSwapBuffers(eng_glb->window);
-}
-
-GraphicsContext* Engine_GraphicsContext(Engine* engine)
-{
-   return engine->graphics_context;
-}
-
-Renderer* Engine_Renderer(Engine* engine)
-{
-   return engine->renderer;
 }

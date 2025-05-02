@@ -1,6 +1,5 @@
 #include "util/types.h"
 #include "util/array.h"
-#include "module_glue.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -8,17 +7,13 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-GraphicsContext* MOD_InitGraphics(error* err)
+GraphicsContext* Graphics_Init(void)
 {
    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
    {
-      err->general = ERR_FATAL;
-      err->extra = ERR_GFX_CONTEXT_FAILED;
-      err->flags = ERR_FLAG_GRAPHICS_FAILED;
       return NULL;
    }
 
@@ -38,7 +33,7 @@ GraphicsContext* MOD_InitGraphics(error* err)
    return context;
 }
 
-void MOD_FreeGraphics(GraphicsContext* context)
+void Graphics_Free(GraphicsContext* context)
 {
    if (context == NULL)
       return;

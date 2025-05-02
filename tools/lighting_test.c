@@ -30,10 +30,10 @@ int main(int argc, char* argv[])
 
    Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
    
-   GraphicsContext* gfx = Engine_GraphicsContext(engine);
+   GraphicsContext* gfx = Engine_FetchModule(engine, "gfx");
    Graphics_SetClearColor(gfx, (color8){ 100, 160, 220, 255 });
 
-   Renderer* rndr = Engine_Renderer(engine);
+   Renderer* rndr = Engine_FetchModule(engine, "rndr");
 
    // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
    struct {

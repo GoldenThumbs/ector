@@ -3,8 +3,8 @@
 
 #include "util/types.h"
 #include "util/keymap.h"
-#include "graphics.h"
-#include "renderer.h"
+
+#include "engine.h"
 
 #define GLFW_INCLUDE_NONE
 
@@ -46,8 +46,7 @@ struct Engine_t
    eng_EngineGlobal internal;
    bool exit_requested;
 
-   GraphicsContext* graphics_context;
-   Renderer* renderer;
+   Module* modules;
 };
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);

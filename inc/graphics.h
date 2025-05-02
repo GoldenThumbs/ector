@@ -99,6 +99,9 @@ typedef struct Uniforms_t
 
 typedef struct GraphicsContext_t GraphicsContext;
 
+GraphicsContext* Graphics_Init(void);
+void Graphics_Free(GraphicsContext* context);
+
 Shader Graphics_CreateShader(GraphicsContext* context, const char* vertex_shader, const char* fragment_shader);
 Shader Graphics_CreateComputeShader(GraphicsContext* context, const char* compute_shader);
 void Graphics_FreeShader(GraphicsContext* context, Shader res_shader);

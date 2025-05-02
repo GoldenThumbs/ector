@@ -8,7 +8,6 @@
 #include "util/quaternion.h"
 #include "util/matrix.h"
 #include "graphics.h"
-#include "module_glue.h"
 
 #include "renderer.h"
 #include "renderer/shaders.h"
@@ -16,12 +15,10 @@
 
 #include <stdlib.h>
 
-Renderer* MOD_InitRenderer(error* err, GraphicsContext* graphics_context)
+Renderer* Renderer_Init(GraphicsContext* graphics_context)
 {
-   if ((graphics_context == NULL) || (err->flags == ERR_GFX_CONTEXT_FAILED))
+   if (graphics_context == NULL)
    {
-      err->general = ERR_FATAL;
-      err->flags |= ERR_FLAG_RENDERER_FAILED;
       return NULL;
    }
 
@@ -62,7 +59,7 @@ Renderer* MOD_InitRenderer(error* err, GraphicsContext* graphics_context)
    return renderer;
 }
 
-void MOD_FreeRenderer(Renderer* renderer)
+void Renderer_Free(Renderer* renderer)
 {
    Graphics_FreeShader(renderer->graphics_context, renderer->gfx.cluster_comp);
    Graphics_FreeShader(renderer->graphics_context, renderer->gfx.culling_comp);

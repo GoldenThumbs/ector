@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
       &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
    );
 
-   GraphicsContext* gfx = Engine_GraphicsContext(engine);
+   GraphicsContext* gfx = Engine_FetchModule(engine, "gfx");
    Graphics_SetClearColor(gfx, (color8){ 15, 15, 15, 255 });
 
    while(!Engine_CheckExitConditions(engine))
