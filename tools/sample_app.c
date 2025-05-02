@@ -12,12 +12,12 @@ int main(int argc, char* argv[])
    GraphicsContext* gfx = Engine_GraphicsContext(engine);
    Graphics_SetClearColor(gfx, (color8){ 15, 15, 15, 255 });
 
-   while(!Engine_ShouldQuit(engine))
+   while(!Engine_CheckExitConditions(engine))
    {
       if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
-         Engine_Quit(engine);
+         Engine_RequestExit(engine);
 
-      size2i size = Engine_GetSize(engine);
+      resolution2d size = Engine_GetFrameSize(engine);
       Graphics_Viewport(gfx, size);
       
       Engine_Present(engine);

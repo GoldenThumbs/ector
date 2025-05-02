@@ -8,6 +8,12 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
+resolution2d Engine_GetFrameSize(Engine* engine)
+{
+   eng_EngineGlobal eng_glb = engine->internal;
+   return eng_glb.frame_size;
+}
+
 f64 Engine_GetFrameDelta(Engine* engine)
 {
    eng_EngineGlobal* eng_glb = &engine->internal;

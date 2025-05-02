@@ -79,10 +79,10 @@ typedef struct memblob_t
    uS size;
 } memblob;
 
-typedef struct size2i_t
+typedef struct resolution2d_t
 {
    i32 width, height;
-} size2i;
+} resolution2d;
 
 typedef union vec2_t
 {

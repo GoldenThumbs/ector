@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
    });
 
    // Everything else is random
-   // CreateRandomLights(rndr, 16, 16);
+   CreateRandomLights(rndr, 16, 16);
 
    Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
    Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
    struct SurfaceDef_s box_surf = {
       .color = VEC4(1.0f, 0.3f, 0.3f, 1),
       .metallic = 0,
-      .roughness = 0.6f,
+      .roughness = 0.1f,
       .ambient = 0.6f
    };
 
@@ -139,10 +139,10 @@ int main(int argc, char* argv[])
       }
    );
 
-   while(!Engine_ShouldQuit(engine))
+   while(!Engine_CheckExitConditions(engine))
    {
       if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
-         Engine_Quit(engine);
+         Engine_RequestExit(engine);
 
       f64 frame_delta = Engine_GetFrameDelta(engine);
       vec2 mouse_delta = Engine_GetMouseDelta(engine);
@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
          );
       }
       
-      size2i size = Engine_GetSize(engine);
+      resolution2d size = Engine_GetFrameSize(engine);
 
       Renderer_SetView(rndr, Util_ViewMatrix(player.origin, player.euler, 0));
       Renderer_RenderLit(rndr, size);
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
    return 0;
 }
 
-u32 Hash(u32 x)
+u32 XorShift(u32 x)
 {
    x ^= (x << 13);
    x ^= (x >> 17);
@@ -231,16 +231,23 @@ void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y)
 
          f32 x = 2 * ((f32)j - (f32)count_x * 0.5f + 0.5);
 
-         seed = Hash(seed);
+         seed = XorShift(seed);
+
+         u32 offset_seed = XorShift(seed + 1);
+
+         const u32 two_bytes = (1u << 16) - 1;
+         x += (f32)((offset_seed >> 0) & 255) / 255.0f;
+         y += (f32)((offset_seed >> 1) & 255) / 255.0f;
+         f32 h = (f32)((offset_seed >> 2) & two_bytes) / (f32)two_bytes * 3.0f + 0.25f;
 
          LightDesc desc = { 0 };
-         desc.origin = VEC3(x, 1, y);
-         desc.radius = (f32)(Hash(seed + 2) % 128) / 32 + 2;
+         desc.origin = VEC3(x, h, y);
+         desc.radius = (f32)(XorShift(seed + 2) % 128) / 32 + 2;
          desc.light_type = RNDR_LIGHT_POINT;
-         desc.color.r = (f32)(Hash(seed + 23) % 512) / 512.0f;
-         desc.color.g = (f32)(Hash(seed + 22) % 512) / 512.0f;
-         desc.color.b = (f32)(Hash(seed + 21) % 512) / 512.0f;
-         desc.strength = (f32)(Hash(seed + 1) % 128) / 150.0f;
+         desc.color.r = (f32)(XorShift(seed + 23) % 512) / 512.0f;
+         desc.color.g = (f32)(XorShift(seed + 22) % 512) / 512.0f;
+         desc.color.b = (f32)(XorShift(seed + 21) % 512) / 512.0f;
+         desc.strength = (f32)(XorShift(seed + 4) % 128) / 150.0f + 0.5f;
          Renderer_AddLight(renderer, &desc);
       }
    }

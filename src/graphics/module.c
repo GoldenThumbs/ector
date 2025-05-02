@@ -79,7 +79,7 @@ void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color)
    glClearColor(r, g, b, a);
 }
 
-void Graphics_Viewport(GraphicsContext* context, size2i size)
+void Graphics_Viewport(GraphicsContext* context, resolution2d size)
 {
    glViewport(0, 0, size.width, size.height);
    glEnable(GL_DEPTH_TEST);

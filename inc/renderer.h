@@ -45,7 +45,7 @@ typedef struct LightDesc_t
 typedef struct Renderer_t Renderer;
 
 void Renderer_SetView(Renderer* renderer, mat4x4 view);
-void Renderer_RenderLit(Renderer* renderer, size2i size);
+void Renderer_RenderLit(Renderer* renderer, resolution2d size);
 
 Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D transform);
 void Renderer_RemoveObject(Renderer* renderer, Object object);

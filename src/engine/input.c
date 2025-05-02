@@ -85,12 +85,6 @@ void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode)
    glfwSetInputMode(eng_glb.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL + mouse_mode);
 }
 
-size2i Engine_GetSize(Engine* engine)
-{
-   eng_EngineGlobal eng_glb = engine->internal;
-   return eng_glb.frame_size;
-}
-
 vec2 Engine_GetMousePos(Engine* engine)
 {
    eng_EngineGlobal eng_glb = engine->internal;

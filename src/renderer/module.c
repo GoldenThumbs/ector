@@ -86,7 +86,7 @@ void Renderer_SetView(Renderer* renderer, mat4x4 view)
    renderer->camera.inv_view = Util_InverseViewMatrix(renderer->camera.view);
 }
 
-void Renderer_RenderLit(Renderer* renderer, size2i size)
+void Renderer_RenderLit(Renderer* renderer, resolution2d size)
 {
    Graphics_Viewport(renderer->graphics_context, size);
 

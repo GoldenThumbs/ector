@@ -30,8 +30,8 @@ typedef struct Engine_t Engine;
 Engine* Engine_Init(EngineDesc* desc);
 void Engine_Free(Engine* engine);
 
-void Engine_Quit(Engine* engine);
-bool Engine_ShouldQuit(Engine* engine);
+void Engine_RequestExit(Engine* engine);
+bool Engine_CheckExitConditions(Engine* engine);
 
 bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action);
 bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyModifiers modifiers);
@@ -39,13 +39,13 @@ KeyState Engine_GetKeyState(Engine* engine, Key key);
 
 void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode);
 
-size2i Engine_GetSize(Engine* engine);
-vec2 Engine_GetMousePos(Engine* engine);
-vec2 Engine_GetMouseDelta(Engine* engine);
+void Engine_Present(Engine* engine);
 
+resolution2d Engine_GetFrameSize(Engine* engine);
 f64 Engine_GetFrameDelta(Engine* engine);
 
-void Engine_Present(Engine* engine);
+vec2 Engine_GetMousePos(Engine* engine);
+vec2 Engine_GetMouseDelta(Engine* engine);
 
 struct GraphicsContext_t* Engine_GraphicsContext(Engine* engine);
 struct Renderer_t* Engine_Renderer(Engine* engine);

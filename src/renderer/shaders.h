@@ -317,7 +317,7 @@ RNDR_LIGHT_GLSL
 "   frg_out.rgb = color;\n"
 "   frg_out.a = 1.0;\n"
 
-"   #define DEBUG_CLUSTERS\n"
+"   // #define DEBUG_CLUSTERS\n"
 
 "   #ifdef DEBUG_CLUSTERS\n"
 "   float light_fac = 10*2.0 * float(light_count) / float(LIGHTS_PER_CLUSTER);\n"

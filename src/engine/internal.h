@@ -37,14 +37,14 @@ typedef struct eng_EngineGlobal_t
    GLFWwindow* window;
    f64 up_time;
    f64 frame_delta;
-   size2i frame_size;
+   resolution2d frame_size;
 } eng_EngineGlobal;
 
 struct Engine_t
 {
    char* app_name;
    eng_EngineGlobal internal;
-   bool quit;
+   bool exit_requested;
 
    GraphicsContext* graphics_context;
    Renderer* renderer;

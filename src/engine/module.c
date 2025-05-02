@@ -91,12 +91,12 @@ void Engine_Free(Engine* engine)
    free(engine);
 }
 
-void Engine_Quit(Engine* engine)
+void Engine_RequestExit(Engine* engine)
 {
-   engine->quit = true;
+   engine->exit_requested = true;
 }
 
-bool Engine_ShouldQuit(Engine* engine)
+bool Engine_CheckExitConditions(Engine* engine)
 {
    eng_EngineGlobal* eng_glb = &engine->internal;
 
@@ -114,7 +114,7 @@ bool Engine_ShouldQuit(Engine* engine)
 
    glfwPollEvents();
 
-   return (glfwWindowShouldClose(eng_glb->window) || engine->quit);
+   return (glfwWindowShouldClose(eng_glb->window) || engine->exit_requested);
 }
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height)
