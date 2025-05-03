@@ -105,4 +105,12 @@ static inline bool Util_ContainsBBox(BBox a, BBox b)
    return min_ab && max_ab;
 }
 
+static inline bool Util_ContainsBBoxPoint(BBox bbox, vec3 point)
+{
+   vec3 diff = Util_AbsVec3(Util_SubVec3(bbox.center, point));
+   diff = Util_SubVec3(diff, bbox.extents);
+
+   return (diff.x <= 0) && (diff.y <= 0) && (diff.z <= 0);
+}
+
 #endif
