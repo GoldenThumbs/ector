@@ -118,4 +118,12 @@ static inline vec3 Util_MulMat3Vec3(mat3x3 matrix, vec3 vector)
    return res;
 }
 
+static inline vec3 Util_MulMat3TransposeVec3(mat3x3 matrix, vec3 vector)
+{
+   vec3 res = { 0 };
+
+   Util_MulMatTranspose_NxN_Vec_N(matrix.arr, vector.arr, res.arr, M_VEC3_LEN);
+   return res;
+}
+
 #endif

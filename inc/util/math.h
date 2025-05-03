@@ -186,6 +186,15 @@ static inline void Util_MulMat_NxN_Vec_N(f32 matrix[], f32 vector[], f32* res_ve
    }
 }
 
+static inline void Util_MulMatTranspose_NxN_Vec_N(f32 matrix[], f32 vector[], f32* res_vec, const u32 N)
+{
+   for (u32 ROW=0; ROW<N; ROW++)
+   for (u32 COL=0; COL<N; COL++)
+   {
+      res_vec[ROW] += matrix[ROW * N + COL] * vector[COL];
+   }
+}
+
 static inline void Util_InverseDiagonalMat_NxN(f32 matrix[], f32* res_mat, const u32 N)
 {
    memcpy(res_mat, matrix, (uS)(N*N) * sizeof(f32));
