@@ -51,8 +51,8 @@ static inline BBox Util_ResizeBBox(BBox bbox, mat3x3 rotation)
 {
    bbox.extents = Util_AddVec3(Util_AddVec3(
       Util_AbsVec3(Util_ScaleVec3(rotation.v[0], bbox.extents.x)),
-                                            Util_AbsVec3(Util_ScaleVec3(rotation.v[1], bbox.extents.y))),
-                               Util_AbsVec3(Util_ScaleVec3(rotation.v[2], bbox.extents.z))
+      Util_AbsVec3(Util_ScaleVec3(rotation.v[1], bbox.extents.y))),
+      Util_AbsVec3(Util_ScaleVec3(rotation.v[2], bbox.extents.z))
    );
    return bbox;
 }
