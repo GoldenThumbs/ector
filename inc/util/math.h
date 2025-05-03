@@ -15,6 +15,7 @@
 #define M_FLOAT_FUZZ (1e-32)
 
 #define M_ABS(x) (((x) > 0) ? (x) : -(x))
+#define M_SIGN(x) (((x) > 0) ? 1 : -1)
 #define M_MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define M_CLAMP(x, x_min, x_max) M_MAX(x_min, M_MIN(x, x_max))
