@@ -42,4 +42,29 @@ static inline quat Util_MakeQuatEuler(vec3 euler)
    return Util_MulQuat(roll, Util_MulQuat(pitch, yaw));
 }
 
+static inline quat Util_MakeQuatMat3(mat3x3 matrix)
+{
+   f32 t = matrix.m[0][0] + matrix.m[1][1] + matrix.m[2][2];
+   if (t > 0)
+   {
+      f32 r = M_SQRT(1.0f + t);
+      f32 s = M_RCP(2.0f * r, M_FLOAT_FUZZ);
+      return QUAT(
+         (matrix.m[2][1] - matrix.m[1][2]) * s,
+         (matrix.m[0][2] - matrix.m[2][0]) * s,
+         (matrix.m[1][0] - matrix.m[0][1]) * s,
+         r * 0.5f
+      );
+   } else {
+      f32 r = M_SQRT(1.0f + matrix.m[0][0] - matrix.m[1][1] - matrix.m[2][2]);
+      f32 s = M_RCP(2.0f * r, M_FLOAT_FUZZ);
+      return QUAT(
+         r * 0.5f,
+         (matrix.m[0][1] - matrix.m[1][0]) * s,
+         (matrix.m[2][0] - matrix.m[0][2]) * s,
+         (matrix.m[2][1] - matrix.m[1][2]) * s
+      );
+   }
+}
+
 #endif
