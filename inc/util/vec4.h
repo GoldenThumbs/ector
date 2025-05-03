@@ -109,4 +109,12 @@ static inline vec4 Util_MulMat4Vec4(mat4x4 matrix, vec4 vector)
    return res;
 }
 
+static inline vec4 Util_MulMat4TransposeVec4(mat4x4 matrix, vec4 vector)
+{
+   vec4 res = { 0 };
+
+   Util_MulMatTranspose_NxN_Vec_N(matrix.arr, vector.arr, res.arr, M_VEC4_LEN);
+   return res;
+}
+
 #endif
