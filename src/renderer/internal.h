@@ -122,6 +122,6 @@ struct Renderer_t
    u16 ref;
 };
 
-
+void RNDR_TransformObject(rndr_Object* object, Transform3D transform);
 
 #endif

@@ -17,4 +17,7 @@ error MOD_GraphicsFree(Module* self, Engine* engine);
 error MOD_RendererInit(Module* self, Engine* engine);
 error MOD_RendererFree(Module* self, Engine* engine);
 
+error MOD_PhysicsInit(Module* self, Engine* engine);
+error MOD_PhysicsFree(Module* self, Engine* engine);
+
 #endif

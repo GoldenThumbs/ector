@@ -151,7 +151,7 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
          vec3 a_c = Util_SubVec3(vrt_a, vrt_c);
          vec3 b_c = Util_SubVec3(vrt_b, vrt_c);
 
-         vec3 face_normal = Util_CrossVec3(b_a, c_a);
+         vec3 face_normal = Util_Cross(b_a, c_a);
          f32 ang_a = Util_DotVec3(b_a, c_a);
          f32 ang_b = Util_DotVec3(c_b, a_b);
          f32 ang_c = Util_DotVec3(a_c, b_c);

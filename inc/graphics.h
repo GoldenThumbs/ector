@@ -119,9 +119,11 @@ void Graphics_UseBuffer(GraphicsContext* context, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mode);
 void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry);
+void Graphics_UpdateGeometry(GraphicsContext* context, Geometry res_geometry, void* data, u32 length, uS type_size);
 
 void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color);
 void Graphics_Viewport(GraphicsContext* context, resolution2d size);
 void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, Uniforms uniforms);
+void Graphics_DrawExplicit(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 element_count, Uniforms uniforms);
 
 #endif

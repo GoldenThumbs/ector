@@ -203,6 +203,15 @@ void Renderer_RemoveObject(Renderer* renderer, Object res_object)
    REMOVE_ARRAY(renderer->objects, (u32)res_object.handle);
 }
 
+void Renderer_SetObjectTransform(Renderer* renderer, Object res_object, Transform3D transform)
+{
+   rndr_Object* object = &renderer->objects[res_object.handle];
+   if (object->compare.ref != res_object.ref)
+      return;
+
+   RNDR_TransformObject(object, transform);
+}
+
 Light Renderer_AddLight(Renderer* renderer, LightDesc* desc)
 {
    if (desc == NULL)
@@ -254,4 +263,45 @@ void Renderer_RemoveLight(Renderer* renderer, Light res_light)
 Shader Renderer_LitShader(GraphicsContext* graphics_context)
 {
    return Graphics_CreateShader(graphics_context, rndr_LIT_VRTSHADER_GLSL, rndr_LIT_FRGSHADER_GLSL);
+}
+
+void RNDR_TransformObject(rndr_Object* object, Transform3D transform)
+{
+   mat3x3 rot = Util_QuatToMat3(transform.rotation);
+   vec3 origin = transform.origin;
+
+   mat3x3 inv_rot = Util_TransposeMat3(rot);
+   vec3 inv_origin = Util_ScaleVec3(Util_MulMat3Vec3(inv_rot, transform.origin),-1);
+
+   mat3x3 scale = MAT3(
+      transform.scale.x, 0, 0,
+      0, transform.scale.y, 0,
+      0, 0, transform.scale.z
+   );
+
+   rot = Util_MulMat3(
+      rot,
+      scale
+   );
+
+   inv_rot = Util_MulMat3(
+      Util_InverseDiagonalMat3(scale),
+      inv_rot
+   );
+
+   object->matrix.model = MAT4(
+      rot.m[0][0], rot.m[0][1], rot.m[0][2], 0,
+      rot.m[1][0], rot.m[1][1], rot.m[1][2], 0,
+      rot.m[2][0], rot.m[2][1], rot.m[2][2], 0,
+      origin.x, origin.y, origin.z, 1
+   );
+
+   object->matrix.inv_model = MAT4(
+      inv_rot.m[0][0], inv_rot.m[0][1], inv_rot.m[0][2], 0,
+      inv_rot.m[1][0], inv_rot.m[1][1], inv_rot.m[1][2], 0,
+      inv_rot.m[2][0], inv_rot.m[2][1], inv_rot.m[2][2], 0,
+      inv_origin.x, inv_origin.y, inv_origin.z, 1
+   );
+
+   object->matrix.normal = Util_TransposeMat3(inv_rot);
 }

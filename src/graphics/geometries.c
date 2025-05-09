@@ -10,7 +10,7 @@ Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mo
 {
    gfx_Geometry geometry = { 0 };
    geometry.draw_mode = draw_mode;
-   geometry.face_cull = GFX_FACECULL_BACK;
+   geometry.face_cull = mesh.face_culling;
    geometry.primitive = mesh.primitive;
    geometry.element_count = ((mesh.index_count > 0) && (mesh.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
    geometry.compare.ref =  context->ref;
@@ -85,4 +85,15 @@ void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry)
    geometry.id.vao = 0;
    geometry.id.v_buf = 0;
    geometry.id.i_buf = 0;
+}
+
+void Graphics_UpdateGeometry(GraphicsContext* context, Geometry res_geometry, void* data, u32 length, uS type_size)
+{
+   gfx_Geometry geometry = context->geometries[res_geometry.handle];
+   if (geometry.compare.ref != res_geometry.ref)
+      return;
+   
+      glBindBuffer(GL_ARRAY_BUFFER, geometry.id.v_buf);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, (uS)length * type_size, data);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

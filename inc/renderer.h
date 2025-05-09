@@ -51,7 +51,9 @@ void Renderer_SetView(Renderer* renderer, mat4x4 view);
 void Renderer_RenderLit(Renderer* renderer, resolution2d size);
 
 Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D transform);
-void Renderer_RemoveObject(Renderer* renderer, Object object);
+void Renderer_RemoveObject(Renderer* renderer, Object res_object);
+
+void Renderer_SetObjectTransform(Renderer* renderer, Object res_object, Transform3D transform);
 
 Light Renderer_AddLight(Renderer* renderer, LightDesc* desc);
 void Renderer_RemoveLight(Renderer* renderer, Light res_light);

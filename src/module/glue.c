@@ -2,6 +2,7 @@
 #include "util/types.h"
 #include "engine.h"
 #include "graphics.h"
+#include "physics.h"
 
 #include "module/glue.h"
 
@@ -20,6 +21,13 @@ void MOD_DefaultModules(Engine* engine)
       .mod_free = MOD_RendererFree,
    };
    Engine_RegisterModule(engine, m_renderer);
+
+   Module m_physics = {
+      .name = "phys",
+      .mod_init = MOD_PhysicsInit,
+      .mod_free = MOD_PhysicsFree,
+   };
+   Engine_RegisterModule(engine, m_physics);
 }
 
 error MOD_GraphicsInit(Module* self, Engine* engine)
@@ -68,6 +76,26 @@ error MOD_RendererInit(Module* self, Engine* engine)
 error MOD_RendererFree(Module* self, Engine* engine)
 {
    Renderer_Free((Renderer*)self->data);
+
+   return (error){ .general = ERR_OK };
+}
+
+error MOD_PhysicsInit(Module* self, Engine* engine)
+{
+   self->data = Physics_Init();
+
+   if (self->data == NULL)
+   {
+      error res = { .general = ERR_FATAL };
+      res.flags = ERR_FLAG_GRAPHICS_FAILED;
+      return res;
+   }
+   return (error){ .general = ERR_OK };
+}
+
+error MOD_PhysicsFree(Module* self, Engine* engine)
+{
+   Physics_Free((PhysicsWorld*)self->data);
 
    return (error){ .general = ERR_OK };
 }

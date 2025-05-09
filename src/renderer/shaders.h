@@ -305,7 +305,7 @@ RNDR_LIGHT_GLSL
 
 "   uint light_count = clusters[tile_id].count;\n"
 
-"   vec3 color = surface.albedo.rgb * u_ambient;\n"
+"   vec3 color = surface.color.rgb * u_ambient;\n"
 "   for (uint i=0; i<light_count; i++)\n"
 "   {\n"
 "      uint idx = clusters[tile_id].indices[i];\n"

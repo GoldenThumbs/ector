@@ -101,13 +101,23 @@ static inline f32 Util_DotVec3(vec3 a, vec3 b)
    return res;
 }
 
-static inline vec3 Util_CrossVec3(vec3 a, vec3 b)
+static inline vec3 Util_Cross(vec3 a, vec3 b)
 {
    return VEC3(
       a.y*b.z - b.y*a.z,
       a.z*b.x - b.z*a.x,
       a.x*b.y - b.x*a.y
    );
+}
+
+static inline f32 Util_MixedProduct(vec3 a, vec3 b, vec3 c)
+{
+   return Util_DotVec3(a, Util_Cross(b, c));
+}
+
+static inline vec3 Util_TripleProduct(vec3 a, vec3 b, vec3 c)
+{
+   return Util_Cross(a, Util_Cross(b, c));
 }
 
 static inline vec3 Util_MulMat3Vec3(mat3x3 matrix, vec3 vector)

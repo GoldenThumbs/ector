@@ -8,7 +8,6 @@
 #include <glad/gl.h>
 
 #include <stdio.h>
-#include <stdlib.h>
 
 Shader Graphics_CreateShader(GraphicsContext* context, const char* vertex_shader, const char* fragment_shader)
 {

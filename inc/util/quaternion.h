@@ -27,7 +27,7 @@ static inline quat Util_MulQuat(quat a, quat b)
    quat res = { 0 };
    res.xyz = Util_AddVec3(
       Util_AddVec3(Util_ScaleVec3(b.xyz, a.w), Util_ScaleVec3(a.xyz, b.w)),
-      Util_CrossVec3(a.xyz, b.xyz)
+      Util_Cross(a.xyz, b.xyz)
    );
    res.w = a.w * b.w - Util_DotVec3(a.xyz, b.xyz);
    return res;

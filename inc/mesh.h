@@ -12,7 +12,8 @@ typedef struct Mesh_t
    
    u16 vertex_count;
    u16 index_count;
-   u8 primitive;
+   u8 primitive: 4;
+   u8 face_culling: 4;
    u8 attribute_count;
    u8 attributes[MESH_MAX_ATTRIBUTES];
 } Mesh;

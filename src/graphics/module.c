@@ -29,6 +29,7 @@ GraphicsContext* Graphics_Init(void)
 
    Graphics_SetClearColor(context, (color8){ 127, 127, 127, 255 });
    glEnable(GL_CULL_FACE);
+   glPointSize(6.0f);
 
    return context;
 }
@@ -88,6 +89,15 @@ void Graphics_Viewport(GraphicsContext* context, resolution2d size)
 
 void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, Uniforms uniforms)
 {
+   gfx_Geometry geometry = context->geometries[res_geometry.handle];
+   if (geometry.compare.ref != res_geometry.ref)
+      return;
+
+   Graphics_DrawExplicit(context, res_shader, res_geometry, geometry.element_count, uniforms);
+}
+
+void Graphics_DrawExplicit(GraphicsContext* context, Shader res_shader, Geometry res_geometry, u32 element_count, Uniforms uniforms)
+{
    gfx_Shader shader = context->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -101,14 +111,17 @@ void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geo
    switch (geometry.face_cull)
    {
       case GFX_FACECULL_BACK:
+         glEnable(GL_CULL_FACE);
          glCullFace(GL_BACK);
       break;
 
       case GFX_FACECULL_FRONT:
+         glEnable(GL_CULL_FACE);
          glCullFace(GL_FRONT);
       break;
 
       default:
+         glDisable(GL_CULL_FACE);
       break;
    }
 
@@ -119,10 +132,10 @@ void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geo
    u32 prim = GFX_Primitive(geometry.primitive);
    glBindVertexArray(geometry.id.vao);
    if (geometry.id.i_buf == 0)
-      glDrawArrays(prim, 0, geometry.element_count);
+      glDrawArrays(prim, 0, element_count);
    else {
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry.id.i_buf);
-      glDrawElements(prim, geometry.element_count, GL_UNSIGNED_SHORT, (void*)0);
+      glDrawElements(prim, element_count, GL_UNSIGNED_SHORT, (void*)0);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
    }
 

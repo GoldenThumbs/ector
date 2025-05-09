@@ -99,8 +99,8 @@ static inline mat4x4 Util_InverseDiagonalMat4(mat4x4 matrix)
 // https://github.com/HandmadeMath/HandmadeMath/blob/142ba3cd9da700e3e599d301bbd27d415ad14626/HandmadeMath.h#L1696
 static inline mat4x4 Util_InverseMat4(mat4x4 matrix)
 {
-   vec3 c0_1 = Util_CrossVec3(matrix.v[0].xyz, matrix.v[1].xyz);
-   vec3 c2_3 = Util_CrossVec3(matrix.v[2].xyz, matrix.v[3].xyz);
+   vec3 c0_1 = Util_Cross(matrix.v[0].xyz, matrix.v[1].xyz);
+   vec3 c2_3 = Util_Cross(matrix.v[2].xyz, matrix.v[3].xyz);
    vec3 b1_0 = Util_SubVec3(Util_ScaleVec3(matrix.v[0].xyz, matrix.v[1].w), Util_ScaleVec3(matrix.v[1].xyz, matrix.v[0].w));
    vec3 b3_2 = Util_SubVec3(Util_ScaleVec3(matrix.v[2].xyz, matrix.v[3].w), Util_ScaleVec3(matrix.v[3].xyz, matrix.v[2].w));
 
@@ -110,16 +110,16 @@ static inline mat4x4 Util_InverseMat4(mat4x4 matrix)
    b1_0 = Util_ScaleVec3(b1_0, rcp_determinant);
    b3_2 = Util_ScaleVec3(b3_2, rcp_determinant);
 
-   vec3 v0 = Util_AddVec3(Util_CrossVec3(matrix.v[1].xyz, b3_2), Util_ScaleVec3(c2_3, matrix.v[1].w));
+   vec3 v0 = Util_AddVec3(Util_Cross(matrix.v[1].xyz, b3_2), Util_ScaleVec3(c2_3, matrix.v[1].w));
    f32 w0 =-Util_DotVec3(matrix.v[1].xyz, c2_3);
 
-   vec3 v1 = Util_SubVec3(Util_CrossVec3(b3_2, matrix.v[0].xyz), Util_ScaleVec3(c2_3, matrix.v[0].w));
+   vec3 v1 = Util_SubVec3(Util_Cross(b3_2, matrix.v[0].xyz), Util_ScaleVec3(c2_3, matrix.v[0].w));
    f32 w1 = Util_DotVec3(matrix.v[0].xyz, c2_3);
 
-   vec3 v2 = Util_AddVec3(Util_CrossVec3(matrix.v[3].xyz, b1_0), Util_ScaleVec3(c0_1, matrix.v[3].w));
+   vec3 v2 = Util_AddVec3(Util_Cross(matrix.v[3].xyz, b1_0), Util_ScaleVec3(c0_1, matrix.v[3].w));
    f32 w2 =-Util_DotVec3(matrix.v[3].xyz, c0_1);
 
-   vec3 v3 = Util_SubVec3(Util_CrossVec3(b1_0, matrix.v[2].xyz), Util_ScaleVec3(c0_1, matrix.v[2].w));
+   vec3 v3 = Util_SubVec3(Util_Cross(b1_0, matrix.v[2].xyz), Util_ScaleVec3(c0_1, matrix.v[2].w));
    f32 w3 = Util_DotVec3(matrix.v[2].xyz, c0_1);
 
    return MAT4(

@@ -12,7 +12,7 @@
    #define M_INVPI64 (1.0 / M_PI64)
 #endif
 
-#define M_FLOAT_FUZZ (1e-32)
+#define M_FLOAT_FUZZ (1e-8)
 
 #define M_ABS(x) (((x) > 0) ? (x) : -(x))
 #define M_SIGN(x) (((x) > 0) ? 1 : -1)

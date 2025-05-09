@@ -35,6 +35,30 @@ static inline color8 Util_MakeRGBE(vec3 hdr_color)
    };
 }
 
+static inline vec3 Util_BarycentricCoordinates(vec3 point, vec3 vertex_a, vec3 vertex_b, vec3 vertex_c)
+{
+   vec3 barycentric = { 0 };
+
+   vec3 v[3] = {
+      Util_SubVec3(vertex_b, vertex_a),
+      Util_SubVec3(vertex_c, vertex_a),
+      Util_SubVec3(point, vertex_a)
+   };
+
+   f32 d00 = Util_DotVec3(v[0], v[0]);
+   f32 d01 = Util_DotVec3(v[0], v[1]);
+   f32 d11 = Util_DotVec3(v[1], v[1]);
+   f32 d20 = Util_DotVec3(v[2], v[0]);
+   f32 d21 = Util_DotVec3(v[2], v[1]);
+
+   f32 denom = M_RCP(d00 * d11 - d01 * d01, M_FLOAT_FUZZ);
+   barycentric.y = (d11 * d20 - d01 * d21) * denom;
+   barycentric.z = (d00 * d21 - d01 * d21) * denom;
+   barycentric.x = 1.0f - barycentric.y - barycentric.z;
+
+   return barycentric;
+}
+
 static inline f32 Util_AreaBBox(BBox bbox)
 {
    vec3 d = Util_ScaleVec3(bbox.extents, 2.0f);
