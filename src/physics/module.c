@@ -13,7 +13,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <float.h>
 
 PhysicsWorld* Physics_Init(void)
 {
@@ -52,119 +51,14 @@ void Physics_Update(PhysicsWorld* world, f32 delta)
    SET_ARRAY_LENGTH(world->debug.points, 0);
    SET_ARRAY_LENGTH(world->debug.lines, 0);
    SET_ARRAY_LENGTH(world->debug.faces, 0);
-
-   phys_DebugVertex o_v = { Util_FillVec3(0), 12 };
-   ADD_BACK_ARRAY(world->debug.points, o_v);
-
-   u32 body_count = Util_ArrayLength(world->bodies);
-   for (u32 i=0; i<body_count; i++)
-   {
-      phys_PhysicsBody* body = world->bodies + (uS)i;
-      PHYS_BodyUpdateRotation(body);
-
-      f32 wx = body->aabb.extents.x + PHYS_BIAS;
-      f32 wy = body->aabb.extents.y + PHYS_BIAS;
-      f32 wz = body->aabb.extents.z + PHYS_BIAS;
-      phys_DebugVertex v[8] = {
-         { Util_AddVec3(body->aabb.center, VEC3( wx, wy, wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3(-wx, wy, wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3(-wx, wy,-wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3( wx, wy,-wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3( wx,-wy, wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3(-wx,-wy, wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3(-wx,-wy,-wz)), 0 },
-         { Util_AddVec3(body->aabb.center, VEC3( wx,-wy,-wz)), 0 }
-      };
-
-      ADD_BACK_ARRAY(world->debug.lines, v[0]);
-      ADD_BACK_ARRAY(world->debug.lines, v[1]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[1]);
-      ADD_BACK_ARRAY(world->debug.lines, v[2]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[2]);
-      ADD_BACK_ARRAY(world->debug.lines, v[3]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[3]);
-      ADD_BACK_ARRAY(world->debug.lines, v[0]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[4]);
-      ADD_BACK_ARRAY(world->debug.lines, v[5]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[5]);
-      ADD_BACK_ARRAY(world->debug.lines, v[6]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[6]);
-      ADD_BACK_ARRAY(world->debug.lines, v[7]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[7]);
-      ADD_BACK_ARRAY(world->debug.lines, v[4]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[0]);
-      ADD_BACK_ARRAY(world->debug.lines, v[4]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[1]);
-      ADD_BACK_ARRAY(world->debug.lines, v[5]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[2]);
-      ADD_BACK_ARRAY(world->debug.lines, v[6]);
-
-      ADD_BACK_ARRAY(world->debug.lines, v[3]);
-      ADD_BACK_ARRAY(world->debug.lines, v[7]);
-
-      f32 ox = body->bounds.extents.x;
-      f32 oy = body->bounds.extents.y;
-      f32 oz = body->bounds.extents.z;
-      phys_DebugVertex c[8] = {
-         { PHYS_ObjectPointInWorld(body, VEC3( ox, oy, oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3(-ox, oy, oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3(-ox, oy,-oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3( ox, oy,-oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3( ox,-oy, oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3(-ox,-oy, oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3(-ox,-oy,-oz)), 2 },
-         { PHYS_ObjectPointInWorld(body, VEC3( ox,-oy,-oz)), 2 }
-      };
-
-      ADD_BACK_ARRAY(world->debug.lines, c[0]);
-      ADD_BACK_ARRAY(world->debug.lines, c[1]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[1]);
-      ADD_BACK_ARRAY(world->debug.lines, c[2]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[2]);
-      ADD_BACK_ARRAY(world->debug.lines, c[3]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[3]);
-      ADD_BACK_ARRAY(world->debug.lines, c[0]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[4]);
-      ADD_BACK_ARRAY(world->debug.lines, c[5]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[5]);
-      ADD_BACK_ARRAY(world->debug.lines, c[6]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[6]);
-      ADD_BACK_ARRAY(world->debug.lines, c[7]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[7]);
-      ADD_BACK_ARRAY(world->debug.lines, c[4]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[0]);
-      ADD_BACK_ARRAY(world->debug.lines, c[4]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[1]);
-      ADD_BACK_ARRAY(world->debug.lines, c[5]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[2]);
-      ADD_BACK_ARRAY(world->debug.lines, c[6]);
-
-      ADD_BACK_ARRAY(world->debug.lines, c[3]);
-      ADD_BACK_ARRAY(world->debug.lines, c[7]);
-   }
+   
+   PHYS_PreStep(world, delta);
 
    PHYS_Broadphase(world);
    PHYS_Narrowphase(world);
+   PHYS_Solver(world, delta);
+
+   PHYS_PostStep(world, delta);
 }
 
 PhysicsBody Physics_AddBody(PhysicsWorld* world, PhysicsBodyDesc* desc)
@@ -175,28 +69,32 @@ PhysicsBody Physics_AddBody(PhysicsWorld* world, PhysicsBodyDesc* desc)
    body.rotation = Util_QuatToMat3(desc->transform.rotation);
    body.bounds = desc->bounds;
    body.compare.ref = world->ref;
-
-   PHYS_BodyUpdateRotation(&body);
+   body.is_static = (u32)desc->is_static;
 
    return Util_AddResource(&world->ref, REF(world->bodies), &body);
 }
 
-vec3 Physics_GetBodyOrigin(PhysicsWorld* world, PhysicsBody res_body)
+Transform3D Physics_GetBodyTransform(PhysicsWorld* world, PhysicsBody res_body)
 {
    phys_PhysicsBody* body = &world->bodies[res_body.handle];
    if (body->compare.ref != res_body.ref)
-      return VEC3(0, 0, 0);
+      return (Transform3D){ 0 };
 
-   return body->origin;
+   return (Transform3D){
+      .origin = body->origin,
+      .rotation = Util_MakeQuatMat3(body->rotation),
+      .scale = VEC3(1, 1, 1)
+   };
 }
 
-void Physics_MoveBody(PhysicsWorld* world, PhysicsBody res_body, vec3 translate)
+void Physics_SetBodyTransform(PhysicsWorld* world, PhysicsBody res_body, Transform3D transform)
 {
    phys_PhysicsBody* body = &world->bodies[res_body.handle];
    if (body->compare.ref != res_body.ref)
       return;
 
-   body->origin = Util_AddVec3(body->origin, translate);
+   body->origin = transform.origin;
+   body->rotation = Util_QuatToMat3(transform.rotation);
 }
 
 PhysicsDebugInfo Physics_GetDebugInfo(PhysicsWorld* world)
@@ -214,9 +112,83 @@ PhysicsDebugInfo Physics_GetDebugInfo(PhysicsWorld* world)
    return debug_info;
 }
 
+void PHYS_PreStep(PhysicsWorld* world, f32 delta)
+{
+   const vec3 gravity = VEC3(0,-9.8f, 0);
+   u32 body_count = Util_ArrayLength(world->bodies);
+   for (u32 i=0; i<body_count; i++)
+   {
+      phys_PhysicsBody* body = world->bodies + (uS)i;
+      PHYS_BodyUpdateRotation(body);
+
+      if (body->is_static != 0)
+         continue;
+
+      PHYS_BodyApplyForce(body, gravity, body->aabb.center);
+
+      f32 dampen = 1.0f / (1.0f + delta);
+      body->linear_velocity = Util_ScaleVec3(body->linear_velocity, dampen);
+      body->angular_velocity = Util_ScaleVec3(body->angular_velocity, dampen);
+   }
+}
+
+void PHYS_PostStep(PhysicsWorld* world, f32 delta)
+{
+   u32 body_count = Util_ArrayLength(world->bodies);
+   for (u32 i=0; i<body_count; i++)
+   {
+      phys_PhysicsBody* body = world->bodies + (uS)i;
+
+      if (body->is_static != 0)
+         continue;
+
+      body->linear_velocity = Util_AddVec3(
+         body->linear_velocity,
+         Util_ScaleVec3(body->total_force, delta * body->inv_mass)
+      );
+
+      body->total_force = VEC3(0, 0, 0);
+      body->origin = Util_AddVec3(
+         body->origin,
+         Util_ScaleVec3(body->linear_velocity, delta)
+      );
+   }
+}
+
+void PHYS_Solver(PhysicsWorld* world, f32 delta)
+{
+   const f32 b_slop = 0.00002f;
+   const f32 b_fact = 0.5f;
+
+   u32 manifold_count = Util_ArrayLength(world->manifolds);
+   for (u32 i=0; i<manifold_count; i++)
+   {
+      phys_Manifold* manifold = world->manifolds + (uS)i;
+
+      phys_PhysicsBody* body_1 = manifold->body[0];
+      phys_PhysicsBody* body_2 = manifold->body[1];
+
+      for (u32 j=0; j<manifold->contact_count; j++)
+      {
+         phys_Contact contact = manifold->contacts[j];
+         
+         vec3 impulse = Util_ScaleVec3(contact.basis.v[2], contact.depth);
+         if ((body_1->is_static == 1) || (body_2->is_static == 1))
+            impulse = Util_ScaleVec3(impulse, 2);
+         //f32 bias = b_fact * (M_MAX(contact.depth - b_slop, 0.0f));
+
+
+         if (body_1->is_static == 0)
+            body_1->origin = Util_SubVec3(body_1->origin, impulse);
+         if (body_2->is_static == 0)
+            body_2->origin = Util_AddVec3(body_2->origin, impulse);
+      }
+   }
+}
+
 bool PHYS_TestCollisonCoarse(phys_PhysicsBody* body_1, phys_PhysicsBody* body_2, phys_Manifold* result)
 {
-   const vec3 margin = VEC3(PHYS_BIAS, PHYS_BIAS, PHYS_BIAS);
+   const vec3 margin = VEC3(PHYS_MARGIN, PHYS_MARGIN, PHYS_MARGIN);
    BBox aabb_1 = body_1->aabb;
    aabb_1.extents = Util_AddVec3(aabb_1.extents, margin);
 
@@ -239,41 +211,6 @@ bool PHYS_TestCollisonCoarse(phys_PhysicsBody* body_1, phys_PhysicsBody* body_2,
    return false;
 }
 
-bool PHYS_TestGJK(PhysicsWorld* world, phys_Manifold* manifold)
-{
-   PHYS_ClearSupports(world);
-
-   vec3 direction = VEC3(1, 0, 0);
-
-   //direction = VEC3(
-   //   (direction.x >= 0) ? manifold->aabb.extents.x :-manifold->aabb.extents.x,
-   //   (direction.y >= 0) ? manifold->aabb.extents.y :-manifold->aabb.extents.y,
-   //   (direction.z >= 0) ? manifold->aabb.extents.z :-manifold->aabb.extents.z
-   //);
-
-   phys_Support support = PHYS_GetSupport(manifold, direction);
-   
-   PHYS_AddSupport(world, support, 0);
-   direction = Util_ScaleVec3(support.world_point,-1);
-
-   while(true)
-   {
-      support = PHYS_GetSupport(manifold, direction);
-      
-      if (!PHYS_IsInDirection(support.world_point, direction))
-         break;
-   
-      PHYS_AddSupport(world, support, 0);
-      
-      if (PHYS_EvolveGJK(world, manifold, &direction))
-      {
-         PHYS_RunEPA(world, manifold);
-         return true;
-      }
-   }
-   
-   return false;
-}
 
 void PHYS_Broadphase(PhysicsWorld* world)
 {
@@ -286,9 +223,13 @@ void PHYS_Broadphase(PhysicsWorld* world)
    for (u32 i=0; i<body_count; i++)
    {
       phys_PhysicsBody* body_1 = world->bodies + (uS)i;
+      
       for (u32 j=i+1; j<body_count; j++)
       {
          phys_PhysicsBody* body_2 = world->bodies + (uS)j;
+
+         if ((body_1->is_static == 1) && (body_2->is_static == 1))
+            continue;
 
          phys_Manifold manifold = { 0 };
          if (PHYS_TestCollisonCoarse(body_1, body_2, &manifold))
@@ -306,7 +247,7 @@ void PHYS_Narrowphase(PhysicsWorld* world)
 
       if (PHYS_TestGJK(world, manifold))
       {
-         printf("Collision Hit: %i\n", i);
+         // printf("Collision Hit: %i\n", i);
       }
    }
 }
@@ -393,419 +334,6 @@ void PHYS_ShrinkSupports(PhysicsWorld* world, u32 count)
 void PHYS_ClearSupports(PhysicsWorld* world)
 {
    SET_ARRAY_LENGTH(world->supports, 0);
-}
-
-void PHYS_AddEdge(PhysicsWorld* world, phys_EpaEdge edge)
-{
-   phys_EpaEdge edge_rev = { .idx = { edge.idx[1], edge.idx[0] } };
-
-   u32 edge_count = Util_ArrayLength(world->epa_edges);
-   for (u32 i=0; i<edge_count; i++)
-   {
-      u64 edge_id = world->epa_edges[i].edge_id;
-      if (edge_rev.edge_id == edge_id)
-      {
-         PHYS_RemoveEdge(world, i);
-         return;
-      }
-   }
-
-   ADD_BACK_ARRAY(world->epa_edges, edge);
-}
-
-void PHYS_RemoveEdge(PhysicsWorld* world, u32 index)
-{
-   u32 edge_count = Util_ArrayLength(world->epa_edges);
-   world->epa_edges[M_MIN(index, edge_count - 1)] = POP_BACK_ARRAY(world->epa_edges);
-}
-
-void PHYS_ClearEdges(PhysicsWorld* world)
-{
-   SET_ARRAY_LENGTH(world->epa_edges, 0);
-}
-
-bool PHYS_EvolveGJK(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction)
-{
-   u32 support_count = Util_ArrayLength(world->supports);
-   switch (support_count)
-   {
-      case 2:
-         return PHYS_EvolveGJK_2(world, manifold, direction);
-      case 3:
-         return PHYS_EvolveGJK_3(world, manifold, direction);
-      case 4:
-         return PHYS_EvolveGJK_4(world, manifold, direction);
-
-      default:
-         break;
-   }
-
-   return false;
-}
-
-bool PHYS_EvolveGJK_2(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction)
-{
-   phys_Support support_a = world->supports[0];
-   phys_Support support_b = world->supports[1];
-
-   vec3 a = support_a.world_point;
-   vec3 b = support_b.world_point;
-
-   vec3 b_a = Util_SubVec3(b, a);
-   vec3 o_a = Util_ScaleVec3(a,-1);
-
-   if (PHYS_IsInDirection(b_a, o_a))
-   {
-      *direction = Util_Cross(Util_Cross(b_a, o_a), b_a);
-   } else {
-      PHYS_ShrinkSupports(world, 1);
-      *direction = o_a;
-   }
-
-   return false;
-}
-
-bool PHYS_EvolveGJK_3(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction)
-{
-   phys_Support support_a = world->supports[0];
-   phys_Support support_b = world->supports[1];
-   phys_Support support_c = world->supports[2];
-   
-   vec3 a = support_a.world_point;
-   vec3 b = support_b.world_point;
-   vec3 c = support_c.world_point;
-
-   vec3 b_a = Util_SubVec3(b, a);
-   vec3 c_a = Util_SubVec3(c, a);
-   vec3 o_a = Util_ScaleVec3(a,-1);
-
-   vec3 b_axc_a = Util_Cross(b_a, c_a);
-
-   if (PHYS_IsInDirection(Util_Cross(b_axc_a, c_a), o_a))
-   {
-      if (PHYS_IsInDirection(c_a, o_a))
-      {
-         world->supports[1] = support_c;
-
-         PHYS_ShrinkSupports(world, 1);
-         *direction = Util_Cross(Util_Cross(c_a, o_a), c_a);
-      } else {
-         PHYS_ShrinkSupports(world, 1);
-         return PHYS_EvolveGJK_2(world, manifold, direction);
-      }
-   } else {
-      if (PHYS_IsInDirection(Util_Cross(b_a, b_axc_a), o_a))
-      {
-         PHYS_ShrinkSupports(world, 1);
-         return PHYS_EvolveGJK_2(world, manifold, direction);
-      } else {
-         if (PHYS_IsInDirection(b_axc_a, o_a))
-            *direction = b_axc_a;
-         else {
-            world->supports[1] = support_c;
-            world->supports[2] = support_b;
-
-            *direction = Util_ScaleVec3(b_axc_a,-1);
-         }
-      }
-   }
-
-   return false;
-}
-
-bool PHYS_EvolveGJK_4(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction)
-{
-   phys_Support support_a = world->supports[0];
-   phys_Support support_b = world->supports[1];
-   phys_Support support_c = world->supports[2];
-   phys_Support support_d = world->supports[3];
-
-   vec3 a = support_a.world_point;
-   vec3 b = support_b.world_point;
-   vec3 c = support_c.world_point;
-   vec3 d = support_d.world_point;
-
-   vec3 b_a = Util_SubVec3(b, a);
-   vec3 c_a = Util_SubVec3(c, a);
-   vec3 d_a = Util_SubVec3(d, a);
-   vec3 o_a = Util_ScaleVec3(a,-1);
-
-   vec3 b_axc_a = Util_Cross(b_a, c_a);
-   vec3 c_axd_a = Util_Cross(c_a, d_a);
-   vec3 d_axb_a = Util_Cross(d_a, b_a);
-
-   if (PHYS_IsInDirection(b_axc_a, o_a))
-   {
-      PHYS_ShrinkSupports(world, 1);
-      return PHYS_EvolveGJK_3(world, manifold, direction);
-   }
-
-   if (PHYS_IsInDirection(c_axd_a, o_a))
-   {
-      world->supports[1] = support_c;
-      world->supports[2] = support_d;
-
-      PHYS_ShrinkSupports(world, 1);
-      return PHYS_EvolveGJK_3(world, manifold, direction);
-   }
-
-   if (PHYS_IsInDirection(d_axb_a, o_a))
-   {
-      world->supports[1] = support_d;
-      world->supports[2] = support_b;
-
-      PHYS_ShrinkSupports(world, 1);
-      return PHYS_EvolveGJK_3(world, manifold, direction);
-   }
-
-   return true;
-}
-
-void PHYS_RunEPA(PhysicsWorld* world, phys_Manifold* manifold)
-{
-   const f32 epa_epsilon = 0.005f;
-
-   SET_ARRAY_LENGTH(world->epa_faces, 0);
-
-   u32 closest_face_idx = 0;
-   if (!PHYS_InitPolytope(world, &closest_face_idx))
-      return;
-
-   phys_EpaFace closest_face = { 0 };
-   f32 closest_dist = FLT_MAX;
-
-   phys_Support support = { 0 };
-   for (u32 epa_iter=0; epa_iter<2048; ++epa_iter)
-   {
-      closest_face = world->epa_faces[closest_face_idx];
-      support = PHYS_GetSupport(manifold, closest_face.normal.xyz);
-
-      f32 support_dist = Util_DotVec3(support.world_point, closest_face.normal.xyz);
-      
-      bool close_enough = (M_ABS(support_dist - closest_face.normal.w) < epa_epsilon);
-      
-      closest_dist = closest_face.normal.w;
-      if (epa_iter >= 2047)
-         break;
-      if (close_enough)
-         break;
-
-      closest_face_idx = PHYS_GrowPolytope(world, support);
-   }
-
-   for (u32 i=0; i<Util_ArrayLength(world->epa_edges); i++)
-   {
-      phys_EpaEdge edge = world->epa_edges[i];
-
-      phys_DebugVertex v1 = {
-         .position = world->supports[edge.idx[0]].world_point,
-         .render_type = 13
-      };
-
-      phys_DebugVertex v2 = {
-         .position = world->supports[edge.idx[1]].world_point,
-         .render_type = 13
-      };
-
-      ADD_BACK_ARRAY(world->debug.lines, v1);
-      ADD_BACK_ARRAY(world->debug.lines, v2);
-   }
-
-   vec3 barycentric = PHYS_BarycentricCoords(world, closest_face, VEC3(0, 0, 0));
-
-   phys_Contact contact = { 0 };
-   contact.object_point[0] = PHYS_ProjectLocalPoint(world, closest_face, barycentric, 0);
-   contact.object_point[1] = PHYS_ProjectLocalPoint(world, closest_face, barycentric, 1);
-   contact.world_point[0] = PHYS_ObjectPointInWorld(manifold->body[0], contact.object_point[0]);
-   contact.world_point[1] = PHYS_ObjectPointInWorld(manifold->body[1], contact.object_point[1]);
-   contact.basis = PHYS_MakeBasis(world, closest_face.normal.xyz);
-   contact.depth = closest_face.normal.w + epa_epsilon;
-
-   manifold->contact_count = 1;
-   manifold->contacts[0] = contact;
-
-   phys_DebugVertex v1 = { .position = contact.world_point[0], .render_type = 13 };
-   phys_DebugVertex v2 = { .position = contact.world_point[1], .render_type = 13 };
-   ADD_BACK_ARRAY(world->debug.points, v1);
-   ADD_BACK_ARRAY(world->debug.points, v2);
-
-   u32 face_count = Util_ArrayLength(world->epa_faces);
-   for (u32 i=0; i<face_count; i++)
-   {
-      phys_EpaFace face = world->epa_faces[i];
-      for (u32 j=0; j<3; j++)
-      {
-         phys_DebugVertex dbg_vertex = { .render_type = 9 };
-
-         dbg_vertex.position = world->supports[face.idx[j]].world_point;
-         ADD_BACK_ARRAY(world->debug.faces, dbg_vertex);
-      }
-   }
-}
-
-bool PHYS_InitPolytope(PhysicsWorld *world, u32* closest_face_idx)
-{
-   if (Util_ArrayLength(world->supports) < 4)
-      false;
-
-   f32 closest_dist = FLT_MAX;
-   for (u32 i=0; i<4; i++)
-   {
-      u32 idx_a = i / 3;
-      u32 idx_b = i + 1 - idx_a;
-      u32 idx_c = idx_a + (idx_b % 3) + 1;
-
-      phys_EpaFace face = PHYS_MakeFace(world, idx_a, idx_b, idx_c);
-      if (face.normal.w < closest_dist)
-      {
-         *closest_face_idx = Util_ArrayLength(world->epa_faces);
-         closest_dist = face.normal.w;
-      }
-
-      ADD_BACK_ARRAY(world->epa_faces, face);
-   }
-
-   return true;
-}
-
-phys_EpaFace PHYS_MakeFace(PhysicsWorld* world, u32 idx_a, u32 idx_b, u32 idx_c)
-{
-   vec3 a = world->supports[idx_a].world_point;
-   vec3 b = world->supports[idx_b].world_point;
-   vec3 c = world->supports[idx_c].world_point;
-
-   vec3 b_a = Util_SubVec3(b, a);
-   vec3 c_a = Util_SubVec3(c, a);
-
-   vec3 centroid = Util_ScaleVec3(Util_AddVec3(a, Util_AddVec3(b, c)), 0.3333);
-
-   vec3 normal = Util_NormalizeVec3(Util_Cross(b_a, c_a));
-   f32 dist = Util_DotVec3(centroid, normal);
-
-   return (phys_EpaFace){
-      { idx_a, idx_b, idx_c },
-      Util_VecF32Vec4(normal, dist)
-   };
-}
-
-u32 PHYS_GrowPolytope(PhysicsWorld* world, phys_Support support)
-{
-   u32 idx = Util_ArrayLength(world->supports);
-   PHYS_AddSupport(world, support, idx);
-
-   PHYS_RemoveFaces(world, idx);
-
-   u32 face_count = Util_ArrayLength(world->epa_faces);
-
-   u32 min_idx = PHYS_RepairFaces(world, idx);
-   f32 min_dist = world->epa_faces[min_idx].normal.w;
-
-   for (u32 i=0; i<face_count; i++)
-   {
-      phys_EpaFace face = world->epa_faces[i];
-
-      if (face.normal.w < min_dist)
-      {
-         min_idx = i;
-         min_dist = face.normal.w;
-      }
-   }
-
-   return min_idx;
-}
-
-void PHYS_RemoveFaces(PhysicsWorld* world, u32 point_idx)
-{
-   PHYS_ClearEdges(world);
-
-   vec3 p = world->supports[point_idx].world_point;
-
-   u32 face_count = Util_ArrayLength(world->epa_faces);
-   for (u32 i=0; i<face_count;)
-   {
-      phys_EpaFace face = world->epa_faces[i];
-      vec3 a = world->supports[face.idx[0]].world_point;
-
-      if (PHYS_IsInDirection(Util_SubVec3(p, a), face.normal.xyz))
-      {
-         PHYS_AddEdge(world, (phys_EpaEdge){ .idx = { face.idx[0], face.idx[1] } });
-         PHYS_AddEdge(world, (phys_EpaEdge){ .idx = { face.idx[1], face.idx[2] } });
-         PHYS_AddEdge(world, (phys_EpaEdge){ .idx = { face.idx[2], face.idx[0] } });
-
-         world->epa_faces[i] = world->epa_faces[--face_count];
-      } else
-         i++;
-   }
-
-   SET_ARRAY_LENGTH(world->epa_faces, face_count);
-}
-
-u32 PHYS_RepairFaces(PhysicsWorld* world, u32 point_idx)
-{
-   u32 min_idx = 0;
-   f32 min_dist = FLT_MAX;
-
-   u32 edge_count = Util_ArrayLength(world->epa_edges);
-   for (u32 i=0; i<edge_count; i++)
-   {
-      phys_EpaEdge edge = world->epa_edges[i];
-
-      phys_EpaFace face = PHYS_MakeFace(world, point_idx, edge.idx[1], edge.idx[0]);
-
-      if (face.normal.w < 0)
-      {
-         face.idx[1] = edge.idx[0];
-         face.idx[2] = edge.idx[1];
-         face.normal = Util_ScaleVec4(face.normal,-1);
-      }
-
-      if (face.normal.w < min_dist)
-      {
-         min_idx = Util_ArrayLength(world->epa_faces);
-         min_dist = face.normal.w;
-      }
-
-      ADD_BACK_ARRAY(world->epa_faces, face);
-   }
-
-   return min_idx;
-}
-
-vec3 PHYS_BarycentricCoords(PhysicsWorld* world, phys_EpaFace face, vec3 point)
-{
-   vec3 a = world->supports[face.idx[0]].world_point;
-   vec3 b = world->supports[face.idx[1]].world_point;
-   vec3 c = world->supports[face.idx[2]].world_point;
-
-   return Util_BarycentricCoordinates(point, a, b, c);
-}
-
-vec3 PHYS_ProjectLocalPoint(PhysicsWorld* world, phys_EpaFace face, vec3 barycentric, u32 body_idx)
-{
-   body_idx = M_MIN(body_idx, 1);
-
-   vec3 a = world->supports[face.idx[0]].object_point[body_idx];
-   vec3 b = world->supports[face.idx[1]].object_point[body_idx];
-   vec3 c = world->supports[face.idx[2]].object_point[body_idx];
-
-   a = Util_ScaleVec3(a, barycentric.x);
-   b = Util_ScaleVec3(b, barycentric.y);
-   c = Util_ScaleVec3(c, barycentric.z);
-
-   return Util_AddVec3(a, Util_AddVec3(b, c));
-}
-
-mat3x3 PHYS_MakeBasis(PhysicsWorld* world, vec3 normal)
-{
-   const f32 sqrt_third = 0.57735f; // sqrt(1 / 3)
-
-   vec3 t = (M_ABS(normal.x) > sqrt_third) ?
-      Util_NormalizeVec3(VEC3(normal.y,-normal.x, 0)) :
-      Util_NormalizeVec3(VEC3(0, normal.z,-normal.y));
-   
-   vec3 b = Util_Cross(normal, t);
-
-   return (mat3x3){ .v = { t, b, normal } };
 }
 
 phys_Support PHYS_GetSupport(phys_Manifold* manifold, vec3 direction)

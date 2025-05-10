@@ -60,12 +60,33 @@ int main(int argc, char* argv[])
       KEY_D
    };
    
-   vec3 angle = VEC3(0, 25, 0);
+   PhysicsBody floor_body = Physics_AddBody(phys, &(PhysicsBodyDesc){
+      .mass = 1.0,
+      .bounds = (BBox){ VEC3(0,-0.5f, 0), VEC3(16, 0.5f, 16) },
+      .is_static = true,
+      .transform = (Transform3D){
+         .origin = VEC3(-2, -1, 2),
+         .rotation = Util_IdentityQuat(),
+         .scale = VEC3(1, 1, 1)
+      }
+   });
+
+   PhysicsBody player_body = Physics_AddBody(phys, &(PhysicsBodyDesc){
+      .mass = 1.0,
+      .bounds = (BBox){ VEC3(0, 0, 0), VEC3(1, 1, 1) },
+      .is_static = true,
+      .transform = (Transform3D){
+         .origin = VEC3(0, 0, 0),
+         .rotation = Util_IdentityQuat(),
+         .scale = VEC3(1, 1, 1)
+      }
+   });
+
    PhysicsBody body_1 = Physics_AddBody(phys, &(PhysicsBodyDesc){
       .mass = 1.0,
       .bounds = (BBox){ VEC3(0, 0, 0), VEC3(1, 1, 1) },
       .transform = (Transform3D){
-         .origin = VEC3(-2, 1, 2),
+         .origin = VEC3(0,10, 0),
          .rotation = Util_IdentityQuat(),
          .scale = VEC3(1, 1, 1)
       }
@@ -75,8 +96,8 @@ int main(int argc, char* argv[])
       .mass = 1.0,
       .bounds = (BBox){ VEC3(0, 0, 0), VEC3(1, 1, 1) },
       .transform = (Transform3D){
-         .origin = VEC3( 2.0f, 1,-2.0f),
-         .rotation = Util_MakeQuatEuler(angle),
+         .origin = VEC3( 1, 20, 0),
+         .rotation = Util_MakeQuatEuler(VEC3(0, 25, 0)),
          .scale = VEC3(1, 1, 1)
       }
    });
@@ -114,8 +135,8 @@ int main(int argc, char* argv[])
 
    struct SurfaceDef_s floor_surf = {
       .color = VEC4(0.5f, 0.5f, 0.5f, 1),
-      .metallic = 1,
-      .roughness = 0.2f,
+      .metallic = 0,
+      .roughness = 0.7f,
       .ambient = 0.6f
    };
 
@@ -236,12 +257,15 @@ int main(int argc, char* argv[])
          f32 yaw_sin = M_SIN(player.euler.y);
          f32 yaw_cos = M_COS(player.euler.y);
 
+         f32 pitch_sin = M_SIN(player.euler.x);
+         f32 pitch_cos = M_COS(player.euler.x);
+
          vec3 move_vec = VEC3(0, 0, 0);
          if (Engine_CheckKey(engine, player.key_forward, KEY_IS_DOWN))
          {
             move_vec = Util_AddVec3(
                move_vec,
-               VEC3(-yaw_sin, 0,-yaw_cos)
+               VEC3(-yaw_sin*pitch_cos, pitch_sin,-yaw_cos*pitch_cos)
             );
          }
 
@@ -249,7 +273,7 @@ int main(int argc, char* argv[])
          {
             move_vec = Util_AddVec3(
                move_vec,
-               VEC3( yaw_sin, 0, yaw_cos)
+               VEC3( yaw_sin*pitch_cos,-pitch_sin, yaw_cos*pitch_cos)
             );
          }
 
@@ -276,31 +300,26 @@ int main(int argc, char* argv[])
          );
       }
 
-      if (Engine_CheckKey(engine, KEY_SPACE, KEY_JUST_DOWN))
-      {
-         Physics_MoveBody(phys, body_2, VEC3(-0.2f, 0, 0.2f));
-         Physics_MoveBody(phys, body_1, VEC3( 0.2f, 0,-0.2f));
-         Physics_Update(phys, 0);
-      }
+      Physics_SetBodyTransform(phys, player_body, (Transform3D){ .origin = player.origin, .rotation = Util_IdentityQuat() });
+
+      Physics_Update(phys, frame_delta);
+
+      Renderer_SetObjectTransform(
+         rndr,
+         floor_obj,
+         Physics_GetBodyTransform(phys, floor_body)
+      );
 
       Renderer_SetObjectTransform(
          rndr,
          box_obj_1,
-         (Transform3D){
-            .origin = Physics_GetBodyOrigin(phys, body_1),
-            .rotation = Util_IdentityQuat(),
-            .scale = VEC3(1, 1, 1)
-         }
+         Physics_GetBodyTransform(phys, body_1)
       );
 
       Renderer_SetObjectTransform(
          rndr,
          box_obj_2,
-         (Transform3D){
-            .origin = Physics_GetBodyOrigin(phys, body_2),
-            .rotation = Util_MakeQuatEuler(angle),
-            .scale = VEC3(1, 1, 1)
-         }
+         Physics_GetBodyTransform(phys, body_2)
       );
       
       resolution2d size = Engine_GetFrameSize(engine);

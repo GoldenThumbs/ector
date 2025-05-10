@@ -5,7 +5,7 @@
 //#include "physics.h"
 
 #define PHYS_MAX 64
-#define PHYS_BIAS 0.0f
+#define PHYS_MARGIN 0.5f
 
 typedef struct phys_PhysicsBody_t
 {
@@ -28,6 +28,8 @@ typedef struct phys_PhysicsBody_t
    mat3x3 inv_inertia_world;
 
    handle compare;
+
+   u32 is_static; // TODO: flags
 } phys_PhysicsBody;
 
 typedef struct phys_Contact_t
@@ -113,8 +115,11 @@ static inline bool PHYS_IsInDirection(vec3 v, vec3 direction)
    return (Util_DotVec3(v, direction) > 0);
 }
 
+void PHYS_PreStep(PhysicsWorld* world, f32 delta);
+void PHYS_PostStep(PhysicsWorld* world, f32 delta);
+void PHYS_Solver(PhysicsWorld* world, f32 delta);
+
 bool PHYS_TestCollisonCoarse(phys_PhysicsBody* body_1, phys_PhysicsBody* body_2, phys_Manifold* result);
-bool PHYS_TestGJK(PhysicsWorld* world, phys_Manifold* manifold);
 void PHYS_Broadphase(PhysicsWorld* world);
 void PHYS_Narrowphase(PhysicsWorld* world);
 
@@ -133,10 +138,7 @@ void PHYS_AddSupport(PhysicsWorld* world, phys_Support support, u32 index);
 void PHYS_ShrinkSupports(PhysicsWorld* world, u32 count);
 void PHYS_ClearSupports(PhysicsWorld* world);
 
-void PHYS_AddEdge(PhysicsWorld* world, phys_EpaEdge edge);
-void PHYS_RemoveEdge(PhysicsWorld* world, u32 index);
-void PHYS_ClearEdges(PhysicsWorld* world);
-
+bool PHYS_TestGJK(PhysicsWorld* world, phys_Manifold* manifold);
 bool PHYS_EvolveGJK(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
 bool PHYS_EvolveGJK_2(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
 bool PHYS_EvolveGJK_3(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
@@ -144,13 +146,19 @@ bool PHYS_EvolveGJK_4(PhysicsWorld* world, phys_Manifold* manifold, vec3* direct
 
 void PHYS_RunEPA(PhysicsWorld* world, phys_Manifold* manifold);
 bool PHYS_InitPolytope(PhysicsWorld* world, u32* closest_face_idx);
-phys_EpaFace PHYS_MakeFace(PhysicsWorld* world, u32 idx_a, u32 idx_b, u32 idx_c);
 u32 PHYS_GrowPolytope(PhysicsWorld* world, phys_Support support);
-void PHYS_RemoveFaces(PhysicsWorld* world, u32 point_idx);
-u32 PHYS_RepairFaces(PhysicsWorld* world, u32 point_idx);
+
 vec3 PHYS_BarycentricCoords(PhysicsWorld* world, phys_EpaFace face, vec3 point);
 vec3 PHYS_ProjectLocalPoint(PhysicsWorld* world, phys_EpaFace face, vec3 barycentric, u32 body_idx);
 mat3x3 PHYS_MakeBasis(PhysicsWorld* world, vec3 normal);
+
+phys_EpaFace PHYS_MakeFace(PhysicsWorld* world, u32 idx_a, u32 idx_b, u32 idx_c);
+void PHYS_RemoveFaces(PhysicsWorld* world, u32 point_idx);
+u32 PHYS_RepairFaces(PhysicsWorld* world, u32 point_idx);
+
+void PHYS_AddEdge(PhysicsWorld* world, phys_EpaEdge edge);
+void PHYS_RemoveEdge(PhysicsWorld* world, u32 index);
+void PHYS_ClearEdges(PhysicsWorld* world);
 
 phys_Support PHYS_GetSupport(phys_Manifold* manifold, vec3 direction);
 vec3 PHYS_BBoxSupportPoint(phys_PhysicsBody* body, vec3 direction);

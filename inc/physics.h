@@ -11,6 +11,7 @@ typedef struct PhysicsBodyDesc_t
    Transform3D transform;
    BBox bounds;
    f32 mass;
+   bool is_static;
 } PhysicsBodyDesc;
 
 typedef struct PhysicsDebugInfo_t
@@ -33,8 +34,8 @@ void Physics_Free(PhysicsWorld* world);
 void Physics_Update(PhysicsWorld* world, f32 delta);
 
 PhysicsBody Physics_AddBody(PhysicsWorld* world, PhysicsBodyDesc* desc);
-vec3 Physics_GetBodyOrigin(PhysicsWorld* world, PhysicsBody res_body);
-void Physics_MoveBody(PhysicsWorld* world, PhysicsBody res_body, vec3 translate);
+Transform3D Physics_GetBodyTransform(PhysicsWorld* world, PhysicsBody res_body);
+void Physics_SetBodyTransform(PhysicsWorld* world, PhysicsBody res_body, Transform3D transform);
 
 PhysicsDebugInfo Physics_GetDebugInfo(PhysicsWorld* world);
 
