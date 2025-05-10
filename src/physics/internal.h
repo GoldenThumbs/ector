@@ -84,7 +84,7 @@ typedef struct phys_EpaFace_t
    vec4 normal;
 } phys_EpaFace;
 
-typedef union phys_EpaEdge_y
+typedef union phys_EpaEdge_t
 {
    u64 edge_id;
    u32 idx[2];
@@ -133,12 +133,24 @@ void PHYS_AddSupport(PhysicsWorld* world, phys_Support support, u32 index);
 void PHYS_ShrinkSupports(PhysicsWorld* world, u32 count);
 void PHYS_ClearSupports(PhysicsWorld* world);
 
+void PHYS_AddEdge(PhysicsWorld* world, phys_EpaEdge edge);
+void PHYS_RemoveEdge(PhysicsWorld* world, u32 index);
+void PHYS_ClearEdges(PhysicsWorld* world);
+
 bool PHYS_EvolveGJK(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
 bool PHYS_EvolveGJK_2(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
 bool PHYS_EvolveGJK_3(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
 bool PHYS_EvolveGJK_4(PhysicsWorld* world, phys_Manifold* manifold, vec3* direction);
 
-// void PHYS_RunEPA(PhysicsWorld* world, phys_Manifold* manifold);
+void PHYS_RunEPA(PhysicsWorld* world, phys_Manifold* manifold);
+bool PHYS_InitPolytope(PhysicsWorld* world, u32* closest_face_idx);
+phys_EpaFace PHYS_MakeFace(PhysicsWorld* world, u32 idx_a, u32 idx_b, u32 idx_c);
+u32 PHYS_GrowPolytope(PhysicsWorld* world, phys_Support support);
+void PHYS_RemoveFaces(PhysicsWorld* world, u32 point_idx);
+u32 PHYS_RepairFaces(PhysicsWorld* world, u32 point_idx);
+vec3 PHYS_BarycentricCoords(PhysicsWorld* world, phys_EpaFace face, vec3 point);
+vec3 PHYS_ProjectLocalPoint(PhysicsWorld* world, phys_EpaFace face, vec3 barycentric, u32 body_idx);
+mat3x3 PHYS_MakeBasis(PhysicsWorld* world, vec3 normal);
 
 phys_Support PHYS_GetSupport(phys_Manifold* manifold, vec3 direction);
 vec3 PHYS_BBoxSupportPoint(phys_PhysicsBody* body, vec3 direction);

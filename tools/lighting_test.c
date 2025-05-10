@@ -312,11 +312,11 @@ int main(int argc, char* argv[])
       Graphics_UpdateGeometry(gfx, debug_points, debug_info.points, debug_info.point_count, sizeof(vec4));
       Graphics_DrawExplicit(gfx, unlit_shader, debug_points, debug_info.point_count, (Uniforms){ 0 });
 
-      Graphics_UpdateGeometry(gfx, debug_lines, debug_info.lines, debug_info.line_count, sizeof(vec4));
-      Graphics_DrawExplicit(gfx, unlit_shader, debug_lines, debug_info.line_count, (Uniforms){ 0 });
+      //Graphics_UpdateGeometry(gfx, debug_lines, debug_info.lines, debug_info.line_count, sizeof(vec4));
+      //Graphics_DrawExplicit(gfx, unlit_shader, debug_lines, debug_info.line_count, (Uniforms){ 0 });
 
-      Graphics_UpdateGeometry(gfx, debug_faces, debug_info.faces, debug_info.face_count, sizeof(vec4));
-      Graphics_DrawExplicit(gfx, unlit_shader, debug_faces, debug_info.face_count, (Uniforms){ 0 });
+      //Graphics_UpdateGeometry(gfx, debug_faces, debug_info.faces, debug_info.face_count, sizeof(vec4));
+      //Graphics_DrawExplicit(gfx, unlit_shader, debug_faces, debug_info.face_count, (Uniforms){ 0 });
       
       Engine_Present(engine);
    }
@@ -396,40 +396,37 @@ Shader CreateUnlitShader(GraphicsContext* context)
    "out vec4 frg_out;\n"
    "void main()\n"
    "{\n"
-   "   gl_FragDepth = gl_FragCoord.z - 0.00001;\n"
-   "   if ((v2f_render_type > 3) && (v2f_render_type != 8) && (v2f_render_type != 10))\n"
+   "   gl_FragDepth = gl_FragCoord.z - 0.00002;\n"
+   "   if ((v2f_render_type > 3) && (v2f_render_type != 8) && (v2f_render_type < 10))\n"
    "   {\n"
    "      bvec2 c = lessThan(ivec2(gl_FragCoord.xy) % 2, ivec2(1));\n"
    "      if ((c.x != c.y) == gl_FrontFacing)\n"
    "         discard;\n"
    "      gl_FragDepth = gl_FragCoord.z * 0.001;\n"
    "   }\n"
+   "   if (v2f_render_type >= 10)\n"
+   "      gl_FragDepth = 0.0;\n"
    "   if (v2f_render_type > 7)\n"
    "   {\n"
    "      vec3 normal = normalize(cross(dFdx(v2f_position), dFdy(v2f_position)));\n"
    "      normal = gl_FrontFacing ? normal : vec3(0.0);\n"
    "      frg_out.rgb = normal * 0.5 + 0.5;\n"
    "   }\n"
-   "   if ((v2f_render_type == 0) || (v2f_render_type == 4))\n"
+   "   if ((v2f_render_type == 0) || (v2f_render_type == 4) || (v2f_render_type == 10))\n"
    "   {\n"
    "      frg_out.rgb = vec3(1.0, 1.0, 1.0);\n"
    "   }\n"
-   "   if ((v2f_render_type == 1) || (v2f_render_type == 5))\n"
+   "   if ((v2f_render_type == 1) || (v2f_render_type == 5) || (v2f_render_type == 11))\n"
    "   {\n"
    "      frg_out.rgb = vec3(1.0, 0.1, 0.1);\n"
    "   }\n"
-   "   if ((v2f_render_type == 2) || (v2f_render_type == 6))\n"
+   "   if ((v2f_render_type == 2) || (v2f_render_type == 6) || (v2f_render_type == 12))\n"
    "   {\n"
    "      frg_out.rgb = vec3(1.0, 0.8, 0.0);\n"
    "   }\n"
-   "   if ((v2f_render_type == 3) || (v2f_render_type == 7))\n"
+   "   if ((v2f_render_type == 3) || (v2f_render_type == 7) || (v2f_render_type == 13))\n"
    "   {\n"
    "      frg_out.rgb = vec3(0.0, 0.2, 0.9);\n"
-   "   }\n"
-   "   if (v2f_render_type == 10)\n"
-   "   {\n"
-   "      frg_out.rgb = vec3(1.0, 0.8, 0.0);\n"
-   "      gl_FragDepth = gl_FragCoord.z * 0.001;\n"
    "   }\n"
    "   frg_out.a = 1.0;\n"
    "}\n"

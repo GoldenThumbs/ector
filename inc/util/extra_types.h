@@ -53,7 +53,7 @@ static inline vec3 Util_BarycentricCoordinates(vec3 point, vec3 vertex_a, vec3 v
 
    f32 denom = M_RCP(d00 * d11 - d01 * d01, M_FLOAT_FUZZ);
    barycentric.y = (d11 * d20 - d01 * d21) * denom;
-   barycentric.z = (d00 * d21 - d01 * d21) * denom;
+   barycentric.z = (d00 * d21 - d01 * d20) * denom;
    barycentric.x = 1.0f - barycentric.y - barycentric.z;
 
    return barycentric;

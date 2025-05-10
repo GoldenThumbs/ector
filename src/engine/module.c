@@ -74,7 +74,7 @@ Engine* Engine_Init(EngineDesc* desc)
 void Engine_Free(Engine* engine)
 {
    u32 module_count = Util_ArrayLength(engine->modules);
-   for (u32 i=0; i<module_count; i++)
+   for (u32 i=module_count; i<module_count; --i)
    {
       Module* m = engine->modules + (uS)i;
       if (m == NULL)
