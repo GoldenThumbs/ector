@@ -42,24 +42,6 @@ void PHYS_RunEPA(PhysicsWorld* world, phys_Manifold* manifold)
       closest_face_idx = PHYS_GrowPolytope(world, support);
    }
 
-   for (u32 i=0; i<Util_ArrayLength(world->epa_edges); i++)
-   {
-      phys_EpaEdge edge = world->epa_edges[i];
-
-      phys_DebugVertex v1 = {
-         .position = world->supports[edge.idx[0]].world_point,
-         .render_type = 13
-      };
-
-      phys_DebugVertex v2 = {
-         .position = world->supports[edge.idx[1]].world_point,
-         .render_type = 13
-      };
-
-      ADD_BACK_ARRAY(world->debug.lines, v1);
-      ADD_BACK_ARRAY(world->debug.lines, v2);
-   }
-
    vec3 barycentric = PHYS_BarycentricCoords(world, closest_face, VEC3(0, 0, 0));
 
    phys_Contact contact = { 0 };
@@ -68,28 +50,9 @@ void PHYS_RunEPA(PhysicsWorld* world, phys_Manifold* manifold)
    contact.world_point[0] = PHYS_ObjectPointInWorld(manifold->body[0], contact.object_point[0]);
    contact.world_point[1] = PHYS_ObjectPointInWorld(manifold->body[1], contact.object_point[1]);
    contact.basis = PHYS_MakeBasis(world, closest_face.normal.xyz);
-   contact.depth = closest_face.normal.w + epa_epsilon;
+   contact.depth = closest_face.normal.w;
 
-   manifold->contact_count = 1;
-   manifold->contacts[0] = contact;
-
-   phys_DebugVertex v1 = { .position = contact.world_point[0], .render_type = 13 };
-   phys_DebugVertex v2 = { .position = contact.world_point[1], .render_type = 13 };
-   ADD_BACK_ARRAY(world->debug.points, v1);
-   ADD_BACK_ARRAY(world->debug.points, v2);
-
-   u32 face_count = Util_ArrayLength(world->epa_faces);
-   for (u32 i=0; i<face_count; i++)
-   {
-      phys_EpaFace face = world->epa_faces[i];
-      for (u32 j=0; j<3; j++)
-      {
-         phys_DebugVertex dbg_vertex = { .render_type = 9 };
-
-         dbg_vertex.position = world->supports[face.idx[j]].world_point;
-         ADD_BACK_ARRAY(world->debug.faces, dbg_vertex);
-      }
-   }
+   PHYS_AddContact(manifold, contact);
 }
 
 bool PHYS_InitPolytope(PhysicsWorld *world, u32* closest_face_idx)

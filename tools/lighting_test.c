@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
    } player = {
       VEC3(0, 3, 3),
       VEC3(0, 0, 0),
-      15,
+      7,
       0.15f,
       KEY_W,
       KEY_S,
@@ -85,6 +85,7 @@ int main(int argc, char* argv[])
    PhysicsBody body_1 = Physics_AddBody(phys, &(PhysicsBodyDesc){
       .mass = 1.0,
       .bounds = (BBox){ VEC3(0, 0, 0), VEC3(1, 1, 1) },
+      .is_static = false,
       .transform = (Transform3D){
          .origin = VEC3(0,10, 0),
          .rotation = Util_IdentityQuat(),
@@ -95,9 +96,10 @@ int main(int argc, char* argv[])
    PhysicsBody body_2 = Physics_AddBody(phys, &(PhysicsBodyDesc){
       .mass = 1.0,
       .bounds = (BBox){ VEC3(0, 0, 0), VEC3(1, 1, 1) },
+      .is_static = false,
       .transform = (Transform3D){
-         .origin = VEC3( 1, 20, 0),
-         .rotation = Util_MakeQuatEuler(VEC3(0, 25, 0)),
+         .origin = VEC3( 5, 20, 0),
+         .rotation = Util_MakeQuatEuler(VEC3(25, 25, 25)),
          .scale = VEC3(1, 1, 1)
       }
    });
@@ -302,7 +304,7 @@ int main(int argc, char* argv[])
 
       Physics_SetBodyTransform(phys, player_body, (Transform3D){ .origin = player.origin, .rotation = Util_IdentityQuat() });
 
-      Physics_Update(phys, frame_delta);
+      Physics_Update(phys, 0.0016f);
 
       Renderer_SetObjectTransform(
          rndr,
@@ -331,8 +333,8 @@ int main(int argc, char* argv[])
       Graphics_UpdateGeometry(gfx, debug_points, debug_info.points, debug_info.point_count, sizeof(vec4));
       Graphics_DrawExplicit(gfx, unlit_shader, debug_points, debug_info.point_count, (Uniforms){ 0 });
 
-      //Graphics_UpdateGeometry(gfx, debug_lines, debug_info.lines, debug_info.line_count, sizeof(vec4));
-      //Graphics_DrawExplicit(gfx, unlit_shader, debug_lines, debug_info.line_count, (Uniforms){ 0 });
+      Graphics_UpdateGeometry(gfx, debug_lines, debug_info.lines, debug_info.line_count, sizeof(vec4));
+      Graphics_DrawExplicit(gfx, unlit_shader, debug_lines, debug_info.line_count, (Uniforms){ 0 });
 
       //Graphics_UpdateGeometry(gfx, debug_faces, debug_info.faces, debug_info.face_count, sizeof(vec4));
       //Graphics_DrawExplicit(gfx, unlit_shader, debug_faces, debug_info.face_count, (Uniforms){ 0 });

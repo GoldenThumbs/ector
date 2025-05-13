@@ -2,7 +2,9 @@
 #include "util/types.h"
 #include "util/extra_types.h"
 #include "util/vec3.h"
-//#include "physics.h"
+#include "util/vec4.h"
+// #include "util/quaternion.h"
+// #include "physics.h"
 
 #define PHYS_MAX 64
 #define PHYS_MARGIN 0.5f
@@ -42,9 +44,18 @@ typedef struct phys_Contact_t
    f32 depth;
    
    struct {
-      f32 tangent[2];
-      f32 normal;
-   } impulse_sums;
+      f32 t[2];
+      f32 n;
+   } impulse;
+
+   struct {
+      f32 t[2];
+      f32 n;
+   } mass;
+
+   f32 bias;
+
+   u32 warmed;
 } phys_Contact;
 
 typedef struct phys_Manifold_t
@@ -53,7 +64,7 @@ typedef struct phys_Manifold_t
    BBox aabb;
    u32 contact_count;
    phys_Contact contacts[4];
-   i32 next;
+   i32 next_warm;
 } phys_Manifold;
 
 
@@ -97,7 +108,7 @@ struct PhysicsWorld_t
    phys_PhysicsBody* bodies;
    phys_Manifold* manifolds;
    u16 ref;
-   i32 manifold_root;
+   i32 warmed_root;
    
    phys_Support* supports;
    phys_EpaFace* epa_faces;
@@ -110,14 +121,21 @@ struct PhysicsWorld_t
    } debug;
 };
 
-static inline bool PHYS_IsInDirection(vec3 v, vec3 direction)
+static inline bool PHYS_IsInDirection(vec3 vector, vec3 direction)
 {
-   return (Util_DotVec3(v, direction) > 0);
+   return (Util_DotVec3(vector, direction) > 0);
+}
+
+static inline quat PHYS_QuatApproxAxisAngle(vec3 vector)
+{
+   vec3 v = Util_ScaleVec3(vector, 0.5f);
+   return Util_NormalizeVec4(Util_VecF32Vec4(v, 1.0f));
 }
 
 void PHYS_PreStep(PhysicsWorld* world, f32 delta);
 void PHYS_PostStep(PhysicsWorld* world, f32 delta);
 void PHYS_Solver(PhysicsWorld* world, f32 delta);
+void PHYS_BiasSolver(PhysicsWorld* world, f32 delta);
 
 bool PHYS_TestCollisonCoarse(phys_PhysicsBody* body_1, phys_PhysicsBody* body_2, phys_Manifold* result);
 void PHYS_Broadphase(PhysicsWorld* world);
@@ -159,6 +177,10 @@ u32 PHYS_RepairFaces(PhysicsWorld* world, u32 point_idx);
 void PHYS_AddEdge(PhysicsWorld* world, phys_EpaEdge edge);
 void PHYS_RemoveEdge(PhysicsWorld* world, u32 index);
 void PHYS_ClearEdges(PhysicsWorld* world);
+
+void PHYS_AddContact(phys_Manifold* manifold, phys_Contact contact);
+
+quat PHYS_IntegrateAngularVelocity(vec3 angular_velocity, quat rotation, f32 delta);
 
 phys_Support PHYS_GetSupport(phys_Manifold* manifold, vec3 direction);
 vec3 PHYS_BBoxSupportPoint(phys_PhysicsBody* body, vec3 direction);
