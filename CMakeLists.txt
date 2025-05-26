@@ -25,4 +25,4 @@ target_include_directories(Ector
 )
 target_link_libraries(Ector PRIVATE external)
 
-add_subdirectory("tools")
+add_subdirectory("examples")
