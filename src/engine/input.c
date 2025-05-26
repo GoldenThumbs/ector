@@ -19,9 +19,9 @@ bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action)
          return !key_state.is_down;
       case KEY_IS_DOWN:
          return key_state.is_down;
-      case KEY_JUST_UP:
+      case KEY_JUST_RELEASED:
          return (!key_state.is_down && key_state.was_down);
-      case KEY_JUST_DOWN:
+      case KEY_JUST_PRESSED:
          return (key_state.is_down && !key_state.was_down);
       default:
          return false;

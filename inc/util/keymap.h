@@ -22,8 +22,8 @@ typedef enum KeyAction_t
 {
    KEY_IS_UP = 0,
    KEY_IS_DOWN,
-   KEY_JUST_UP,
-   KEY_JUST_DOWN
+   KEY_JUST_RELEASED,
+   KEY_JUST_PRESSED
 } KeyAction;
 
 enum {
