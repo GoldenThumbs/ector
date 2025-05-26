@@ -9,8 +9,6 @@ enum {
    ERR_FLAG_RENDERER_FAILED = (1u << 2)
 };
 
-void MOD_DefaultModules(Engine* engine);
-
 error MOD_GraphicsInit(Module* self, Engine* engine);
 error MOD_GraphicsFree(Module* self, Engine* engine);
 

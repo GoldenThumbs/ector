@@ -36,14 +36,26 @@ typedef struct gfx_Geometry_t
    } id;
 
    u8 draw_mode: 4;
-   u8 face_cull: 4;
+   u8 face_cull_mode: 4;
    u8 primitive;
    u16 element_count;
 
    handle compare;
 } gfx_Geometry;
 
-struct GraphicsContext_t
+typedef union gfx_State_t
+{
+   u16 state_id;
+   struct {
+      u16 blend_enable: 1;
+      u16 face_cull_enable: 1;
+      u16 depthtest_enable: 1;
+      u16 stenciltest_enable: 1;
+      u16 face_cull_mode: 1;
+   };
+} gfx_State;
+
+struct Graphics_t
 {
    gfx_Shader* shaders;
    gfx_Buffer* buffers;
@@ -51,19 +63,20 @@ struct GraphicsContext_t
    struct {
       color8 clear_color;
       u16 ref;
-      struct {
-         u16 color: 1;
-         u16 depth: 1;
-         u16 stencil: 1;
-      } clear_buffers;
+      gfx_State state;
    };
 };
+
+void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks);
 
 u32 GFX_AttributeType(u8 attribute);
 i32 GFX_AttributeTypeCount(u8 attribute);
 bool GFX_AttributeTypeNormalized(u8 attribute);
 uS GFX_AttributeTypeSize(u8 attribute);
 uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count);
+
+void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
+void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset);
 
 u32 GFX_Primitive(u8 primitive_type);
 u32 GFX_DrawMode(u8 draw_mode);

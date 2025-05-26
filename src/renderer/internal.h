@@ -39,7 +39,7 @@ typedef struct rndr_Object_t
 {
    Shader shader;
    Geometry geometry;
-   Uniforms uniforms;
+   UniformBlockList uniforms;
 
    struct {
       mat4x4 model;
@@ -94,7 +94,7 @@ struct Renderer_t
    rndr_Object* objects;
    rndr_Light* lights;
 
-   GraphicsContext* graphics_context;
+   Graphics* graphics;
 
    struct {
       mat4x4 view;
@@ -117,7 +117,7 @@ struct Renderer_t
       Shader cluster_comp;
       Shader culling_comp;
 
-   } gfx;
+   };
 
    u16 ref;
 };

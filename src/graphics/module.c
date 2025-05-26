@@ -10,60 +10,57 @@
 #include <stdlib.h>
 #include <string.h>
 
-GraphicsContext* Graphics_Init(void)
+Graphics* Graphics_Init(void)
 {
    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
    {
       return NULL;
    }
 
-   GraphicsContext* context = malloc(sizeof(GraphicsContext));
-   context->shaders = NEW_ARRAY(gfx_Shader);
-   context->buffers = NEW_ARRAY(gfx_Buffer);
-   context->geometries = NEW_ARRAY(gfx_Geometry);
-   context->ref = 0;
-   context->clear_buffers.color = 1;
-   context->clear_buffers.depth = 1;
-   context->clear_buffers.stencil = 0;
-   context->clear_color.hex = 0;
+   Graphics* graphics = malloc(sizeof(Graphics));
+   graphics->shaders = NEW_ARRAY(gfx_Shader);
+   graphics->buffers = NEW_ARRAY(gfx_Buffer);
+   graphics->geometries = NEW_ARRAY(gfx_Geometry);
+   graphics->ref = 0;
+   graphics->clear_color.hex = 0;
 
-   Graphics_SetClearColor(context, (color8){ 127, 127, 127, 255 });
+   Graphics_SetClearColor(graphics, (color8){ 127, 127, 127, 255 });
    glEnable(GL_CULL_FACE);
 
-   return context;
+   return graphics;
 }
 
-void Graphics_Free(GraphicsContext* context)
+void Graphics_Free(Graphics* graphics)
 {
-   if (context == NULL)
+   if (graphics == NULL)
       return;
    
-   for (u32 i=0; i<Util_ArrayLength(context->shaders); i++)
-      glDeleteProgram(context->shaders[i].id.program);
+   for (u32 i=0; i<Util_ArrayLength(graphics->shaders); i++)
+      glDeleteProgram(graphics->shaders[i].id.program);
 
-   for (u32 i=0; i<Util_ArrayLength(context->buffers); i++)
-      glDeleteBuffers(1, &context->buffers[i].id.buf);
+   for (u32 i=0; i<Util_ArrayLength(graphics->buffers); i++)
+      glDeleteBuffers(1, &graphics->buffers[i].id.buf);
 
-   for (u32 i=0; i<Util_ArrayLength(context->buffers); i++)
+   for (u32 i=0; i<Util_ArrayLength(graphics->buffers); i++)
    {
-      if (context->geometries[i].id.vao == 0)
+      if (graphics->geometries[i].id.vao == 0)
          continue;
       
-      glDeleteVertexArrays(1, &context->geometries[i].id.vao);
+      glDeleteVertexArrays(1, &graphics->geometries[i].id.vao);
 
-      if (context->geometries[i].id.v_buf != 0)
-         glDeleteBuffers(1, &context->geometries[i].id.v_buf);
-      if (context->geometries[i].id.i_buf != 0)
-         glDeleteBuffers(1, &context->geometries[i].id.i_buf);
+      if (graphics->geometries[i].id.v_buf != 0)
+         glDeleteBuffers(1, &graphics->geometries[i].id.v_buf);
+      if (graphics->geometries[i].id.i_buf != 0)
+         glDeleteBuffers(1, &graphics->geometries[i].id.i_buf);
    }
-   FREE_ARRAY(context->geometries);
-   context->ref = 0;
-   free(context);
+   FREE_ARRAY(graphics->geometries);
+   graphics->ref = 0;
+   free(graphics);
 }
 
-void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color)
+void Graphics_SetClearColor(Graphics* graphics, color8 clear_color)
 {
-   context->clear_color = clear_color;
+   graphics->clear_color = clear_color;
 
    const f32 rcp_byte = 1.0f / 255.0f;
    f32 r = (f32)clear_color.r * rcp_byte;
@@ -74,144 +71,38 @@ void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color)
    glClearColor(r, g, b, a);
 }
 
-void Graphics_Viewport(GraphicsContext* context, resolution2d size)
+void Graphics_Viewport(Graphics* graphics, resolution2d size)
 {
    glViewport(0, 0, size.width, size.height);
    glEnable(GL_DEPTH_TEST);
    glDepthFunc(GL_LESS);
 
-   u32 color_bit = context->clear_buffers.color * GL_COLOR_BUFFER_BIT;
-   u32 depth_bit = context->clear_buffers.depth * GL_DEPTH_BUFFER_BIT;
-   u32 stencil_bit = context->clear_buffers.stencil * GL_STENCIL_BUFFER_BIT;
+   u32 color_bit = GL_COLOR_BUFFER_BIT;
+   u32 depth_bit = GL_DEPTH_BUFFER_BIT;
+   u32 stencil_bit = GL_STENCIL_BUFFER_BIT;
    glClear(color_bit | depth_bit | stencil_bit);
 }
 
-void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, Uniforms uniforms)
+void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniforms)
 {
-   gfx_Shader shader = context->shaders[res_shader.handle];
+   gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
    if (shader.is_compute)
       return;
 
-   gfx_Geometry geometry = context->geometries[res_geometry.handle];
+   gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
    if (geometry.compare.ref != res_geometry.ref)
       return;
 
-   switch (geometry.face_cull)
-   {
-      case GFX_FACECULL_BACK:
-         glCullFace(GL_BACK);
-      break;
-
-      case GFX_FACECULL_FRONT:
-         glCullFace(GL_FRONT);
-      break;
-
-      default:
-      break;
-   }
+   GFX_SetFaceCullMode(graphics, geometry.face_cull_mode);
 
    glUseProgram(shader.id.program);
-   for (u32 i=0; i<uniforms.count; i++)
-      Graphics_UseBuffer(context, uniforms.blocks[i].ubo, uniforms.blocks[i].binding);
 
-   u32 prim = GFX_Primitive(geometry.primitive);
-   glBindVertexArray(geometry.id.vao);
-   if (geometry.id.i_buf == 0)
-      glDrawArrays(prim, 0, geometry.element_count);
-   else {
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry.id.i_buf);
-      glDrawElements(prim, geometry.element_count, GL_UNSIGNED_SHORT, (void*)0);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-   }
+   GFX_UseUniformBlocks(graphics, uniforms);
+   GFX_DrawVertices(geometry.primitive, geometry.element_count, (geometry.id.i_buf != 0), geometry.id.vao, 0);
 
-   glBindVertexArray(0);
    glUseProgram(0);
-}
-
-u32 GFX_AttributeType(u8 attribute)
-{
-   switch (attribute)
-   {
-      case GFX_ATTRIBUTE_F32_1X:
-      case GFX_ATTRIBUTE_F32_2X:
-      case GFX_ATTRIBUTE_F32_3X:
-      case GFX_ATTRIBUTE_F32_4X:
-         return GL_FLOAT;
-
-      case GFX_ATTRIBUTE_U8_4X_NORM:
-         return GL_BYTE;
-
-      default:
-         return 0;
-   }
-}
-
-i32 GFX_AttributeTypeCount(u8 attribute)
-{
-   switch (attribute)
-   {
-      case GFX_ATTRIBUTE_F32_1X:
-         return 1;
-
-      case GFX_ATTRIBUTE_F32_2X:
-         return 2;
-
-      case GFX_ATTRIBUTE_F32_3X:
-         return 3;
-
-      case GFX_ATTRIBUTE_F32_4X:
-      case GFX_ATTRIBUTE_U8_4X_NORM:
-         return 4;
-      
-      default:
-         return 0;
-   }
-}
-
-bool GFX_AttributeTypeNormalized(u8 attribute)
-{
-   {
-      switch (attribute)
-      {
-         case GFX_ATTRIBUTE_U8_4X_NORM:
-            return true;
-         
-         default:
-            return false;
-      }
-   }
-}
-
-uS GFX_AttributeTypeSize(u8 attribute)
-{
-   switch (attribute)
-   {
-      case GFX_ATTRIBUTE_F32_1X:
-      case GFX_ATTRIBUTE_F32_2X:
-      case GFX_ATTRIBUTE_F32_3X:
-      case GFX_ATTRIBUTE_F32_4X:
-         return sizeof(f32);
-      
-      case GFX_ATTRIBUTE_U8_4X_NORM:
-         return sizeof(u8);
-      
-      default:
-         return 0;
-   }
-}
-
-uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count)
-{
-   uS buffer_size = 0;
-   for (u16 i=0; i<attribute_count; i++)
-   {
-      u8 a = attributes[i];
-      buffer_size += GFX_AttributeTypeSize(a) * (uS)GFX_AttributeTypeCount(a) * (uS)vertex_count;
-   }
-
-   return buffer_size;
 }
 
 u32 GFX_Primitive(u8 primitive_type)
@@ -257,19 +148,6 @@ u32 GFX_DrawMode(u8 draw_mode)
       
       default:
          return GL_DYNAMIC_DRAW;
-   }
-}
-
-u32 GFX_BufferType(u8 buffer_type)
-{
-   switch (buffer_type) {
-      case GFX_BUFFERTYPE_UNIFORM:
-         return GL_UNIFORM_BUFFER;
-      case GFX_BUFFERTYPE_STORAGE:
-         return GL_SHADER_STORAGE_BUFFER;
-      
-      default:
-         return GL_UNIFORM_BUFFER;
    }
 }
 

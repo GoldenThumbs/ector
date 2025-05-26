@@ -8,12 +8,12 @@
 
 #include <string.h>
 
-Buffer Graphics_CreateBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type)
+Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type)
 {
    gfx_Buffer buffer = { 0 };
    buffer.type = buffer_type;
    buffer.draw_mode = draw_mode;
-   buffer.compare.ref = context->ref;
+   buffer.compare.ref = graphics->ref;
 
    u32 gl_target = GFX_BufferType(buffer.type);
 
@@ -30,15 +30,15 @@ Buffer Graphics_CreateBuffer(GraphicsContext* context, void* data, u32 length, u
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
    //glBindBuffer(gl_target, 0);
-   return Util_AddResource(&context->ref, REF(context->buffers), &buffer);
+   return Util_AddResource(&graphics->ref, REF(graphics->buffers), &buffer);
 }
 
-Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS size, u8 draw_mode, u8 buffer_type)
+Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8 draw_mode, u8 buffer_type)
 {
    gfx_Buffer buffer = { 0 };
    buffer.type = buffer_type;
    buffer.draw_mode = draw_mode;
-   buffer.compare.ref = context->ref;
+   buffer.compare.ref = graphics->ref;
 
    u32 gl_target = GFX_BufferType(buffer.type);
 
@@ -54,12 +54,12 @@ Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS si
    if (data == NULL)
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
-   return Util_AddResource(&context->ref, REF(context->buffers), &buffer);
+   return Util_AddResource(&graphics->ref, REF(graphics->buffers), &buffer);
 }
 
-void Graphics_ReuseBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, Buffer res_buffer)
+void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer)
 {
-   gfx_Buffer buffer = context->buffers[res_buffer.handle];
+   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
 
@@ -78,9 +78,9 @@ void Graphics_ReuseBuffer(GraphicsContext* context, void* data, u32 length, uS t
    );
 }
 
-void Graphics_FreeBuffer(GraphicsContext* context, Buffer res_buffer)
+void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
 {
-   gfx_Buffer buffer = context->buffers[res_buffer.handle];
+   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
 
@@ -88,9 +88,9 @@ void Graphics_FreeBuffer(GraphicsContext* context, Buffer res_buffer)
    buffer.id.buf = 0;
 }
 
-void Graphics_UpdateBuffer(GraphicsContext* context, Buffer res_buffer, void* data, u32 length, uS type_size)
+void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size)
 {
-   gfx_Buffer buffer = context->buffers[res_buffer.handle];
+   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
 
@@ -101,9 +101,9 @@ void Graphics_UpdateBuffer(GraphicsContext* context, Buffer res_buffer, void* da
    glBindBuffer(gl_target, 0);
 }
 
-void Graphics_UpdateBufferRange(GraphicsContext* context, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size)
+void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size)
 {
-   gfx_Buffer buffer = context->buffers[res_buffer.handle];
+   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
 
@@ -114,9 +114,9 @@ void Graphics_UpdateBufferRange(GraphicsContext* context, Buffer res_buffer, voi
    glBindBuffer(gl_target, 0);
 }
 
-void Graphics_UseBuffer(GraphicsContext* context, Buffer res_buffer, u32 slot)
+void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
 {
-   gfx_Buffer buffer = context->buffers[res_buffer.handle];
+   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
 
@@ -124,4 +124,17 @@ void Graphics_UseBuffer(GraphicsContext* context, Buffer res_buffer, u32 slot)
 
    glBindBuffer(gl_target, buffer.id.buf);
    glBindBufferBase(gl_target, slot, buffer.id.buf);
+}
+
+u32 GFX_BufferType(u8 buffer_type)
+{
+   switch (buffer_type) {
+      case GFX_BUFFERTYPE_UNIFORM:
+         return GL_UNIFORM_BUFFER;
+      case GFX_BUFFERTYPE_STORAGE:
+         return GL_SHADER_STORAGE_BUFFER;
+      
+      default:
+         return GL_UNIFORM_BUFFER;
+   }
 }

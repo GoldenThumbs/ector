@@ -6,6 +6,8 @@
 // #include "util/math.h"
 #include "graphics.h"
 
+#define RENDERER_MODULE "renderer"
+
 typedef handle Object;
 typedef handle Light;
 
@@ -21,7 +23,7 @@ typedef struct ObjectDesc_t
    Shader shader;
    Geometry geometry;
    BBox bounds;
-   Uniforms uniforms;
+   UniformBlockList uniforms;
 } ObjectDesc;
 
 typedef struct LightDesc_t
@@ -44,7 +46,7 @@ typedef struct LightDesc_t
 
 typedef struct Renderer_t Renderer;
 
-Renderer* Renderer_Init(GraphicsContext* graphics_context);
+Renderer* Renderer_Init(Graphics* graphics);
 void Renderer_Free(Renderer* renderer);
 
 void Renderer_SetView(Renderer* renderer, mat4x4 view);
@@ -56,7 +58,7 @@ void Renderer_RemoveObject(Renderer* renderer, Object object);
 Light Renderer_AddLight(Renderer* renderer, LightDesc* desc);
 void Renderer_RemoveLight(Renderer* renderer, Light res_light);
 
-Shader Renderer_LitShader(GraphicsContext* graphics_context);
+Shader Renderer_LitShader(Graphics* graphics);
 
 #define RNDR_CAMERA_GLSL \
 "layout(std140, binding=1) uniform CameraUBO\n" \

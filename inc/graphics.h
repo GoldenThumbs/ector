@@ -4,6 +4,8 @@
 #include "util/types.h"
 #include "mesh.h"
 
+#define GRAPHICS_MODULE "graphics"
+
 typedef handle Shader;
 typedef handle Buffer;
 typedef handle Geometry;
@@ -91,37 +93,37 @@ typedef struct UniformBlock_t
 
 #define GFX_MAX_UNIFORM_BLOCKS 8
 
-typedef struct Uniforms_t
+typedef struct UniformBlockList_t
 {
    UniformBlock blocks[GFX_MAX_UNIFORM_BLOCKS];
    u32 count;
-} Uniforms;
+} UniformBlockList;
 
-typedef struct GraphicsContext_t GraphicsContext;
+typedef struct Graphics_t Graphics;
 
-GraphicsContext* Graphics_Init(void);
-void Graphics_Free(GraphicsContext* context);
+Graphics* Graphics_Init(void);
+void Graphics_Free(Graphics* graphics);
 
-Shader Graphics_CreateShader(GraphicsContext* context, const char* vertex_shader, const char* fragment_shader);
-Shader Graphics_CreateComputeShader(GraphicsContext* context, const char* compute_shader);
-void Graphics_FreeShader(GraphicsContext* context, Shader res_shader);
-u32 Graphics_GetUniformLocation(GraphicsContext* context, Shader res_shader, const char* name);
-void Graphics_Dispatch(GraphicsContext* context, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, Uniforms uniforms);
+Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader);
+Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader);
+void Graphics_FreeShader(Graphics* graphics, Shader res_shader);
+u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name);
+void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks);
 void Graphics_DispatchBarrier(void);
 
-Buffer Graphics_CreateBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
-Buffer Graphics_CreateBufferExplicit(GraphicsContext* context, void* data, uS total_size, u8 draw_mode, u8 buffer_type);
-void Graphics_ReuseBuffer(GraphicsContext* context, void* data, u32 length, uS type_size, Buffer res_buffer);
-void Graphics_FreeBuffer(GraphicsContext* context, Buffer res_buffer);
-void Graphics_UpdateBuffer(GraphicsContext* context, Buffer res_buffer, void* data, u32 length, uS type_size);
-void Graphics_UpdateBufferRange(GraphicsContext* context, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size);
-void Graphics_UseBuffer(GraphicsContext* context, Buffer res_buffer, u32 slot);
+Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
+Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS total_size, u8 draw_mode, u8 buffer_type);
+void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer);
+void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer);
+void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size);
+void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size);
+void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
 
-Geometry Graphics_CreateGeometry(GraphicsContext* context, Mesh mesh, u8 draw_mode);
-void Graphics_FreeGeometry(GraphicsContext* context, Geometry res_geometry);
+Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);
+void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry);
 
-void Graphics_SetClearColor(GraphicsContext* context, color8 clear_color);
-void Graphics_Viewport(GraphicsContext* context, resolution2d size);
-void Graphics_Draw(GraphicsContext* context, Shader res_shader, Geometry res_geometry, Uniforms uniforms);
+void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
+void Graphics_Viewport(Graphics* graphics, resolution2d size);
+void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
 
 #endif

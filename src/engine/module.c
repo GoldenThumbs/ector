@@ -2,7 +2,6 @@
 #include "util/types.h"
 #include "util/array.h"
 #include "util/keymap.h"
-#include "module/glue.h"
 
 #include "engine.h"
 #include "engine/internal.h"
@@ -66,8 +65,6 @@ Engine* Engine_Init(EngineDesc* desc)
    glfwSetScrollCallback(window, ENG_ScrollCallback);
    glfwSetKeyCallback(window, ENG_KeyCallback);
 
-   MOD_DefaultModules(engine);
-
    return engine;
 }
 
@@ -76,7 +73,7 @@ void Engine_Free(Engine* engine)
    u32 module_count = Util_ArrayLength(engine->modules);
    for (u32 i=0; i<module_count; i++)
    {
-      Module* m = engine->modules + (uS)i;
+      Module* m = engine->modules + (uS)(module_count - i - 1);
       if (m == NULL)
          break;
 
@@ -84,6 +81,7 @@ void Engine_Free(Engine* engine)
       if (err.general != ERR_OK)
          abort();
    }
+   
    FREE_ARRAY(engine->modules);
 
    glfwTerminate();

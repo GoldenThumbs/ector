@@ -9,6 +9,7 @@
 #include <graphics.h>
 #include <mesh.h>
 #include <renderer.h>
+#include <default_modules.h>
 
 // #include <stdio.h>
 
@@ -28,12 +29,14 @@ int main(int argc, char* argv[])
       &(EngineDesc){ .app_name = "Game", .window.title = "Game Window", .renderer.enabled = true }
    );
 
+   Module_Defaults(engine, 0, NULL);
+
    Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
    
-   GraphicsContext* gfx = Engine_FetchModule(engine, "gfx");
-   Graphics_SetClearColor(gfx, (color8){ 100, 160, 220, 255 });
+   Graphics* graphics = Engine_FetchModule(engine, "graphics");
+   Graphics_SetClearColor(graphics, (color8){ 100, 160, 220, 255 });
 
-   Renderer* rndr = Engine_FetchModule(engine, "rndr");
+   Renderer* renderer = Engine_FetchModule(engine, "renderer");
 
    // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
    struct {
@@ -56,14 +59,14 @@ int main(int argc, char* argv[])
       KEY_D
    };
 
-   Renderer_AddLight(rndr, &(LightDesc){
+   Renderer_AddLight(renderer, &(LightDesc){
       .light_type = RNDR_LIGHT_DIR,
       .rotation = Util_MakeQuatEuler(VEC3(-32, 20, 0)),
       .color = VEC3(1.0f, 0.9f, 0.6f),
       .strength = 0.5f
    });
 
-   Renderer_AddLight(rndr, &(LightDesc){
+   Renderer_AddLight(renderer, &(LightDesc){
       .light_type = RNDR_LIGHT_SPOT,
       .radius = 10.0f,
       .origin = VEC3(-2, 1.5f,-2),
@@ -77,15 +80,15 @@ int main(int argc, char* argv[])
    });
 
    // Everything else is random
-   CreateRandomLights(rndr, 16, 16);
+   CreateRandomLights(renderer, 16, 16);
 
    Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
    Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
 
-   Geometry floor_geo = Graphics_CreateGeometry(gfx, floor_mesh, GFX_DRAWMODE_STATIC);
-   Geometry box_geo = Graphics_CreateGeometry(gfx, box_mesh, GFX_DRAWMODE_STATIC);
+   Geometry floor_geo = Graphics_CreateGeometry(graphics, floor_mesh, GFX_DRAWMODE_STATIC);
+   Geometry box_geo = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);
 
-   Shader lit_shader = Renderer_LitShader(gfx);
+   Shader lit_shader = Renderer_LitShader(graphics);
 
    struct SurfaceDef_s floor_surf = {
       .color = VEC4(0.5f, 0.5f, 0.5f, 1),
@@ -101,15 +104,15 @@ int main(int argc, char* argv[])
       .ambient = 0.6f
    };
 
-   Object floor_obj = Renderer_AddObject(rndr, &(ObjectDesc){
+   Object floor_obj = Renderer_AddObject(renderer, &(ObjectDesc){
          .shader = lit_shader,
          .geometry = floor_geo,
          .bounds = { .extents = VEC3(16, 1, 16) },
-         .uniforms = (Uniforms){
+         .uniforms = (UniformBlockList){
             .count = 1,
             .blocks[0] = {
                .binding = 3,
-               .ubo = Graphics_CreateBuffer(gfx, (void*)&floor_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
+               .ubo = Graphics_CreateBuffer(graphics, (void*)&floor_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
             }
          }
       },
@@ -120,15 +123,15 @@ int main(int argc, char* argv[])
       }
    );
 
-   Object box_obj = Renderer_AddObject(rndr, &(ObjectDesc){
+   Object box_obj = Renderer_AddObject(renderer, &(ObjectDesc){
          .shader = lit_shader,
          .geometry = box_geo,
          .bounds = { .extents = VEC3(1, 1, 1) },
-         .uniforms = (Uniforms){
+         .uniforms = (UniformBlockList){
             .count = 1,
             .blocks[0] = {
                .binding = 3,
-               .ubo = Graphics_CreateBuffer(gfx, (void*)&box_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
+               .ubo = Graphics_CreateBuffer(graphics, (void*)&box_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
             }
          }
       },
@@ -198,8 +201,8 @@ int main(int argc, char* argv[])
       
       resolution2d size = Engine_GetFrameSize(engine);
 
-      Renderer_SetView(rndr, Util_ViewMatrix(player.origin, player.euler, 0));
-      Renderer_RenderLit(rndr, size);
+      Renderer_SetView(renderer, Util_ViewMatrix(player.origin, player.euler, 0));
+      Renderer_RenderLit(renderer, size);
       
       Engine_Present(engine);
    }

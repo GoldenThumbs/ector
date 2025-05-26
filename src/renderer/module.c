@@ -15,15 +15,15 @@
 
 #include <stdlib.h>
 
-Renderer* Renderer_Init(GraphicsContext* graphics_context)
+Renderer* Renderer_Init(Graphics* graphics)
 {
-   if (graphics_context == NULL)
+   if (graphics == NULL)
    {
       return NULL;
    }
 
    Renderer* renderer = malloc(sizeof(Renderer));
-   renderer->graphics_context = graphics_context;
+   renderer->graphics = graphics;
    renderer->objects = NEW_ARRAY(rndr_Object);
    renderer->lights = NEW_ARRAY_N(rndr_Light, RNDR_INIT_LIGHT_COUNT);
 
@@ -39,40 +39,40 @@ Renderer* Renderer_Init(GraphicsContext* graphics_context)
    u32 cluster_size[3] = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z };
    f32 cull_cfg[2] = { 0.01f, 5.0f };
 
-   renderer->gfx.camera_ubo   = Graphics_CreateBuffer(graphics_context, NULL, 1, sizeof(struct rndr_CameraData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
-   renderer->gfx.model_ubo    = Graphics_CreateBuffer(graphics_context, NULL, 1, sizeof(struct rndr_ModelData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
-   renderer->gfx.culling_ubo  = Graphics_CreateBuffer(graphics_context, cull_cfg, 1, sizeof(cull_cfg), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_UNIFORM);
+   renderer->camera_ubo   = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(struct rndr_CameraData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
+   renderer->model_ubo    = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(struct rndr_ModelData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
+   renderer->culling_ubo  = Graphics_CreateBuffer(graphics, cull_cfg, 1, sizeof(cull_cfg), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_UNIFORM);
 
-   renderer->gfx.cluster_ssbo = Graphics_CreateBuffer(graphics_context, NULL, RNDR_CLUSTER_COUNT, sizeof(rndr_Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
+   renderer->cluster_ssbo = Graphics_CreateBuffer(graphics, NULL, RNDR_CLUSTER_COUNT, sizeof(rndr_Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
 
-   renderer->gfx.light_ssbo   = Graphics_CreateBuffer(graphics_context, renderer->lights, (u32)Util_ArrayMemory(renderer->lights), sizeof(rndr_Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
+   renderer->light_ssbo   = Graphics_CreateBuffer(graphics, renderer->lights, (u32)Util_ArrayMemory(renderer->lights), sizeof(rndr_Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
 
-   renderer->gfx.cluster_comp = Graphics_CreateComputeShader(graphics_context, rndr_CLUSTER_SHADER_GLSL);
-   renderer->gfx.culling_comp = Graphics_CreateComputeShader(graphics_context, rndr_CULLING_SHADER_GLSL);
+   renderer->cluster_comp = Graphics_CreateComputeShader(graphics, rndr_CLUSTER_SHADER_GLSL);
+   renderer->culling_comp = Graphics_CreateComputeShader(graphics, rndr_CULLING_SHADER_GLSL);
 
-   Graphics_UseBuffer(renderer->graphics_context, renderer->gfx.camera_ubo, 1);
-   Graphics_UseBuffer(renderer->graphics_context, renderer->gfx.model_ubo, 2);
+   Graphics_UseBuffer(renderer->graphics, renderer->camera_ubo, 1);
+   Graphics_UseBuffer(renderer->graphics, renderer->model_ubo, 2);
 
-   Graphics_UseBuffer(renderer->graphics_context, renderer->gfx.cluster_ssbo, 1);
-   Graphics_UseBuffer(renderer->graphics_context, renderer->gfx.light_ssbo, 2);
+   Graphics_UseBuffer(renderer->graphics, renderer->cluster_ssbo, 1);
+   Graphics_UseBuffer(renderer->graphics, renderer->light_ssbo, 2);
 
    return renderer;
 }
 
 void Renderer_Free(Renderer* renderer)
 {
-   Graphics_FreeShader(renderer->graphics_context, renderer->gfx.cluster_comp);
-   Graphics_FreeShader(renderer->graphics_context, renderer->gfx.culling_comp);
-   Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.camera_ubo);
-   Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.model_ubo);
-   Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.culling_ubo);
-   Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.cluster_ssbo);
-   Graphics_FreeBuffer(renderer->graphics_context, renderer->gfx.light_ssbo);
+   Graphics_FreeShader(renderer->graphics, renderer->cluster_comp);
+   Graphics_FreeShader(renderer->graphics, renderer->culling_comp);
+   Graphics_FreeBuffer(renderer->graphics, renderer->camera_ubo);
+   Graphics_FreeBuffer(renderer->graphics, renderer->model_ubo);
+   Graphics_FreeBuffer(renderer->graphics, renderer->culling_ubo);
+   Graphics_FreeBuffer(renderer->graphics, renderer->cluster_ssbo);
+   Graphics_FreeBuffer(renderer->graphics, renderer->light_ssbo);
 
    FREE_ARRAY(renderer->objects);
    FREE_ARRAY(renderer->lights);
 
-   renderer->graphics_context = NULL;
+   renderer->graphics = NULL;
 
    free(renderer);
 }
@@ -85,7 +85,7 @@ void Renderer_SetView(Renderer* renderer, mat4x4 view)
 
 void Renderer_RenderLit(Renderer* renderer, resolution2d size)
 {
-   Graphics_Viewport(renderer->graphics_context, size);
+   Graphics_Viewport(renderer->graphics, size);
 
    renderer->camera.aspect_ratio = (f32)size.height / (f32)size.width;
    renderer->camera.proj = Util_PerspectiveMatrix(
@@ -108,14 +108,14 @@ void Renderer_RenderLit(Renderer* renderer, resolution2d size)
       .cluster_size = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, 0 }
    };
 
-   Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.camera_ubo, (void*)&cam_data, 1, sizeof(struct rndr_CameraData_s));
+   Graphics_UpdateBuffer(renderer->graphics, renderer->camera_ubo, (void*)&cam_data, 1, sizeof(struct rndr_CameraData_s));
 
-   Graphics_Dispatch(renderer->graphics_context, renderer->gfx.cluster_comp, RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, (Uniforms){ .count = 0 });
+   Graphics_Dispatch(renderer->graphics, renderer->cluster_comp, RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, (UniformBlockList){ .count = 0 });
    Graphics_DispatchBarrier();
 
-   Graphics_Dispatch(renderer->graphics_context, renderer->gfx.culling_comp, RNDR_CLUSTER_COUNT / 128u, 1, 1,
-      (Uniforms){
-         .blocks[0] = { .binding = 3, renderer->gfx.culling_ubo },
+   Graphics_Dispatch(renderer->graphics, renderer->culling_comp, RNDR_CLUSTER_COUNT / 128u, 1, 1,
+      (UniformBlockList){
+         .blocks[0] = { .binding = 3, renderer->culling_ubo },
          .count = 1
    });
    Graphics_DispatchBarrier();
@@ -134,9 +134,9 @@ void Renderer_RenderLit(Renderer* renderer, resolution2d size)
             [2] = Util_VecF32Vec4(object.matrix.normal.v[2], 0)
          }
       };
-      Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.model_ubo, (void*)&model_data, 1, sizeof(struct rndr_ModelData_s));
+      Graphics_UpdateBuffer(renderer->graphics, renderer->model_ubo, (void*)&model_data, 1, sizeof(struct rndr_ModelData_s));
 
-      Graphics_Draw(renderer->graphics_context, object.shader, object.geometry, object.uniforms);
+      Graphics_Draw(renderer->graphics, object.shader, object.geometry, object.uniforms);
    }
 }
 
@@ -228,15 +228,15 @@ Light Renderer_AddLight(Renderer* renderer, LightDesc* desc)
    if (too_large)
    {
       Graphics_ReuseBuffer(
-         renderer->graphics_context,
+         renderer->graphics,
          renderer->lights,
          (u32)Util_ArrayMemory(renderer->lights),
          sizeof(rndr_Light),
-         renderer->gfx.light_ssbo
+         renderer->light_ssbo
       );
-      Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.light_ssbo, renderer->lights, Util_ArrayLength(renderer->lights), sizeof(rndr_Light));
+      Graphics_UpdateBuffer(renderer->graphics, renderer->light_ssbo, renderer->lights, Util_ArrayLength(renderer->lights), sizeof(rndr_Light));
    } else
-      Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.light_ssbo, renderer->lights, Util_ArrayLength(renderer->lights), sizeof(rndr_Light));
+      Graphics_UpdateBuffer(renderer->graphics, renderer->light_ssbo, renderer->lights, Util_ArrayLength(renderer->lights), sizeof(rndr_Light));
 
    return (Light){ .id = light_count - 1 }; // ignoring ref number stuff for lights
 }
@@ -248,10 +248,10 @@ void Renderer_RemoveLight(Renderer* renderer, Light res_light)
    REMOVE_ARRAY(renderer->lights, res_light.id);
 
    u32 light_count = Util_ArrayLength(renderer->lights);
-   Graphics_UpdateBuffer(renderer->graphics_context, renderer->gfx.light_ssbo, renderer->lights, light_count, sizeof(rndr_Light));
+   Graphics_UpdateBuffer(renderer->graphics, renderer->light_ssbo, renderer->lights, light_count, sizeof(rndr_Light));
 }
 
-Shader Renderer_LitShader(GraphicsContext* graphics_context)
+Shader Renderer_LitShader(Graphics* graphics)
 {
-   return Graphics_CreateShader(graphics_context, rndr_LIT_VRTSHADER_GLSL, rndr_LIT_FRGSHADER_GLSL);
+   return Graphics_CreateShader(graphics, rndr_LIT_VRTSHADER_GLSL, rndr_LIT_FRGSHADER_GLSL);
 }

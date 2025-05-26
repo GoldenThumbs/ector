@@ -2,6 +2,7 @@
 #include <util/keymap.h>
 #include <engine.h>
 #include <graphics.h>
+#include <default_modules.h>
 
 int main(int argc, char* argv[])
 {
@@ -9,8 +10,10 @@ int main(int argc, char* argv[])
       &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
    );
 
-   GraphicsContext* gfx = Engine_FetchModule(engine, "gfx");
-   Graphics_SetClearColor(gfx, (color8){ 15, 15, 15, 255 });
+   Engine_RegisterModule(engine, Module_Graphics());
+
+   Graphics* graphics = Engine_FetchModule(engine, "graphics");
+   Graphics_SetClearColor(graphics, (color8){ 15, 15, 15, 255 });
 
    while(!Engine_CheckExitConditions(engine))
    {
@@ -18,7 +21,7 @@ int main(int argc, char* argv[])
          Engine_RequestExit(engine);
 
       resolution2d size = Engine_GetFrameSize(engine);
-      Graphics_Viewport(gfx, size);
+      Graphics_Viewport(graphics, size);
       
       Engine_Present(engine);
    }
