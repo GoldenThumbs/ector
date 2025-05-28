@@ -71,6 +71,15 @@ static inline mat3x3 Util_QuatToMat3(quat quaternion)
    );
 }
 
+static inline mat4x4 Util_Mat3ToMat4(mat3x3 matrix)
+{
+   mat4x4 res = Util_IdentityMat4();
+   res.v[0].xyz = matrix.v[0];
+   res.v[1].xyz = matrix.v[1];
+   res.v[2].xyz = matrix.v[2];
+   return res;
+}
+
 static inline mat4x4 Util_MulMat4(mat4x4 a, mat4x4 b)
 {
    mat4x4 res = { 0 };
