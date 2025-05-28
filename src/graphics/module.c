@@ -21,6 +21,7 @@ Graphics* Graphics_Init(void)
    graphics->shaders = NEW_ARRAY(gfx_Shader);
    graphics->buffers = NEW_ARRAY(gfx_Buffer);
    graphics->geometries = NEW_ARRAY(gfx_Geometry);
+   graphics->textures = NEW_ARRAY(gfx_Texture);
    graphics->ref = 0;
    graphics->clear_color.hex = 0;
 
@@ -53,6 +54,10 @@ void Graphics_Free(Graphics* graphics)
       if (graphics->geometries[i].id.i_buf != 0)
          glDeleteBuffers(1, &graphics->geometries[i].id.i_buf);
    }
+
+   for (u32 i=0; i<Util_ArrayLength(graphics->textures); i++)
+      glDeleteTextures(1, &graphics->textures[i].id.tex);
+
    FREE_ARRAY(graphics->geometries);
    graphics->ref = 0;
    free(graphics);

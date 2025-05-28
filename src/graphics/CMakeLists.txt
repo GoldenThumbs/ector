@@ -3,4 +3,5 @@ add_module(
    "shaders.c"
    "geometries.c"
    "buffers.c"
+   "textures.c"
 )

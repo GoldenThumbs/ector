@@ -43,6 +43,19 @@ typedef struct gfx_Geometry_t
    handle compare;
 } gfx_Geometry;
 
+typedef struct gfx_Texture_t
+{
+   struct {
+      u32 tex;
+   } id;
+
+   u32 width;
+   u32 height;
+   u32 mipmap_count;
+
+   handle compare;
+} gfx_Texture;
+
 typedef union gfx_State_t
 {
    u16 state_id;
@@ -60,6 +73,7 @@ struct Graphics_t
    gfx_Shader* shaders;
    gfx_Buffer* buffers;
    gfx_Geometry* geometries;
+   gfx_Texture* textures;
    struct {
       color8 clear_color;
       u16 ref;

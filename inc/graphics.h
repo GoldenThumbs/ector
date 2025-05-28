@@ -9,6 +9,7 @@
 typedef handle Shader;
 typedef handle Buffer;
 typedef handle Geometry;
+typedef handle Texture;
 
 enum {
    ERR_GFX_CONTEXT_FAILED = 1
@@ -70,8 +71,8 @@ enum {
 
 typedef struct Uniform_t
 {
-   u16 uniform_type;
-   u16 location;
+   u32 uniform_type;
+   u32 location;
    union {
       f32 as_float[16];
       vec2 as_vec2;
@@ -108,6 +109,7 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader);
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader);
 u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name);
+void Graphics_SetUniform(Graphics* graphics, Uniform uniform);
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks);
 void Graphics_DispatchBarrier(void);
 
@@ -121,6 +123,11 @@ void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);
 void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry);
+
+Texture Graphics_CreateTexture(Graphics* graphics, u8* data, resolution2d size, u8 channels);
+void Graphics_FreeTexture(Graphics* graphics, Texture res_texture);
+
+void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot);
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
