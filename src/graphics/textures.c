@@ -58,3 +58,8 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
    glActiveTexture(GL_TEXTURE0 + bind_slot);
    glBindTexture(GL_TEXTURE_2D, texture.id.tex);
 }
+
+void Graphics_UnbindTextures(Graphics* graphics)
+{
+   glBindTexture(GL_TEXTURE_2D, 0);
+}

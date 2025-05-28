@@ -128,6 +128,7 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, resolution2d size, 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture);
 
 void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot);
+void Graphics_UnbindTextures(Graphics* graphics);
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
