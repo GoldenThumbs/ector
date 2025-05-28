@@ -14,6 +14,7 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, resolution2d size, 
    texture.width = (u32)size.width;
    texture.height = (u32)size.height;
    texture.mipmap_count = 1;
+   texture.compare.ref = graphics->ref;
 
    glGenTextures(1, &texture.id.tex);
    glBindTexture(GL_TEXTURE_2D, texture.id.tex);
