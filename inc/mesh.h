@@ -58,6 +58,7 @@ void Mesh_Free(Mesh* mesh);
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface);
 MeshInterface Mesh_GenNormals(MeshInterface mesh_interface);
+MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface);
 
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size);
 Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size);

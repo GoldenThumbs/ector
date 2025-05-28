@@ -1,3 +1,4 @@
+#include "util/math.h"
 #include "util/types.h"
 #include "util/vec3.h"
 #include "util/vec4.h"
@@ -6,21 +7,23 @@
 
 #include "mesh.h"
 
-#include <stdio.h>
+//#include <stdio.h>
 #include <stdlib.h>
 
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 {
    Mesh mesh = Mesh_EmptyMesh(GFX_PRIMITIVE_TRIANGLE);
-   mesh.attribute_count = 2;
+   mesh.attribute_count = 3;
    mesh.attributes[0] = GFX_ATTRIBUTE_F32_3X;
    mesh.attributes[1] = GFX_ATTRIBUTE_F32_3X;
+   mesh.attributes[2] = GFX_ATTRIBUTE_F32_2X;
    
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
    mat4x4 t = Util_ScalingMatrix(VEC3(size.x, 1, size.y));
    mesh_interface = Mesh_AddQuad(faces_x, faces_y, t, mesh_interface);
    mesh_interface = Mesh_GenNormals(mesh_interface);
+   mesh_interface = Mesh_GenTexcoords(mesh_interface);
 
    return mesh;
 }
@@ -28,9 +31,10 @@ Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
 {
    Mesh mesh = Mesh_EmptyMesh(GFX_PRIMITIVE_TRIANGLE);
-   mesh.attribute_count = 2;
+   mesh.attribute_count = 3;
    mesh.attributes[0] = GFX_ATTRIBUTE_F32_3X;
    mesh.attributes[1] = GFX_ATTRIBUTE_F32_3X;
+   mesh.attributes[2] = GFX_ATTRIBUTE_F32_2X;
    
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
@@ -51,6 +55,7 @@ Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
    mesh_interface = Mesh_AddQuad(faces_z, faces_y, t4, mesh_interface);
    mesh_interface = Mesh_AddQuad(faces_x, faces_z, t5, mesh_interface);
    mesh_interface = Mesh_GenNormals(mesh_interface);
+   mesh_interface = Mesh_GenTexcoords(mesh_interface);
 
    return mesh;
 }
@@ -127,6 +132,9 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
    uS last_byte = mesh_interface.total_bytes;
    uS total_bytes = (uS)vertex_count * sizeof(vec3);
 
+   mesh_interface.atr.normal_ofs = last_byte;
+   mesh_interface.atr.normal_size = total_bytes;
+
    u8* vertex_buffer = realloc(mesh_interface.mesh->vertex_buffer, last_byte + total_bytes);
    if (vertex_buffer != NULL)
    {
@@ -152,9 +160,9 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
          vec3 b_c = Util_SubVec3(vrt_b, vrt_c);
 
          vec3 face_normal = Util_CrossVec3(b_a, c_a);
-         f32 ang_a = Util_DotVec3(b_a, c_a);
-         f32 ang_b = Util_DotVec3(c_b, a_b);
-         f32 ang_c = Util_DotVec3(a_c, b_c);
+         f32 ang_a = Util_DotVec3(b_a, c_a) + 0.001f;
+         f32 ang_b = Util_DotVec3(c_b, a_b) + 0.001f;
+         f32 ang_c = Util_DotVec3(a_c, b_c) + 0.001f;
 
          normal[idx_a] = Util_AddVec3(
             normal[idx_a],
@@ -173,6 +181,53 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
       for (u16 i=0; i<vertex_count; i++)
       {
          normal[i] = Util_NormalizeVec3(normal[i]);
+      }
+
+      mesh_interface.mesh->vertex_buffer = vertex_buffer;
+      mesh_interface.total_bytes += total_bytes;
+   }
+
+   return mesh_interface;
+}
+
+MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface)
+{
+   const f32 sqrt_third = M_SQRT(1.0f / 3.0f);
+   if ((mesh_interface.atr.position_size == 0) || (mesh_interface.atr.normal_size == 0))
+      return mesh_interface; // TODO: error tracking...
+
+   u16 vertex_count = mesh_interface.mesh->vertex_count;
+   u16 index_count = mesh_interface.mesh->index_count;
+   uS last_byte = mesh_interface.total_bytes;
+   uS total_bytes = (uS)vertex_count * sizeof(vec2);
+
+   mesh_interface.atr.texcoord_ofs[0] = last_byte;
+   mesh_interface.atr.texcoord_size[0] = total_bytes;
+
+   u8* vertex_buffer = realloc(mesh_interface.mesh->vertex_buffer, last_byte + total_bytes);
+   if (vertex_buffer != NULL)
+   {
+      vec3* position = (vec3*)vertex_buffer;
+      vec3* normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs);
+      vec2* texcoord = (vec2*)(vertex_buffer + last_byte);
+      memset(texcoord, 0, total_bytes);
+
+      for (u16 i=0; i<vertex_count; i++)
+      {
+         mat3x3 basis = { 0 };
+         basis.v[2] = normal[i];
+
+         if (M_ABS(normal[i].x) >= sqrt_third)
+            basis.v[0] = Util_ScaleVec3(VEC3( normal[i].y, normal[i].x, 0), M_SIGN(normal[i].z));
+         else
+            basis.v[0] = Util_ScaleVec3(VEC3( 0, normal[i].z,-normal[i].y),-M_SIGN(normal[i].x));
+
+         basis.v[0] = Util_NormalizeVec3(basis.v[0]);
+         basis.v[1] = Util_CrossVec3(normal[i], basis.v[0]);
+
+         vec3 coord = Util_MulMat3Vec3(Util_TransposeMat3(basis), position[i]);
+
+         texcoord[i] = VEC2(coord.y * 0.5 + 0.5, coord.x * 0.5 + 0.5);
       }
 
       mesh_interface.mesh->vertex_buffer = vertex_buffer;
