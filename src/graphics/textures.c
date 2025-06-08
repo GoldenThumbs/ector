@@ -33,7 +33,8 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, resolution2d size, 
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
    glTexImage2D(GL_TEXTURE_2D, 0, format[channels], size.width, size.height, 0, format[channels], GL_UNSIGNED_BYTE, data);
-   glGenerateMipmap(GL_TEXTURE_2D);
+   if (data != NULL)
+      glGenerateMipmap(GL_TEXTURE_2D);
 
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
