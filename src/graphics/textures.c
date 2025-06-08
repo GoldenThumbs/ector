@@ -47,7 +47,6 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
       return;
 
    glDeleteTextures(1, &texture.id.tex);
-   texture.id.tex = 0;
 }
 
 void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot)
@@ -63,4 +62,59 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
 void Graphics_UnbindTextures(Graphics* graphics)
 {
    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+Framebuffer Graphics_CreateFramebuffer(Graphics* graphics)
+{
+   gfx_Framebuffer framebuffer = { 0 };
+   framebuffer.compare.ref = graphics->ref;
+
+   glGenFramebuffers(1, &framebuffer.id.fbo);
+
+   framebuffer.compare.handle = Util_ArrayLength(graphics->textures);
+
+   return Util_AddResource(&graphics->ref, REF(graphics->framebuffers), &framebuffer);
+}
+
+void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
+{
+   gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
+   if (framebuffer.compare.ref != res_framebuffer.ref)
+      return;
+
+   glDeleteFramebuffers(1, &framebuffer.id.fbo);
+}
+
+void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
+{
+   gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
+   if (framebuffer.compare.ref != res_framebuffer.ref)
+      return;
+
+   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
+}
+
+void Graphics_UnbindFramebuffers(Graphics *graphics)
+{
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[])
+{
+   gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
+   if (framebuffer.compare.ref != res_framebuffer.ref)
+      return;
+   
+   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
+
+   for (u32 i=0; i<texture_count; i++)
+   {
+      gfx_Texture texture = graphics->textures[res_textures[i].handle];
+      if (texture.compare.ref != res_textures[i].ref)
+         continue;
+
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, texture.id.tex, 0);
+   }
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

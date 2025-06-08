@@ -10,6 +10,7 @@ typedef handle Shader;
 typedef handle Buffer;
 typedef handle Geometry;
 typedef handle Texture;
+typedef handle Framebuffer;
 
 enum {
    ERR_GFX_CONTEXT_FAILED = 1
@@ -129,6 +130,13 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture);
 
 void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot);
 void Graphics_UnbindTextures(Graphics* graphics);
+
+Framebuffer Graphics_CreateFramebuffer(Graphics* graphics);
+void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
+
+void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
+void Graphics_UnbindFramebuffers(Graphics *graphics);
+void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[]);
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);

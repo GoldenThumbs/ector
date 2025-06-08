@@ -85,7 +85,6 @@ void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
       return;
 
    glDeleteBuffers(1, &buffer.id.buf);
-   buffer.id.buf = 0;
 }
 
 void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size)

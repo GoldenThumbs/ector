@@ -56,6 +56,15 @@ typedef struct gfx_Texture_t
    handle compare;
 } gfx_Texture;
 
+typedef struct gfx_Framebuffer_t
+{
+   struct {
+      u32 fbo;
+   } id;
+
+   handle compare;
+} gfx_Framebuffer;
+
 typedef union gfx_State_t
 {
    u16 state_id;
@@ -74,6 +83,7 @@ struct Graphics_t
    gfx_Buffer* buffers;
    gfx_Geometry* geometries;
    gfx_Texture* textures;
+   gfx_Framebuffer* framebuffers;
    struct {
       color8 clear_color;
       u16 ref;

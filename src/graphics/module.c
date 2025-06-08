@@ -22,6 +22,7 @@ Graphics* Graphics_Init(void)
    graphics->buffers = NEW_ARRAY(gfx_Buffer);
    graphics->geometries = NEW_ARRAY(gfx_Geometry);
    graphics->textures = NEW_ARRAY(gfx_Texture);
+   graphics->framebuffers = NEW_ARRAY(gfx_Framebuffer);
    graphics->ref = 0;
    graphics->clear_color.hex = 0;
 
@@ -37,26 +38,19 @@ void Graphics_Free(Graphics* graphics)
       return;
    
    for (u32 i=0; i<Util_ArrayLength(graphics->shaders); i++)
-      glDeleteProgram(graphics->shaders[i].id.program);
+      Graphics_FreeShader(graphics, graphics->shaders[i].compare);
 
    for (u32 i=0; i<Util_ArrayLength(graphics->buffers); i++)
-      glDeleteBuffers(1, &graphics->buffers[i].id.buf);
+      Graphics_FreeBuffer(graphics, graphics->buffers[i].compare);
 
-   for (u32 i=0; i<Util_ArrayLength(graphics->buffers); i++)
-   {
-      if (graphics->geometries[i].id.vao == 0)
-         continue;
-      
-      glDeleteVertexArrays(1, &graphics->geometries[i].id.vao);
-
-      if (graphics->geometries[i].id.v_buf != 0)
-         glDeleteBuffers(1, &graphics->geometries[i].id.v_buf);
-      if (graphics->geometries[i].id.i_buf != 0)
-         glDeleteBuffers(1, &graphics->geometries[i].id.i_buf);
-   }
+   for (u32 i=0; i<Util_ArrayLength(graphics->geometries); i++)
+      Graphics_FreeGeometry(graphics, graphics->geometries[i].compare);
 
    for (u32 i=0; i<Util_ArrayLength(graphics->textures); i++)
-      glDeleteTextures(1, &graphics->textures[i].id.tex);
+      Graphics_FreeTexture(graphics, graphics->textures[i].compare);
+
+   for (u32 i=0; i<Util_ArrayLength(graphics->framebuffers); i++)
+      Graphics_FreeFramebuffer(graphics, graphics->framebuffers[i].compare);
 
    FREE_ARRAY(graphics->geometries);
    graphics->ref = 0;
