@@ -60,6 +60,7 @@ typedef struct gfx_Framebuffer_t
 {
    struct {
       u32 fbo;
+      u32 rbo;
    } id;
 
    handle compare;

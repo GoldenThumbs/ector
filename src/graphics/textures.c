@@ -65,12 +65,20 @@ void Graphics_UnbindTextures(Graphics* graphics)
    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-Framebuffer Graphics_CreateFramebuffer(Graphics* graphics)
+Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size)
 {
    gfx_Framebuffer framebuffer = { 0 };
    framebuffer.compare.ref = graphics->ref;
 
    glGenFramebuffers(1, &framebuffer.id.fbo);
+   glGenRenderbuffers(1, &framebuffer.id.rbo);
+
+   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
+
+   glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
+   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, (i32)size.width, (i32)size.height);
+
+   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.id.rbo);
 
    framebuffer.compare.handle = Util_ArrayLength(graphics->textures);
 
@@ -84,6 +92,7 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
       return;
 
    glDeleteFramebuffers(1, &framebuffer.id.fbo);
+   glDeleteRenderbuffers(1, &framebuffer.id.rbo);
 }
 
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)

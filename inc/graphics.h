@@ -131,7 +131,7 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture);
 void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot);
 void Graphics_UnbindTextures(Graphics* graphics);
 
-Framebuffer Graphics_CreateFramebuffer(Graphics* graphics);
+Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size);
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
 
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
