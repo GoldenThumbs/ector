@@ -27,7 +27,8 @@ Graphics* Graphics_Init(void)
    graphics->clear_color.hex = 0;
 
    Graphics_SetClearColor(graphics, (color8){ 127, 127, 127, 255 });
-   glEnable(GL_CULL_FACE);
+   Graphics_SetBlending(graphics, GFX_BLENDMODE_MIX);
+   GFX_SetFaceCullMode(graphics, GFX_FACECULL_BACK);
 
    return graphics;
 }
@@ -68,6 +69,49 @@ void Graphics_SetClearColor(Graphics* graphics, color8 clear_color)
    f32 a = (f32)clear_color.a * rcp_byte;
 
    glClearColor(r, g, b, a);
+}
+
+void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
+{
+   bool blend_enable = (blend_mode != GFX_BLENDMODE_NONE);
+   if ((bool)graphics->state.blend_enable != blend_enable)
+   {
+      graphics->state.blend_enable = (u16)blend_enable;
+
+      if(blend_enable)
+         glEnable(GL_BLEND);
+      else
+         glDisable(GL_BLEND);
+   }
+
+   if ((graphics->state.blend_mode != blend_mode) && blend_enable)
+   {
+      switch (blend_mode)
+      {
+         case GFX_BLENDMODE_MIX:
+            glBlendEquation(GL_FUNC_ADD);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+         break;
+
+         case GFX_BLENDMODE_ADD:
+            glBlendEquation(GL_FUNC_ADD);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+         break;
+
+         case GFX_BLENDMODE_SUB:
+            glBlendEquation(GL_FUNC_SUBTRACT);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+         break;
+
+         case GFX_BLENDMODE_MUL:
+            glBlendEquation(GL_FUNC_ADD);
+            glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+         break;
+
+         default:
+            break;
+      }
+   }
 }
 
 void Graphics_Viewport(Graphics* graphics, resolution2d size)

@@ -148,6 +148,14 @@ enum {
    GFX_TEXTUREWRAP_CLAMP
 };
 
+enum {
+   GFX_BLENDMODE_MIX = 0,
+   GFX_BLENDMODE_ADD,
+   GFX_BLENDMODE_SUB,
+   GFX_BLENDMODE_MUL,
+   GFX_BLENDMODE_NONE
+};
+
 typedef struct Uniform_t
 {
    u32 uniform_type;
@@ -236,6 +244,7 @@ void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_fr
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
+void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
 
 #endif

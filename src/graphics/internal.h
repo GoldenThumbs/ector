@@ -77,6 +77,7 @@ typedef union gfx_State_t
       u16 depthtest_enable: 1;
       u16 stenciltest_enable: 1;
       u16 face_cull_mode: 1;
+      u16 blend_mode: 3;
    };
 } gfx_State;
 
