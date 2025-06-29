@@ -49,9 +49,11 @@ typedef struct gfx_Texture_t
       u32 tex;
    } id;
 
-   u32 width;
-   u32 height;
-   u32 mipmap_count;
+   u16 width;
+   u16 height;
+   u16 mipmap_count;
+   u8 type;
+   u8 format;
 
    handle compare;
 } gfx_Texture;
@@ -78,6 +80,12 @@ typedef union gfx_State_t
    };
 } gfx_State;
 
+struct gfx_Filtering_s
+{
+   u32 min_filter;
+   u32 mag_filter;
+};
+
 struct Graphics_t
 {
    gfx_Shader* shaders;
@@ -99,6 +107,14 @@ i32 GFX_AttributeTypeCount(u8 attribute);
 bool GFX_AttributeTypeNormalized(u8 attribute);
 uS GFX_AttributeTypeSize(u8 attribute);
 uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count);
+
+uS GFX_PixelSize(u8 format);
+i32 GFX_TextureInternalFormat(u8 format);
+u32 GFX_TexturePixelFormat(u8 format);
+u32 GFX_TextureFormatType(u8 format);
+u32 GFX_TextureType(u8 type);
+u32 GFX_TextureWrap(u8 wrap);
+struct gfx_Filtering_s GFX_TextureFilter(u8 filter);
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
 void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset);

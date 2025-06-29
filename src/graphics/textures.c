@@ -7,34 +7,97 @@
 #include "graphics/internal.h"
 
 #include <glad/gl.h>
+#include <stdlib.h>
 
-Texture Graphics_CreateTexture(Graphics* graphics, u8* data, resolution2d size, u8 channels)
+Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 {
    gfx_Texture texture = { 0 };
-   texture.width = (u32)size.width;
-   texture.height = (u32)size.height;
-   texture.mipmap_count = 1;
+   texture.width = (u16)desc.size.width;
+   texture.height = (u16)desc.size.height;
+   texture.mipmap_count = M_MAX(1u, desc.mipmap_count);
+   texture.type = desc.texture_type;
+   texture.format = desc.texture_format;
    texture.compare.ref = graphics->ref;
 
+   u32 gl_target = GFX_TextureType(texture.type);
+
    glGenTextures(1, &texture.id.tex);
-   glBindTexture(GL_TEXTURE_2D, texture.id.tex);
+   glBindTexture(gl_target, texture.id.tex);
 
-   channels = M_MAX(channels, 3);
-   const u32 format[] = {
-      GL_RED,
-      GL_RG,
-      GL_RGB,
-      GL_RGBA
-   };
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   i32 internal_format = GFX_TextureInternalFormat(texture.format);
+   u32 pixel_format = GFX_TexturePixelFormat(texture.format);
+   u32 format_type = GFX_TextureFormatType(texture.format);
 
-   glTexImage2D(GL_TEXTURE_2D, 0, format[channels], size.width, size.height, 0, format[channels], GL_UNSIGNED_BYTE, data);
-   if (data != NULL)
-      glGenerateMipmap(GL_TEXTURE_2D);
+   if (data == NULL)
+   {
+      switch (desc.texture_type) {
+         case GFX_TEXTURETYPE_2D:
+         case GFX_TEXTURETYPE_CUBEMAP:
+            glTexStorage2D(gl_target, desc.mipmap_count, internal_format, desc.size.width, desc.size.height);
+            break;
+         
+         case GFX_TEXTURETYPE_3D:
+         case GFX_TEXTURETYPE_2D_ARRAY:
+         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
+            glTexStorage3D(gl_target, desc.mipmap_count, internal_format, desc.size.width, desc.size.height, desc.depth);
+            break;
+         
+         default:
+            glTexStorage2D(gl_target, 0, internal_format, desc.size.width, desc.size.height);
+      }
+   } else {
+      bool is_cubemap = ((texture.type == GFX_TEXTURETYPE_CUBEMAP) || (texture.type == GFX_TEXTURETYPE_CUBEMAP_ARRAY));
+      u32 face_count = is_cubemap ? 6 : 1;
+      u32 gl_face = is_cubemap ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : gl_target;
+
+      uS pixel_size = GFX_PixelSize(texture.format);
+
+      uS offset = 0;
+
+      switch (desc.texture_type) {
+         case GFX_TEXTURETYPE_2D:
+         case GFX_TEXTURETYPE_CUBEMAP:
+            for (u32 mip_i = 0; mip_i < texture.mipmap_count; mip_i++)
+            {
+               i32 mip_divisor = (i32)(2 ^ mip_i);
+               i32 width = desc.size.width / mip_divisor;
+               i32 height = desc.size.height / mip_divisor;
+               for (u32 face_i = 0; face_i < face_count; face_i++)
+               {
+                  glTexImage2D(gl_face + face_i, mip_i, internal_format, width, height, 0, pixel_format, format_type, data + offset);
+                  offset += width * height * pixel_size;
+               }
+            }
+            break;
+         
+         case GFX_TEXTURETYPE_3D:
+         case GFX_TEXTURETYPE_2D_ARRAY:
+         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
+            for (u32 mip_i = 0; mip_i < texture.mipmap_count; mip_i++)
+            {
+               i32 mip_divisor = (i32)(2 ^ mip_i);
+               i32 width = desc.size.width / mip_divisor;
+               i32 height = desc.size.height / mip_divisor;
+               i32 depth = desc.depth / mip_divisor;
+
+               for (u32 face_i = 0; face_i < face_count; face_i++)
+               {
+                  glTexImage3D(gl_face + face_i, mip_i, internal_format, width, height, depth, 0, pixel_format, format_type, data + offset);
+                  offset += width * height * pixel_size;
+               }
+            }
+            break;
+         
+         default:
+            glTexImage2D(gl_face, 0, internal_format, desc.size.width, desc.size.height, 0, pixel_format, format_type, data);
+      }
+   }
 
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
@@ -56,16 +119,42 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
    if (texture.compare.ref != res_texture.ref)
       return;
 
+   u32 gl_target = GFX_TextureType(texture.type);
+
    glActiveTexture(GL_TEXTURE0 + bind_slot);
-   glBindTexture(GL_TEXTURE_2D, texture.id.tex);
+   glBindTexture(gl_target, texture.id.tex);
 }
 
-void Graphics_UnbindTextures(Graphics* graphics)
+void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type)
 {
-   glBindTexture(GL_TEXTURE_2D, 0);
+   u32 gl_target = GFX_TextureType(texture_type);
+
+   glBindTexture(gl_target, 0);
 }
 
-Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size)
+void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings)
+{
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (texture.compare.ref != res_texture.ref)
+      return;
+
+   u32 gl_target = GFX_TextureType(texture.type);
+
+   glBindTexture(gl_target, texture.id.tex);
+
+   u32 wrap = GFX_TextureWrap(interpolation_settings.texture_wrap);
+   struct gfx_Filtering_s filter = GFX_TextureFilter(interpolation_settings.texture_filter);
+
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, wrap);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, wrap);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, wrap);
+   glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, filter.min_filter);
+   glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
+
+   glBindTexture(gl_target, 0);
+}
+
+Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer)
 {
    gfx_Framebuffer framebuffer = { 0 };
    framebuffer.compare.ref = graphics->ref;
@@ -75,10 +164,13 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size)
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
    glGenRenderbuffers(1, &framebuffer.id.rbo);
 
-   glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
-   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.width, size.height);
+   if (depthstencil_renderbuffer)
+   {
+      glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
+      glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.width, size.height);
 
-   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.id.rbo);
+      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.id.rbo);
+   }
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
    {
@@ -100,7 +192,8 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
       return;
 
    glDeleteFramebuffers(1, &framebuffer.id.fbo);
-   glDeleteRenderbuffers(1, &framebuffer.id.rbo);
+   if (framebuffer.id.rbo != 0)
+      glDeleteRenderbuffers(1, &framebuffer.id.rbo);
 }
 
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
@@ -136,7 +229,7 @@ void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_fr
       if (texture.compare.ref != res_textures[i].ref)
          continue;
 
-      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, texture.id.tex, 0);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GFX_TextureType(texture.type), texture.id.tex, 0);
    }
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -144,4 +237,298 @@ void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_fr
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+}
+
+uS GFX_PixelSize(u8 format)
+{
+   switch (format)
+   {
+      case GFX_TEXTUREFORMAT_R_U8_NORM:
+         return 8;
+      case GFX_TEXTUREFORMAT_RG_U8_NORM:
+         return 16;
+      case GFX_TEXTUREFORMAT_RGB_U8_NORM:
+      case GFX_TEXTUREFORMAT_SRGB:
+         return 24;
+      case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
+      case GFX_TEXTUREFORMAT_SRGB_ALPHA:
+         return 32;
+      
+      case GFX_TEXTUREFORMAT_R_U16_NORM:
+         return 16;
+      case GFX_TEXTUREFORMAT_RG_U16_NORM:
+         return 32;
+      case GFX_TEXTUREFORMAT_RGB_U16_NORM:
+         return 48;
+      case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
+         return 64;
+      
+      case GFX_TEXTUREFORMAT_R_F16:
+         return 16;
+      case GFX_TEXTUREFORMAT_RG_F16:
+         return 32;
+      case GFX_TEXTUREFORMAT_RGB_F16:
+         return 48;
+      case GFX_TEXTUREFORMAT_RGBA_F16:
+         return 64;
+      
+      case GFX_TEXTUREFORMAT_R_F32:
+         return 32;
+      case GFX_TEXTUREFORMAT_RG_F32:
+         return 64;
+      case GFX_TEXTUREFORMAT_RGB_F32:
+         return 96;
+      case GFX_TEXTUREFORMAT_RGBA_F32:
+         return 128;
+      
+      case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
+         return 32;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_16:
+         return 16;
+
+      case GFX_TEXTUREFORMAT_DEPTH_24:
+         return 24;
+
+      case GFX_TEXTUREFORMAT_DEPTH_F32:
+         return 32;
+
+      case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+         return 32;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
+         return 40;
+      
+      // TODO: compressed formats
+      
+      default:
+         return 32;
+   }
+}
+
+i32 GFX_TextureInternalFormat(u8 format)
+{
+   switch (format)
+   {
+      case GFX_TEXTUREFORMAT_R_U8_NORM:
+      case GFX_TEXTUREFORMAT_R_U16_NORM:
+      case GFX_TEXTUREFORMAT_R_F16:
+      case GFX_TEXTUREFORMAT_R_F32:
+         return GL_RED;
+
+      case GFX_TEXTUREFORMAT_RG_U8_NORM:
+      case GFX_TEXTUREFORMAT_RG_U16_NORM:
+      case GFX_TEXTUREFORMAT_RG_F16:
+      case GFX_TEXTUREFORMAT_RG_F32:
+         return GL_RG;
+      
+      case GFX_TEXTUREFORMAT_RGB_U8_NORM:
+      case GFX_TEXTUREFORMAT_RGB_U16_NORM:
+      case GFX_TEXTUREFORMAT_RGB_F16:
+      case GFX_TEXTUREFORMAT_RGB_F32:
+         return GL_RGB;
+      
+      case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
+      case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
+      case GFX_TEXTUREFORMAT_RGBA_F16:
+      case GFX_TEXTUREFORMAT_RGBA_F32:
+         return GL_RGBA;
+      
+      case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
+         return GL_R11F_G11F_B10F;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_16:
+      case GFX_TEXTUREFORMAT_DEPTH_24:
+      case GFX_TEXTUREFORMAT_DEPTH_F32:
+         return GL_DEPTH_COMPONENT;
+
+      case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+      case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
+         return GL_DEPTH_STENCIL;
+      
+      case GFX_TEXTUREFORMAT_SRGB:
+         return GL_SRGB8;
+      
+      case GFX_TEXTUREFORMAT_SRGB_ALPHA:
+         return GL_SRGB8_ALPHA8;
+
+      // TODO: compressed formats
+      
+      default:
+         return GL_RGBA;
+   }
+}
+
+u32 GFX_TexturePixelFormat(u8 format)
+{
+   switch (format)
+   {
+      case GFX_TEXTUREFORMAT_R_U8_NORM:
+      case GFX_TEXTUREFORMAT_R_U16_NORM:
+      case GFX_TEXTUREFORMAT_R_F16:
+      case GFX_TEXTUREFORMAT_R_F32:
+         return GL_RED;
+
+      case GFX_TEXTUREFORMAT_RG_U8_NORM:
+      case GFX_TEXTUREFORMAT_RG_U16_NORM:
+      case GFX_TEXTUREFORMAT_RG_F16:
+      case GFX_TEXTUREFORMAT_RG_F32:
+         return GL_RG;
+      
+      case GFX_TEXTUREFORMAT_RGB_U8_NORM:
+      case GFX_TEXTUREFORMAT_RGB_U16_NORM:
+      case GFX_TEXTUREFORMAT_RGB_F16:
+      case GFX_TEXTUREFORMAT_RGB_F32:
+      case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
+      case GFX_TEXTUREFORMAT_SRGB:
+         return GL_RGB;
+      
+      case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
+      case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
+      case GFX_TEXTUREFORMAT_RGBA_F16:
+      case GFX_TEXTUREFORMAT_RGBA_F32:
+      case GFX_TEXTUREFORMAT_SRGB_ALPHA:
+         return GL_RGBA;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_16:
+      case GFX_TEXTUREFORMAT_DEPTH_24:
+      case GFX_TEXTUREFORMAT_DEPTH_F32:
+         return GL_DEPTH_COMPONENT;
+
+      case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+      case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
+         return GL_DEPTH_STENCIL;
+
+      // TODO: compressed formats
+      
+      default:
+         return GL_RGBA;
+   }
+}
+
+u32 GFX_TextureFormatType(u8 format)
+{
+   switch (format)
+   {
+      case GFX_TEXTUREFORMAT_R_U8_NORM:
+      case GFX_TEXTUREFORMAT_RG_U8_NORM:
+      case GFX_TEXTUREFORMAT_RGB_U8_NORM:
+      case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
+      case GFX_TEXTUREFORMAT_SRGB:
+      case GFX_TEXTUREFORMAT_SRGB_ALPHA:
+         return  GL_UNSIGNED_BYTE;
+      
+      case GFX_TEXTUREFORMAT_R_U16_NORM:
+      case GFX_TEXTUREFORMAT_RG_U16_NORM:
+      case GFX_TEXTUREFORMAT_RGB_U16_NORM:
+      case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
+         return GL_UNSIGNED_SHORT;
+      
+      case GFX_TEXTUREFORMAT_R_F16:
+      case GFX_TEXTUREFORMAT_RG_F16:
+      case GFX_TEXTUREFORMAT_RGB_F16:
+      case GFX_TEXTUREFORMAT_RGBA_F16:
+         return GL_HALF_FLOAT;
+      
+      case GFX_TEXTUREFORMAT_R_F32:
+      case GFX_TEXTUREFORMAT_RG_F32:
+      case GFX_TEXTUREFORMAT_RGB_F32:
+      case GFX_TEXTUREFORMAT_RGBA_F32:
+         return GL_FLOAT;
+      
+      case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
+         return GL_UNSIGNED_INT;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_16:
+         return GL_UNSIGNED_SHORT;
+
+      case GFX_TEXTUREFORMAT_DEPTH_24:
+         return GL_UNSIGNED_INT;
+
+      case GFX_TEXTUREFORMAT_DEPTH_F32:
+         return GL_FLOAT;
+
+      case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+         return GL_UNSIGNED_INT;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
+         return GL_FLOAT;
+      
+      // TODO: compressed formats
+      
+      default:
+         return GL_UNSIGNED_BYTE;
+   }
+}
+
+u32 GFX_TextureType(u8 type)
+{
+   switch (type)
+   {
+      case GFX_TEXTURETYPE_2D:
+         return GL_TEXTURE_2D;
+      
+      case GFX_TEXTURETYPE_3D:
+         return GL_TEXTURE_3D;
+      
+      case GFX_TEXTURETYPE_CUBEMAP:
+         return GL_TEXTURE_CUBE_MAP;
+      
+      case GFX_TEXTURETYPE_2D_ARRAY:
+         return GL_TEXTURE_2D_ARRAY;
+      
+      case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
+         return GL_TEXTURE_CUBE_MAP_ARRAY;
+
+      default:
+         return GL_TEXTURE_2D;
+   }
+}
+
+u32 GFX_TextureWrap(u8 wrap)
+{
+   switch (wrap)
+   {
+      case GFX_TEXTUREWRAP_REPEAT:
+         return GL_REPEAT;
+      
+      case GFX_TEXTUREWRAP_REPEAT_MIRRORED:
+         return  GL_MIRRORED_REPEAT;
+      
+      case GFX_TEXTUREWRAP_CLAMP:
+         return GL_CLAMP_TO_EDGE;
+      
+      default:
+         return GL_REPEAT;
+   }
+}
+
+struct gfx_Filtering_s GFX_TextureFilter(u8 filter)
+{
+   switch (filter)
+   {
+      case GFX_TEXTUREFILTER_NEAREST_NO_MIPMAPS:
+         return (struct gfx_Filtering_s){ GL_NEAREST, GL_NEAREST };
+      
+      case GFX_TEXTUREFILTER_NEAREST_NEAREST_MIPMAPS:
+         return (struct gfx_Filtering_s){ GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST };
+      
+      case GFX_TEXTUREFILTER_NEAREST_LINEAR_MIPMAPS:
+         return (struct gfx_Filtering_s){ GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST };
+      
+      case GFX_TEXTUREFILTER_BILINEAR_NO_MIPMAPS:
+         return (struct gfx_Filtering_s){ GL_LINEAR, GL_LINEAR };
+      
+      case GFX_TEXTUREFILTER_BILINEAR_NEAREST_MIPMAPS:
+         return (struct gfx_Filtering_s){ GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR };
+      
+      case GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS:
+         return (struct gfx_Filtering_s){ GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR };
+      
+      case GFX_TEXTUREFILTER_NEAREST_MAX_BILINEAR_MIN:
+         return (struct gfx_Filtering_s){ GL_LINEAR, GL_NEAREST };
+
+      default:
+         return (struct gfx_Filtering_s){ GL_NEAREST, GL_NEAREST };
+   }
 }
