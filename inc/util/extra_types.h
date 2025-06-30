@@ -4,6 +4,7 @@
 #include "util/types.h"
 #include "util/math.h"
 #include "util/vec3.h"
+#include "util/matrix.h"
 
 typedef struct BBox_t
 {
@@ -111,6 +112,15 @@ static inline bool Util_ContainsBBoxPoint(BBox bbox, vec3 point)
    diff = Util_SubVec3(diff, bbox.extents);
 
    return (diff.x <= 0) && (diff.y <= 0) && (diff.z <= 0);
+}
+
+static inline mat4x4 Util_TransformationMatrix(Transform3D transform)
+{
+   mat4x4 t = Util_TranslationMatrix(transform.origin);
+   mat4x4 r = Util_Mat3ToMat4(Util_QuatToMat3(transform.rotation));
+   mat4x4 s = Util_ScalingMatrix(transform.scale);
+
+   return Util_MulMat4(s, Util_MulMat4(r, t));
 }
 
 #endif

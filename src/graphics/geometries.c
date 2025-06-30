@@ -169,13 +169,25 @@ uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count)
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode)
 {
-   bool face_cull_enable = (face_cull_mode == GFX_FACECULL_NONE);
+   bool face_cull_enable = (face_cull_mode != GFX_FACECULL_NONE);
 
    if ((bool)graphics->state.face_cull_enable != face_cull_enable)
+   {
       graphics->state.face_cull_enable = (u16)face_cull_enable;
 
-   if ((graphics->state.face_cull_mode != face_cull_mode) && !face_cull_enable)
+      if(face_cull_enable)
+         glEnable(GL_CULL_FACE);
+      else
+         glDisable(GL_CULL_FACE);
+   }
+
+   if ((graphics->state.face_cull_mode != face_cull_mode) && face_cull_enable)
+   {
       graphics->state.face_cull_mode = (u16)face_cull_mode;
+
+      const u32 gl_cullmode[2] = { GL_BACK, GL_FRONT };
+      glCullFace(gl_cullmode[face_cull_mode]);
+   }
 }
 
 void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset)
