@@ -29,6 +29,7 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
    glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
    glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
    glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, (i32)(texture.mipmap_count - 1));
 
    i32 internal_format = GFX_TextureInternalFormat(texture.format);
    u32 pixel_format = GFX_TexturePixelFormat(texture.format);
@@ -59,13 +60,13 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
       uS pixel_size = GFX_PixelSize(texture.format);
 
       uS offset = 0;
+      i32 mip_divisor = 1;
 
       switch (desc.texture_type) {
          case GFX_TEXTURETYPE_2D:
          case GFX_TEXTURETYPE_CUBEMAP:
             for (u32 mip_i = 0; mip_i < texture.mipmap_count; mip_i++)
             {
-               i32 mip_divisor = (i32)(2 ^ mip_i);
                i32 width = desc.size.width / mip_divisor;
                i32 height = desc.size.height / mip_divisor;
                for (u32 face_i = 0; face_i < face_count; face_i++)
@@ -73,6 +74,8 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
                   glTexImage2D(gl_face + face_i, mip_i, internal_format, width, height, 0, pixel_format, format_type, data + offset);
                   offset += width * height * pixel_size;
                }
+
+               mip_divisor *= 2;
             }
             break;
          
@@ -81,7 +84,6 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
          case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
             for (u32 mip_i = 0; mip_i < texture.mipmap_count; mip_i++)
             {
-               i32 mip_divisor = (i32)(2 ^ mip_i);
                i32 width = desc.size.width / mip_divisor;
                i32 height = desc.size.height / mip_divisor;
                i32 depth = desc.depth / mip_divisor;
@@ -91,6 +93,8 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
                   glTexImage3D(gl_face + face_i, mip_i, internal_format, width, height, depth, 0, pixel_format, format_type, data + offset);
                   offset += width * height * pixel_size;
                }
+
+               mip_divisor *= 2;
             }
             break;
          
