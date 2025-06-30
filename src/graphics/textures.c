@@ -40,17 +40,17 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
       switch (desc.texture_type) {
          case GFX_TEXTURETYPE_2D:
          case GFX_TEXTURETYPE_CUBEMAP:
-            glTexStorage2D(gl_target, desc.mipmap_count, internal_format, desc.size.width, desc.size.height);
+            glTexStorage2D(gl_target, texture.mipmap_count, internal_format, desc.size.width, desc.size.height);
             break;
          
          case GFX_TEXTURETYPE_3D:
          case GFX_TEXTURETYPE_2D_ARRAY:
          case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
-            glTexStorage3D(gl_target, desc.mipmap_count, internal_format, desc.size.width, desc.size.height, desc.depth);
+            glTexStorage3D(gl_target, texture.mipmap_count, internal_format, desc.size.width, desc.size.height, desc.depth);
             break;
          
          default:
-            glTexStorage2D(gl_target, 0, internal_format, desc.size.width, desc.size.height);
+            glTexStorage2D(gl_target, 1, internal_format, desc.size.width, desc.size.height);
       }
    } else {
       bool is_cubemap = ((texture.type == GFX_TEXTURETYPE_CUBEMAP) || (texture.type == GFX_TEXTURETYPE_CUBEMAP_ARRAY));
@@ -318,25 +318,25 @@ i32 GFX_TextureInternalFormat(u8 format)
       case GFX_TEXTUREFORMAT_R_U16_NORM:
       case GFX_TEXTUREFORMAT_R_F16:
       case GFX_TEXTUREFORMAT_R_F32:
-         return GL_RED;
+         return GL_R8;
 
       case GFX_TEXTUREFORMAT_RG_U8_NORM:
       case GFX_TEXTUREFORMAT_RG_U16_NORM:
       case GFX_TEXTUREFORMAT_RG_F16:
       case GFX_TEXTUREFORMAT_RG_F32:
-         return GL_RG;
+         return GL_RG8;
       
       case GFX_TEXTUREFORMAT_RGB_U8_NORM:
       case GFX_TEXTUREFORMAT_RGB_U16_NORM:
       case GFX_TEXTUREFORMAT_RGB_F16:
       case GFX_TEXTUREFORMAT_RGB_F32:
-         return GL_RGB;
+         return GL_RGB8;
       
       case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
       case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
       case GFX_TEXTUREFORMAT_RGBA_F16:
       case GFX_TEXTUREFORMAT_RGBA_F32:
-         return GL_RGBA;
+         return GL_RGBA8;
       
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
          return GL_R11F_G11F_B10F;
@@ -359,7 +359,7 @@ i32 GFX_TextureInternalFormat(u8 format)
       // TODO: compressed formats
       
       default:
-         return GL_RGBA;
+         return GL_RGBA8;
    }
 }
 
