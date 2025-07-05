@@ -116,7 +116,12 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
 
 void Graphics_Viewport(Graphics* graphics, resolution2d size)
 {
-   glViewport(0, 0, size.width, size.height);
+   Graphics_OffsetViewport(graphics, size, 0, 0);
+}
+
+void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y)
+{
+   glViewport(offset_x, offset_y, size.width, size.height);
    glEnable(GL_DEPTH_TEST);
    glDepthFunc(GL_LESS);
 

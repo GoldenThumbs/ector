@@ -244,6 +244,7 @@ void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_fr
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
+void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y);
 void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
 
