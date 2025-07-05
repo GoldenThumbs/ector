@@ -8,7 +8,7 @@
 #define ECT_STRINGIFY(x) ECT_STRINGIFY_2(x)
 #define ECT_STRINGIFY_2(x) #x
 
-#define DATABLOB(data) (memblob) { (data), sizeof((data)) }
+#define DATABLOB(data) (memblob) { (void*)(data), sizeof((data)) }
 
 #define VEC2(...) (vec2)   { { __VA_ARGS__ } }
 #define VEC3(...) (vec3)   { { __VA_ARGS__ } }
