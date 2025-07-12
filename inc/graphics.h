@@ -234,6 +234,7 @@ void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot
 void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type);
 
 void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings);
+void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture);
 
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer);
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);

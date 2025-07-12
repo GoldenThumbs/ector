@@ -158,6 +158,20 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
    glBindTexture(gl_target, 0);
 }
 
+void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
+{
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (texture.compare.ref != res_texture.ref)
+      return;
+
+   u32 gl_target = GFX_TextureType(texture.type);
+
+   glBindTexture(gl_target, texture.id.tex);
+   glGenerateMipmap(gl_target);
+   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, -1);
+   glBindTexture(gl_target, 0);
+}
+
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer)
 {
    gfx_Framebuffer framebuffer = { 0 };
