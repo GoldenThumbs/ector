@@ -6,6 +6,8 @@
 #include "util/vec3.h"
 #include "util/matrix.h"
 
+#define READ_HEAD(PTR, TYPE) *((TYPE*)Util_ReadThenMove(&(PTR), sizeof(TYPE)))
+
 typedef struct BBox_t
 {
    vec3 center;
@@ -121,6 +123,13 @@ static inline mat4x4 Util_TransformationMatrix(Transform3D transform)
    mat4x4 s = Util_ScalingMatrix(transform.scale);
 
    return Util_MulMat4(s, Util_MulMat4(r, t));
+}
+
+static inline u8* Util_ReadThenMove(void** read_head, uS read_size)
+{
+   u8* cached = (u8*)(*read_head);
+   *read_head = (void*)(cached + read_size);
+   return cached;
 }
 
 #endif
