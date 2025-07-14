@@ -1,10 +1,25 @@
 #include "util/types.h"
 #include "util/extra_types.h"
-#include "graphics.h"
 
 #include "mesh.h"
 
 #include <stdlib.h>
+
+// "EBMF" in hex
+#define MODEL_MAGIC_ID 0x45424D46
+
+// Header for the Ector Binary Model Format
+typedef struct MSH_ModelHeader_t
+{
+   union {
+      u8 string[4]; 
+      u32 magic;
+   } identifier; // must equal "EBMF"
+
+   u32 mesh_count;
+   u32 material_count;
+
+} MSH_ModelHeader;
 
 typedef struct MSH_MeshHeader_t
 {
@@ -55,20 +70,20 @@ Mesh Mesh_LoadEctorMesh(memblob memory)
       u8 attribute = READ_HEAD(read_head, u8);
       switch (attribute)
       {
-         case GFX_ATTRIBUTE_F32_1X:
-         case GFX_ATTRIBUTE_U8_4X_NORM:
+         case MESH_ATTRIBUTE_1_CHANNEL:
+         case MESH_ATTRIBUTE_COLOR:
             vertex_size += (uS)mesh_header.vertex_count * 4;
             break;
          
-         case GFX_ATTRIBUTE_F32_2X:
+         case MESH_ATTRIBUTE_2_CHANNEL:
             vertex_size += (uS)mesh_header.vertex_count * 8;
             break;
          
-         case GFX_ATTRIBUTE_F32_3X:
+         case MESH_ATTRIBUTE_3_CHANNEL:
             vertex_size += (uS)mesh_header.vertex_count * 12;
             break;
          
-         case GFX_ATTRIBUTE_F32_4X:
+         case MESH_ATTRIBUTE_4_CHANNEL:
             vertex_size += (uS)mesh_header.vertex_count * 16;
             break;
 

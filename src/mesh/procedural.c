@@ -3,7 +3,6 @@
 #include "util/vec3.h"
 #include "util/vec4.h"
 #include "util/matrix.h"
-#include "graphics.h"
 
 #include "mesh.h"
 
@@ -12,11 +11,11 @@
 
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 {
-   Mesh mesh = Mesh_EmptyMesh(GFX_PRIMITIVE_TRIANGLE);
+   Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
    mesh.attribute_count = 3;
-   mesh.attributes[0] = GFX_ATTRIBUTE_F32_3X;
-   mesh.attributes[1] = GFX_ATTRIBUTE_F32_3X;
-   mesh.attributes[2] = GFX_ATTRIBUTE_F32_2X;
+   mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
+   mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
+   mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
    
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
@@ -30,11 +29,11 @@ Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 
 Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
 {
-   Mesh mesh = Mesh_EmptyMesh(GFX_PRIMITIVE_TRIANGLE);
+   Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
    mesh.attribute_count = 3;
-   mesh.attributes[0] = GFX_ATTRIBUTE_F32_3X;
-   mesh.attributes[1] = GFX_ATTRIBUTE_F32_3X;
-   mesh.attributes[2] = GFX_ATTRIBUTE_F32_2X;
+   mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
+   mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
+   mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
    
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 

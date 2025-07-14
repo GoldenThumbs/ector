@@ -1,3 +1,4 @@
+#include "mesh.h"
 #include "util/types.h"
 #include "util/resource.h"
 
@@ -11,8 +12,8 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
    gfx_Geometry geometry = { 0 };
    geometry.draw_mode = draw_mode;
    geometry.face_cull_mode = GFX_FACECULL_BACK;
-   geometry.primitive = mesh.primitive;
-   geometry.element_count = ((mesh.index_count > 0) && (mesh.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
+   geometry.primitive = GFX_MeshPrimitive(mesh.primitive);
+   geometry.element_count = ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
    geometry.compare.ref =  graphics->ref;
 
    glGenVertexArrays(1, &geometry.id.vao);
@@ -31,7 +32,7 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
    uS atr_ofs = 0;
    for (; atr_num<mesh.attribute_count; atr_num++)
    {
-      u8 a = mesh.attributes[atr_num];
+      u8 a = GFX_MeshAttribute(mesh.attributes[atr_num]);
 
       if (a == GFX_ATTRIBUTE_NULL)
          break;
@@ -54,7 +55,7 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
       atr_ofs += a_size * (uS)a_count * (uS)mesh.vertex_count;
    }
 
-   if ((mesh.index_count > 0) && (mesh.primitive == GFX_PRIMITIVE_TRIANGLE))
+   if ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE))
    {
       glGenBuffers(1,  &geometry.id.i_buf);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry.id.i_buf);
@@ -81,6 +82,37 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
       glDeleteBuffers(1, &geometry.id.v_buf);
    if (geometry.id.i_buf != 0)
       glDeleteBuffers(1, &geometry.id.i_buf);
+}
+
+u8 GFX_MeshPrimitive(u8 mesh_primitive)
+{
+   if (mesh_primitive == MESH_PRIMITIVE_TRIANGLE)
+      return GFX_PRIMITIVE_TRIANGLE;
+   return GFX_PRIMITIVE_TRIANGLE; // not actually supported lmao
+}
+
+u8 GFX_MeshAttribute(u8 mesh_attribute)
+{
+   switch (mesh_attribute)
+   {
+      case MESH_ATTRIBUTE_1_CHANNEL:
+         return GFX_ATTRIBUTE_F32_1X;
+
+      case MESH_ATTRIBUTE_2_CHANNEL:
+         return GFX_ATTRIBUTE_F32_2X;
+
+      case MESH_ATTRIBUTE_3_CHANNEL:
+         return GFX_ATTRIBUTE_F32_3X;
+      
+      case MESH_ATTRIBUTE_4_CHANNEL:
+         return GFX_ATTRIBUTE_F32_4X;
+      
+      case MESH_ATTRIBUTE_COLOR:
+         return GFX_ATTRIBUTE_U8_4X_NORM;
+
+      default:
+         return GFX_ATTRIBUTE_NULL;
+   }
 }
 
 u32 GFX_AttributeType(u8 attribute)

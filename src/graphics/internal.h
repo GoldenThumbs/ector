@@ -103,6 +103,9 @@ struct Graphics_t
 
 void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks);
 
+u8 GFX_MeshPrimitive(u8 mesh_primitive);
+u8 GFX_MeshAttribute(u8 mesh_attribute);
+
 u32 GFX_AttributeType(u8 attribute);
 i32 GFX_AttributeTypeCount(u8 attribute);
 bool GFX_AttributeTypeNormalized(u8 attribute);
