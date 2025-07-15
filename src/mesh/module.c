@@ -1,35 +1,30 @@
 #include "util/types.h"
 #include "util/extra_types.h"
 
+#include "mesh/internal.h"
 #include "mesh.h"
 
 #include <stdlib.h>
 
-// "EBMF" in hex
-#define MODEL_MAGIC_ID 0x45424D46
-
-// Header for the Ector Binary Model Format
-typedef struct MSH_ModelHeader_t
+void Model_Free(Model* model)
 {
-   union {
-      u8 string[4]; 
-      u32 magic;
-   } identifier; // must equal "EBMF"
+   if (model->meshes != NULL)
+   {
+      for (u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++)
+         Mesh_Free(&model->meshes[mesh_i]);
+      free(model->meshes);
+      model->meshes = NULL;
+   }
 
-   u32 mesh_count;
-   u32 material_count;
+   if (model->materials != NULL)
+   {
+      free(model->materials);
+      model->materials = NULL;
+   }
 
-} MSH_ModelHeader;
-
-typedef struct MSH_MeshHeader_t
-{
-   u16 version_number;
-   u16 index_count;
-   u16 vertex_count;
-   u8 primitive;
-   u8 attribute_count;
-   u16 material_id;
-} MSH_MeshHeader;
+   model->mesh_count = 0;
+   model->material_count = 0;
+}
 
 void Mesh_Free(Mesh* mesh)
 {
@@ -51,10 +46,38 @@ void Mesh_Free(Mesh* mesh)
 
 Mesh Mesh_LoadEctorMesh(memblob memory)
 {
-   if ((memory.data == NULL) || (memory.size < sizeof(MSH_MeshHeader)))
+   return MSH_ParseEctorMesh(&memory);
+}
+
+Model Mesh_LoadEctorModel(memblob memory)
+{
+   if ((memory.data == NULL) || (memory.size < sizeof(MSH_ModelHeader)))
+      return (Model){ 0 };
+
+   memblob tmp_mem = memory;
+
+   MSH_ModelHeader model_header = READ_HEAD(tmp_mem.data, MSH_ModelHeader);
+
+   if ((model_header.identifier.magic != MODEL_MAGIC_ID) || (model_header.mesh_count == 0))
+      return (Model){ 0 };
+
+   Model model = { .mesh_count = model_header.mesh_count, .material_count = model_header.material_count };
+   model.meshes = calloc((uS)model.mesh_count, sizeof(Mesh));
+   model.materials = (model.material_count > 0) ? calloc((uS)model.material_count, sizeof(Material)) : NULL;
+   for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
+   {
+      model.meshes[mesh_i] = MSH_ParseEctorMesh(&tmp_mem);
+   }
+
+   return model;
+}
+
+Mesh MSH_ParseEctorMesh(memblob* memory)
+{
+   if ((memory->data == NULL) || (memory->size < sizeof(MSH_MeshHeader)))
       return (Mesh){ 0 };
 
-   void* read_head = memory.data;
+   void* read_head = memory->data;
 
    MSH_MeshHeader mesh_header = READ_HEAD(read_head, MSH_MeshHeader);
 
@@ -93,7 +116,7 @@ Mesh Mesh_LoadEctorMesh(memblob memory)
       mesh.attributes[attribute_i] = attribute;
    }
 
-   if ((index_size + vertex_size) > memory.size)
+   if ((index_size + vertex_size) > memory->size)
       return (Mesh){ 0 };
 
    mesh.index_count = mesh_header.index_count;
@@ -105,6 +128,9 @@ Mesh Mesh_LoadEctorMesh(memblob memory)
 
    memcpy(mesh.index_buffer, Util_ReadThenMove(&read_head, index_size), index_size);
    memcpy(mesh.vertex_buffer, Util_ReadThenMove(&read_head, vertex_size), vertex_size);
+
+   memory->data = read_head;
+   memory->size -= index_size + vertex_size + sizeof(MSH_MeshHeader);
 
    return mesh;
 }

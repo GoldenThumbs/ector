@@ -91,6 +91,7 @@ static inline MeshInterface Mesh_NewInterface(Mesh* mesh)
    };
 }
 
+void Model_Free(Model* model);
 void Mesh_Free(Mesh* mesh);
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface);
@@ -101,5 +102,7 @@ Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size);
 Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size);
 
 Mesh Mesh_LoadEctorMesh(memblob memory);
+Model Mesh_LoadEctorModel(memblob memory);
+
 
 #endif
