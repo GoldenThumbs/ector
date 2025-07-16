@@ -70,8 +70,8 @@ Model Mesh_LoadEctorModel(memblob memory)
       uS mesh_size = 0;
       model.meshes[mesh_i] = MSH_ParseEctorMesh((memblob){ read_head, size_left }, &mesh_size);
 
-      size_left -= size_left;
-      read_head = read_head + mesh_size;
+      size_left -= mesh_size;
+      read_head = ((u8*)read_head) + mesh_size;
    }
 
    return model;
@@ -100,19 +100,19 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
       {
          case MESH_ATTRIBUTE_1_CHANNEL:
          case MESH_ATTRIBUTE_COLOR:
-            vertex_size += (uS)mesh_header.vertex_count * 4;
+            vertex_size += 4;
             break;
          
          case MESH_ATTRIBUTE_2_CHANNEL:
-            vertex_size += (uS)mesh_header.vertex_count * 8;
+            vertex_size += 8;
             break;
          
          case MESH_ATTRIBUTE_3_CHANNEL:
-            vertex_size += (uS)mesh_header.vertex_count * 12;
+            vertex_size += 12;
             break;
          
          case MESH_ATTRIBUTE_4_CHANNEL:
-            vertex_size += (uS)mesh_header.vertex_count * 16;
+            vertex_size += 16;
             break;
 
          default:
@@ -120,6 +120,8 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
       }
       mesh.attributes[attribute_i] = attribute;
    }
+
+   vertex_size *= (uS)mesh_header.vertex_count;
 
    if ((index_size + vertex_size) > memory.size)
       return (Mesh){ 0 };
@@ -134,7 +136,7 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
    memcpy(mesh.index_buffer, Util_ReadThenMove(&read_head, index_size), index_size);
    memcpy(mesh.vertex_buffer, Util_ReadThenMove(&read_head, vertex_size), vertex_size);
 
-   *mesh_size = index_size + vertex_size + sizeof(MSH_MeshHeader);
+   *mesh_size = sizeof(MSH_MeshHeader) + (uS)mesh_header.attribute_count + index_size + vertex_size;
 
    return mesh;
 }
