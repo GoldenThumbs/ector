@@ -46,7 +46,7 @@ void Mesh_Free(Mesh* mesh)
 
 Mesh Mesh_LoadEctorMesh(memblob memory)
 {
-   return MSH_ParseEctorMesh(&memory);
+   return MSH_ParseEctorMesh(memory, NULL);
 }
 
 Model Mesh_LoadEctorModel(memblob memory)
@@ -54,9 +54,10 @@ Model Mesh_LoadEctorModel(memblob memory)
    if ((memory.data == NULL) || (memory.size < sizeof(MSH_ModelHeader)))
       return (Model){ 0 };
 
-   memblob tmp_mem = memory;
+   void* read_head = memory.data;
+   uS size_left = memory.size - sizeof(MSH_ModelHeader);
 
-   MSH_ModelHeader model_header = READ_HEAD(tmp_mem.data, MSH_ModelHeader);
+   MSH_ModelHeader model_header = READ_HEAD(read_head, MSH_ModelHeader);
 
    if ((model_header.identifier.magic != MODEL_MAGIC_ID) || (model_header.mesh_count == 0))
       return (Model){ 0 };
@@ -66,18 +67,22 @@ Model Mesh_LoadEctorModel(memblob memory)
    model.materials = (model.material_count > 0) ? calloc((uS)model.material_count, sizeof(Material)) : NULL;
    for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
    {
-      model.meshes[mesh_i] = MSH_ParseEctorMesh(&tmp_mem);
+      uS mesh_size = 0;
+      model.meshes[mesh_i] = MSH_ParseEctorMesh((memblob){ read_head, size_left }, &mesh_size);
+
+      size_left -= size_left;
+      read_head = read_head + mesh_size;
    }
 
    return model;
 }
 
-Mesh MSH_ParseEctorMesh(memblob* memory)
+Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
 {
-   if ((memory->data == NULL) || (memory->size < sizeof(MSH_MeshHeader)))
+   if ((memory.data == NULL) || (memory.size < sizeof(MSH_MeshHeader)))
       return (Mesh){ 0 };
 
-   void* read_head = memory->data;
+   void* read_head = memory.data;
 
    MSH_MeshHeader mesh_header = READ_HEAD(read_head, MSH_MeshHeader);
 
@@ -116,7 +121,7 @@ Mesh MSH_ParseEctorMesh(memblob* memory)
       mesh.attributes[attribute_i] = attribute;
    }
 
-   if ((index_size + vertex_size) > memory->size)
+   if ((index_size + vertex_size) > memory.size)
       return (Mesh){ 0 };
 
    mesh.index_count = mesh_header.index_count;
@@ -129,8 +134,7 @@ Mesh MSH_ParseEctorMesh(memblob* memory)
    memcpy(mesh.index_buffer, Util_ReadThenMove(&read_head, index_size), index_size);
    memcpy(mesh.vertex_buffer, Util_ReadThenMove(&read_head, vertex_size), vertex_size);
 
-   memory->data = read_head;
-   memory->size -= index_size + vertex_size + sizeof(MSH_MeshHeader);
+   *mesh_size = index_size + vertex_size + sizeof(MSH_MeshHeader);
 
    return mesh;
 }

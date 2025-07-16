@@ -6,7 +6,7 @@
 #include "mesh.h"
 
 // "EBMF" in hex
-#define MODEL_MAGIC_ID 0x45424D46
+#define MODEL_MAGIC_ID 0x464D4245
 
 // Header for the Ector Binary Model Format
 typedef struct MSH_ModelHeader_t
@@ -30,6 +30,6 @@ typedef struct MSH_MeshHeader_t
    u8 attribute_count;
 } MSH_MeshHeader;
 
-Mesh MSH_ParseEctorMesh(memblob* memory);
+Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size);
 
 #endif
