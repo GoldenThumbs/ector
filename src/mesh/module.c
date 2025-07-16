@@ -92,7 +92,7 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
    uS index_size = mesh_header.index_count * sizeof(u16);
    uS vertex_size = 0;
 
-   Mesh mesh = { .attribute_count = mesh_header.attribute_count };
+   Mesh mesh = { .material_id = mesh_header.material_id, .attribute_count = mesh_header.attribute_count };
    for (u8 attribute_i = 0; attribute_i < mesh.attribute_count; attribute_i++)
    {
       u8 attribute = READ_HEAD(read_head, u8);
