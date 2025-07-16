@@ -192,7 +192,7 @@ uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count)
    uS buffer_size = 0;
    for (u16 i=0; i<attribute_count; i++)
    {
-      u8 a = attributes[i];
+      u8 a = GFX_MeshAttribute(attributes[i]);
       buffer_size += GFX_AttributeTypeSize(a) * (uS)GFX_AttributeTypeCount(a) * (uS)vertex_count;
    }
 
