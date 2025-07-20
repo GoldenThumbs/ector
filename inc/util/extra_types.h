@@ -122,7 +122,7 @@ static inline mat4x4 Util_TransformationMatrix(Transform3D transform)
    mat4x4 r = Util_Mat3ToMat4(Util_QuatToMat3(transform.rotation));
    mat4x4 s = Util_ScalingMatrix(transform.scale);
 
-   return Util_MulMat4(s, Util_MulMat4(r, t));
+   return Util_MulMat4(t, Util_MulMat4(r, s));
 }
 
 static inline u8* Util_ReadThenMove(void** read_head, uS read_size)
