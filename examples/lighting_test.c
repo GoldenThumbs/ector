@@ -1,4 +1,5 @@
 // #include "util/array.h"
+#include "util/extra_types.h"
 #include "util/math.h"
 #include "util/vec3.h"
 #include <util/quaternion.h>
@@ -10,6 +11,8 @@
 #include <mesh.h>
 #include <renderer.h>
 #include <default_modules.h>
+
+#include "cube_model.h"
 
 // #include <stdio.h>
 
@@ -85,8 +88,10 @@ int main(int argc, char* argv[])
    Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
    Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
 
+   Model arrow_model = Mesh_LoadEctorModel(DATABLOB(Arrow_ebmf));
+
    Geometry floor_geo = Graphics_CreateGeometry(graphics, floor_mesh, GFX_DRAWMODE_STATIC);
-   Geometry box_geo = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);
+   Geometry box_geo = Graphics_CreateGeometry(graphics, arrow_model.meshes[0], GFX_DRAWMODE_STATIC);
 
    Shader lit_shader = Renderer_LitShader(graphics);
 
@@ -137,8 +142,8 @@ int main(int argc, char* argv[])
       },
       (Transform3D){
          .origin = VEC3(0, 1.5f, 0),
-         .rotation = Util_MakeQuatEuler(VEC3(0, 20, 0)),
-         .scale = VEC3(1, 1, 1)
+         .rotation = Util_IdentityQuat(),
+         .scale = VEC3(0.3f, 0.3f, 0.6f)
       }
    );
 
@@ -198,6 +203,14 @@ int main(int argc, char* argv[])
             Util_ScaleVec3(move_vec, player.move_speed * (f32)frame_delta)
          );
       }
+
+      Transform3D t = Renderer_GetObjectTransform(renderer, box_obj);
+      t.rotation = Util_SphericalLerp(
+         t.rotation,
+         Util_MakeQuatLookingAt(t.origin, player.origin, VEC3(0, 0,-1), VEC3(0, 1, 0)),
+         (f32)frame_delta * 2.0f
+      );
+      Renderer_SetObjectTransform(renderer, box_obj, t);
       
       resolution2d size = Engine_GetFrameSize(engine);
 
@@ -209,6 +222,7 @@ int main(int argc, char* argv[])
 
    Mesh_Free(&floor_mesh);
    Mesh_Free(&box_mesh);
+   Model_Free(&arrow_model);
 
    Engine_Free(engine);
    return 0;

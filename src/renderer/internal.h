@@ -47,6 +47,8 @@ typedef struct rndr_Object_t
       mat3x3 normal;
    } matrix;
    
+   Transform3D transform;
+   
    BBox bounds;
    BBox aabb;
 

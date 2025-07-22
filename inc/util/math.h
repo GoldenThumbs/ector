@@ -51,6 +51,12 @@
    #define M_TAN32(a) tanf(M_TURN32 * (a))
    #define M_TAN64(a) tan(M_TURN64 * (a))
 
+   #define M_ASIN32(x) (M_TO_TURN32 * asinf(x))
+   #define M_ASIN64(x) (M_TO_TURN64 * asin(x))
+   
+   #define M_ACOS32(x) (M_TO_TURN32 * acosf(x))
+   #define M_ACOS64(x) (M_TO_TURN64 * acos(x))
+
    #define M_ATAN32(x) (M_TO_TURN32 * atanf(x))
    #define M_ATAN64(x) (M_TO_TURN64 * atan(x))
 
@@ -73,6 +79,18 @@
       f32: M_TAN32((a)), \
       f64: M_TAN64((a)), \
       default: (f32)(a) \
+   )
+
+   #define M_ASIN(x) _Generic((x), \
+      f32: M_ASIN32((x)), \
+      f64: M_ASIN64((x)), \
+      default: (f32)(x) \
+   )
+
+   #define M_ACOS(x) _Generic((x), \
+      f32: M_ACOS32((x)), \
+      f64: M_ACOS64((x)), \
+      default: (f32)(x) \
    )
 
    #define M_ATAN(x) _Generic((x), \

@@ -4,6 +4,7 @@
 #include "util/types.h"
 #include "util/math.h"
 #include "util/vec3.h"
+#include "util/vec4.h"
 
 static inline quat Util_IdentityQuat(void)
 {
@@ -65,6 +66,69 @@ static inline quat Util_MakeQuatMat3(mat3x3 matrix)
          (matrix.m[2][1] - matrix.m[1][2]) * s
       );
    }
+}
+
+static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, vec3 up)
+{
+   vec3 pointing_dir = Util_NormalizeVec3(Util_SubVec3(target, origin));
+   vec3 tan_dir = Util_NormalizeVec3(Util_SubVec3(pointing_dir, Util_ScaleVec3(up, Util_DotVec3(pointing_dir, up))));
+
+   quat yaw_q = Util_IdentityQuat();
+   quat pitch_q = Util_IdentityQuat();
+
+   vec3 yaw_axis = Util_NormalizeVec3(Util_CrossVec3(front, tan_dir));
+
+   if (Util_DotVec3(yaw_axis, yaw_axis) > M_FLOAT_FUZZ)
+   {
+      f32 cos_angle = Util_DotVec3(front, tan_dir);
+      f32 angle = -M_ACOS(cos_angle);
+
+      yaw_q = Util_MakeQuat(yaw_axis, angle);
+   } else {
+      yaw_axis = Util_ScaleVec3(up, M_SIGN(Util_DotVec3(tan_dir, front)));
+      yaw_q = Util_VecF32Vec4(yaw_axis, 0);
+   }
+   
+   if (M_ABS(Util_DotVec3(pointing_dir, up)) > M_FLOAT_FUZZ)
+   {
+      vec3 pitch_axis = Util_NormalizeVec3(Util_CrossVec3(tan_dir, up));
+      if (Util_DotVec3(pitch_axis, pitch_axis) > M_FLOAT_FUZZ)
+      {
+         f32 cos_angle = Util_DotVec3(pointing_dir, tan_dir);
+         f32 angle = M_ACOS(cos_angle);
+
+         pitch_q = Util_MakeQuat(pitch_axis, angle);
+      }
+   }
+
+   return Util_MulQuat(yaw_q, pitch_q);
+}
+
+static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
+{
+   f32 cos_angle = Util_DotVec4(a, b);
+   if (M_ABS(cos_angle) >= 1.0f)
+      return a;
+
+   if (cos_angle < 0)
+   {
+      cos_angle = -cos_angle;
+      a = Util_ScaleVec4(a, -1);
+   }
+
+   f32 sin_angle = M_SQRT(1.0f - cos_angle * cos_angle);
+   if (M_ABS(sin_angle) < M_FLOAT_FUZZ)
+   {
+      quat q1 = Util_ScaleVec4(a, (1.0f - fac));
+      quat q2 = Util_ScaleVec4(b, fac);
+      return Util_AddVec4(q1, q2);
+   }
+
+   f32 angle = M_ACOS(cos_angle);
+   f32 denom = M_RCP(sin_angle, M_FLOAT_FUZZ);
+   quat q1 = Util_ScaleVec4(a, M_SIN(angle * (1.0f - fac)));
+   quat q2 = Util_ScaleVec4(b, M_SIN(angle * fac));
+   return Util_ScaleVec4(Util_AddVec4(q1, q2), denom);
 }
 
 #endif

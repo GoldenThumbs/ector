@@ -172,6 +172,7 @@ Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D tran
    object.shader = desc->shader;
    object.geometry = desc->geometry;
    object.uniforms = desc->uniforms;
+   object.transform = transform;
    object.bounds = desc->bounds;
    object.aabb = Util_ResizeBBox(desc->bounds, rot);
 
@@ -201,6 +202,35 @@ void Renderer_RemoveObject(Renderer* renderer, Object res_object)
       return;
 
    REMOVE_ARRAY(renderer->objects, (u32)res_object.handle);
+}
+
+Transform3D Renderer_GetObjectTransform(Renderer* renderer, Object res_object)
+{
+   rndr_Object object = renderer->objects[res_object.handle];
+   if (object.compare.ref != res_object.ref)
+      return (Transform3D){ 0 };
+
+   return object.transform;
+}
+
+void Renderer_SetObjectTransform(Renderer* renderer, Object res_object, Transform3D transform)
+{
+   rndr_Object* object = &renderer->objects[res_object.handle];
+   if (object->compare.ref != res_object.ref)
+      return;
+
+   vec3 v1 = object->matrix.inv_model.v[0].xyz;
+   vec3 v2 = object->matrix.inv_model.v[1].xyz;
+   vec3 v3 = object->matrix.inv_model.v[2].xyz;
+
+   object->transform = transform;
+   object->matrix.model = Util_TransformationMatrix(transform);
+   object->matrix.inv_model = Util_InverseMat4(object->matrix.model);
+   object->matrix.normal = MAT3(
+      v1.x, v3.x, v3.x,
+      v1.y, v3.y, v3.y,
+      v1.z, v3.z, v3.z
+   );
 }
 
 Light Renderer_AddLight(Renderer* renderer, LightDesc* desc)
