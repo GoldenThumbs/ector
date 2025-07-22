@@ -78,22 +78,28 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
 
    vec3 yaw_axis = Util_NormalizeVec3(Util_CrossVec3(front, tan_dir));
 
-   if (Util_DotVec3(yaw_axis, yaw_axis) > M_FLOAT_FUZZ)
+   if (Util_DotVec3(yaw_axis, yaw_axis) >= M_FLOAT_FUZZ)
    {
       f32 cos_angle = Util_DotVec3(front, tan_dir);
       f32 angle = -M_ACOS(cos_angle);
 
       yaw_q = Util_MakeQuat(yaw_axis, angle);
    } else {
-      yaw_axis = Util_ScaleVec3(up, M_SIGN(Util_DotVec3(tan_dir, front)));
-      yaw_q = Util_VecF32Vec4(yaw_axis, 0);
+      yaw_axis = up;
+      
+      f32 cos_angle = Util_DotVec3(front, tan_dir);
+      f32 angle = -M_ACOS(cos_angle);
+      
+      yaw_q = Util_MakeQuat(yaw_axis, angle);
    }
    
-   if (M_ABS(Util_DotVec3(pointing_dir, up)) > M_FLOAT_FUZZ)
+   if (M_ABS(Util_DotVec3(pointing_dir, up)) > 0.0001f)
    {
-      vec3 pitch_axis = Util_NormalizeVec3(Util_CrossVec3(tan_dir, up));
+      vec3 pitch_axis = Util_NormalizeVec3(Util_CrossVec3(yaw_axis, tan_dir));
       if (Util_DotVec3(pitch_axis, pitch_axis) > M_FLOAT_FUZZ)
       {
+         pitch_axis = Util_ScaleVec3(pitch_axis, M_SIGN(Util_DotVec3(pointing_dir, yaw_axis)));
+
          f32 cos_angle = Util_DotVec3(pointing_dir, tan_dir);
          f32 angle = M_ACOS(cos_angle);
 
@@ -101,7 +107,7 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
       }
    }
 
-   return Util_MulQuat(yaw_q, pitch_q);
+   return Util_NormalizeVec4(Util_MulQuat(yaw_q, pitch_q));
 }
 
 static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
@@ -128,7 +134,7 @@ static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
    f32 denom = M_RCP(sin_angle, M_FLOAT_FUZZ);
    quat q1 = Util_ScaleVec4(a, M_SIN(angle * (1.0f - fac)));
    quat q2 = Util_ScaleVec4(b, M_SIN(angle * fac));
-   return Util_ScaleVec4(Util_AddVec4(q1, q2), denom);
+   return Util_NormalizeVec4(Util_ScaleVec4(Util_AddVec4(q1, q2), denom));
 }
 
 #endif

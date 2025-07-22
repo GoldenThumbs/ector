@@ -141,11 +141,13 @@ int main(int argc, char* argv[])
          }
       },
       (Transform3D){
-         .origin = VEC3(0, 1.5f, 0),
+         .origin = VEC3(0, 0.5f, 0),
          .rotation = Util_IdentityQuat(),
          .scale = VEC3(0.3f, 0.3f, 0.6f)
       }
    );
+
+   f32 timer = 0.0f;
 
    while(!Engine_CheckExitConditions(engine))
    {
@@ -205,12 +207,12 @@ int main(int argc, char* argv[])
       }
 
       Transform3D t = Renderer_GetObjectTransform(renderer, box_obj);
-      t.rotation = Util_SphericalLerp(
-         t.rotation,
-         Util_MakeQuatLookingAt(t.origin, player.origin, VEC3(0, 0,-1), VEC3(0, 1, 0)),
-         (f32)frame_delta * 2.0f
-      );
+      t.origin.y = player.origin.y + M_SIN(timer) * 1.0f;
+      t.rotation = Util_MakeQuatLookingAt(t.origin, player.origin, VEC3(0, 0,-1), VEC3(0, 1, 0));
+
       Renderer_SetObjectTransform(renderer, box_obj, t);
+
+      timer += (f32)frame_delta * 40.0f;
       
       resolution2d size = Engine_GetFrameSize(engine);
 
