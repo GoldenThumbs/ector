@@ -93,7 +93,7 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
       yaw_q = Util_MakeQuat(yaw_axis, angle);
    }
    
-   if (M_ABS(Util_DotVec3(pointing_dir, up)) > 0.0001f)
+   if (M_ABS(Util_DotVec3(pointing_dir, up)) > 0.001f)
    {
       vec3 pitch_axis = Util_NormalizeVec3(Util_CrossVec3(yaw_axis, tan_dir));
       if (Util_DotVec3(pitch_axis, pitch_axis) > M_FLOAT_FUZZ)
