@@ -156,6 +156,14 @@ enum {
    GFX_BLENDMODE_NONE
 };
 
+enum {
+   GFX_DEPTHMODE_LESS_THAN = 0,
+   GFX_DEPTHMODE_GREATER_THAN,
+   GFX_DEPTHMODE_ALWAYS_OVER,
+   GFX_DEPTHMODE_ALWAYS_UNDER,
+   GFX_DEPTHMODE_NONE
+};
+
 typedef struct Uniform_t
 {
    u32 uniform_type;
@@ -247,6 +255,7 @@ void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
 void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y);
 void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
+void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode);
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
 
 #endif

@@ -28,6 +28,7 @@ Graphics* Graphics_Init(void)
 
    Graphics_SetClearColor(graphics, (color8){ 127, 127, 127, 255 });
    Graphics_SetBlending(graphics, GFX_BLENDMODE_MIX);
+   Graphics_SetDepthTest(graphics, GFX_DEPTHMODE_LESS_THAN);
    GFX_SetFaceCullMode(graphics, GFX_FACECULL_BACK);
 
    return graphics;
@@ -90,22 +91,22 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
       {
          case GFX_BLENDMODE_MIX:
             glBlendEquation(GL_FUNC_ADD);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
          break;
 
          case GFX_BLENDMODE_ADD:
             glBlendEquation(GL_FUNC_ADD);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glBlendFunc(GL_ONE, GL_ONE);
          break;
 
          case GFX_BLENDMODE_SUB:
             glBlendEquation(GL_FUNC_SUBTRACT);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glBlendFunc(GL_ONE, GL_ONE);
          break;
 
          case GFX_BLENDMODE_MUL:
             glBlendEquation(GL_FUNC_ADD);
-            glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+            glBlendFunc(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA);
          break;
 
          default:
@@ -116,6 +117,47 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
    graphics->state.blend_mode = blend_mode;
 }
 
+void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode)
+{
+   bool depthtest_enable = (depth_mode != GFX_DEPTHMODE_NONE);
+   if ((bool)graphics->state.depthtest_enable != depthtest_enable)
+   {
+      graphics->state.depthtest_enable = (u16)depthtest_enable;
+
+      if(depthtest_enable)
+         glEnable(GL_DEPTH_TEST);
+      else
+         glDisable(GL_DEPTH_TEST);
+   }
+
+   if ((graphics->state.depth_mode != depth_mode) && depthtest_enable)
+   {
+      switch (depth_mode)
+      {
+         case GFX_DEPTHMODE_LESS_THAN:
+            glDepthFunc(GL_LESS);
+         break;
+
+         case GFX_DEPTHMODE_GREATER_THAN:
+            glDepthFunc(GL_GREATER);
+         break;
+
+         case GFX_DEPTHMODE_ALWAYS_OVER:
+            glDepthFunc(GL_ALWAYS);
+         break;
+
+         case GFX_DEPTHMODE_ALWAYS_UNDER:
+            glDepthFunc(GL_NEVER);
+         break;
+
+         default:
+            break;
+      }
+   }
+
+   graphics->state.depth_mode = depth_mode;
+}
+
 void Graphics_Viewport(Graphics* graphics, resolution2d size)
 {
    Graphics_OffsetViewport(graphics, size, 0, 0);
@@ -124,8 +166,6 @@ void Graphics_Viewport(Graphics* graphics, resolution2d size)
 void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y)
 {
    glViewport(offset_x, offset_y, size.width, size.height);
-   glEnable(GL_DEPTH_TEST);
-   glDepthFunc(GL_LESS);
 
    u32 color_bit = GL_COLOR_BUFFER_BIT;
    u32 depth_bit = GL_DEPTH_BUFFER_BIT;
