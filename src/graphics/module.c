@@ -112,6 +112,8 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
             break;
       }
    }
+
+   graphics->state.blend_mode = blend_mode;
 }
 
 void Graphics_Viewport(Graphics* graphics, resolution2d size)
