@@ -259,6 +259,7 @@ void Graphics_Viewport(Graphics* graphics, resolution2d size);
 void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y);
 void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode);
+void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask);
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
 
 #endif
