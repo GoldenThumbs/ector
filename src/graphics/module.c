@@ -172,8 +172,9 @@ void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode)
 
 void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask)
 {
-   if ((bool)(graphics->state.depthmask_enable) != depth_mask)
+   if ((bool)graphics->state.depthmask_enable != depth_mask)
       glDepthMask((GLboolean)depth_mask);
+   graphics->state.depthmask_enable = (u16)depth_mask;
 }
 
 void Graphics_Viewport(Graphics* graphics, resolution2d size)
