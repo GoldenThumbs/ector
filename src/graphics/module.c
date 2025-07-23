@@ -138,16 +138,28 @@ void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode)
             glDepthFunc(GL_LESS);
          break;
 
+         case GFX_DEPTHMODE_LESS_THAN_OR_EQUAL:
+            glDepthFunc(GL_LEQUAL);
+         break;
+
          case GFX_DEPTHMODE_GREATER_THAN:
             glDepthFunc(GL_GREATER);
          break;
 
-         case GFX_DEPTHMODE_ALWAYS_OVER:
-            glDepthFunc(GL_ALWAYS);
+         case GFX_DEPTHMODE_GREATER_THAN_OR_EQUAL:
+            glDepthFunc(GL_GEQUAL);
          break;
 
-         case GFX_DEPTHMODE_ALWAYS_UNDER:
-            glDepthFunc(GL_NEVER);
+         case GFX_DEPTHMODE_EQUAL_TO:
+            glDepthFunc(GL_EQUAL);
+         break;
+
+         case GFX_DEPTHMODE_NOT_EQUAL_TO:
+            glDepthFunc(GL_NOTEQUAL);
+         break;
+
+         case GFX_DEPTHMODE_ALWAYS_OVER:
+            glDepthFunc(GL_ALWAYS);
          break;
 
          default:
