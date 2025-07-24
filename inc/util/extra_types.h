@@ -6,6 +6,8 @@
 #include "util/vec3.h"
 #include "util/matrix.h"
 
+#include <math.h>
+
 #define READ_HEAD(PTR, TYPE) *((TYPE*)Util_ReadThenMove(&(PTR), sizeof(TYPE)))
 
 typedef struct BBox_t
@@ -36,6 +38,17 @@ static inline color8 Util_MakeRGBE(vec3 hdr_color)
       (u8)scaled.b,
       (u8)(e + 128)
    };
+}
+
+static inline vec3 Util_FromRGBE(color8 rgbe_color)
+{
+   if (rgbe_color.a != 0)
+   {
+      f32 f = ldexpf(1.0f, (i32)rgbe_color.a - 136);
+      vec3 color = { (f32)rgbe_color.r, (f32)rgbe_color.g, (f32)rgbe_color.b };
+      return Util_ScaleVec3(color, f);
+   }
+   return VEC3(0, 0, 0);
 }
 
 static inline f32 Util_AreaBBox(BBox bbox)
