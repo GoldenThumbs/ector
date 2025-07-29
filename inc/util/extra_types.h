@@ -63,6 +63,12 @@ static inline f32 Util_VolumeBBox(BBox bbox)
    return size.x * size.y * size.z;
 }
 
+static inline void Util_BBoxMinMax(BBox bbox, vec3* min_vertex, vec3* max_vertex)
+{
+   *min_vertex = Util_SubVec3(bbox.center, bbox.extents);
+   *max_vertex = Util_AddVec3(bbox.center, bbox.extents);
+}
+
 static inline BBox Util_ResizeBBox(BBox bbox, mat3x3 rotation)
 {
    bbox.extents = Util_AddVec3(Util_AddVec3(
@@ -70,17 +76,16 @@ static inline BBox Util_ResizeBBox(BBox bbox, mat3x3 rotation)
       Util_AbsVec3(Util_ScaleVec3(rotation.v[1], bbox.extents.y))),
       Util_AbsVec3(Util_ScaleVec3(rotation.v[2], bbox.extents.z))
    );
+
    return bbox;
 }
 
-static inline BBox Util_MinkowskiBBox(BBox a, BBox b)
+static inline BBox Util_BBoxMinkowskiDifference(BBox a, BBox b)
 {
-   vec3 top_left = Util_SubVec3(Util_SubVec3(a.center, a.extents), Util_AddVec3(b.center, b.extents));
-   vec3 extents = Util_ScaleVec3(Util_AddVec3(a.extents, b.extents), 0.5f);
-   return (BBox){
-      Util_AddVec3(top_left, extents),
-      extents
-   };
+   vec3 center = Util_SubVec3(a.center, b.center);
+   vec3 extents = Util_AddVec3(a.extents, b.extents);
+
+   return (BBox){ center, extents };
 }
 
 static inline BBox Util_UnionBBox(BBox a, BBox b)
@@ -89,10 +94,8 @@ static inline BBox Util_UnionBBox(BBox a, BBox b)
    vec3 bound_max = Util_MaxVec3(Util_AddVec3(a.center, a.extents), Util_AddVec3(b.center, b.extents));
    vec3 center = Util_ScaleVec3(Util_AddVec3(bound_min, bound_max), 0.5f);
    vec3 extents = Util_SubVec3(bound_max, center);
-   return (BBox){
-      center,
-      extents
-   };
+
+   return (BBox){ center, extents };
 }
 
 static inline bool Util_OverlapBBox(BBox a, BBox b)
