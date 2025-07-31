@@ -24,6 +24,7 @@ Graphics* Graphics_Init(void)
    graphics->textures = NEW_ARRAY(gfx_Texture);
    graphics->framebuffers = NEW_ARRAY(gfx_Framebuffer);
    graphics->ref = 0;
+   graphics->state.state_id = 0;
    graphics->clear_color.hex = 0;
 
    Graphics_SetClearColor(graphics, (color8){ 127, 127, 127, 255 });
