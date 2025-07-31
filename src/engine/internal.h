@@ -12,6 +12,7 @@
 
 #define MAX_TEXTBUF 128
 #define MAX_KEYS 512
+#define MAX_MOUSE_BUTTONS 8
 
 typedef struct eng_EngineGlobal_t
 {
@@ -24,6 +25,8 @@ typedef struct eng_EngineGlobal_t
          struct {
             f64 x, y;
          } scroll[2];
+
+         KeyState button_state[MAX_MOUSE_BUTTONS];
 
       } mouse;
 
@@ -53,5 +56,6 @@ void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);
 static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y);
 void ENG_ScrollCallback(GLFWwindow* window, f64 x, f64 y);
 void ENG_KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods);
+void ENG_ButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods);
 
 #endif

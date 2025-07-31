@@ -61,5 +61,10 @@ f64 Engine_GetFrameDelta(Engine* engine);
 
 vec2 Engine_GetMousePos(Engine* engine);
 vec2 Engine_GetMouseDelta(Engine* engine);
+vec2 Engine_GetMouseScroll(Engine* engine);
+
+bool Engine_CheckMouseButton(Engine* engine, MouseButton button, KeyAction button_action);
+bool Engine_CheckMouseButtonAdvanced(Engine* engine, MouseButton button, KeyAction button_action, KeyModifiers modifiers);
+KeyState Engine_GetMouseButtonState(Engine* engine, MouseButton button);
 
 #endif

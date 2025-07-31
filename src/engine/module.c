@@ -64,6 +64,7 @@ Engine* Engine_Init(EngineDesc* desc)
    glfwSetCursorPosCallback(window, ENG_CursorCallback);
    glfwSetScrollCallback(window, ENG_ScrollCallback);
    glfwSetKeyCallback(window, ENG_KeyCallback);
+   glfwSetMouseButtonCallback(window, ENG_ButtonCallback);
 
    return engine;
 }
@@ -184,4 +185,32 @@ void ENG_KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 
    }
 
    ENGINE_G->input.keyboard.key_state[key] = key_state;
+}
+
+void ENG_ButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods)
+{
+   KeyState button_state = (KeyState){
+      .mod_shift = ((mods & GLFW_MOD_SHIFT) == GLFW_MOD_SHIFT),
+      .mod_ctrl = ((mods & GLFW_MOD_CONTROL) == GLFW_MOD_CONTROL),
+      .mod_alt = ((mods & GLFW_MOD_ALT) == GLFW_MOD_ALT),
+      .mod_super = ((mods & GLFW_MOD_SUPER) == GLFW_MOD_SUPER),
+      .mod_capslock = ((mods & GLFW_MOD_CAPS_LOCK) == GLFW_MOD_CAPS_LOCK),
+      .mod_numlock = ((mods & GLFW_MOD_NUM_LOCK) == GLFW_MOD_NUM_LOCK)
+   };
+   button_state.was_down = ENGINE_G->input.mouse.button_state[button].was_down;
+
+   switch (action)
+   {
+      case GLFW_RELEASE:
+         break;
+      case GLFW_PRESS:
+      case GLFW_REPEAT:
+         button_state.is_down = 1;
+         break;
+      default:
+         ENGINE_G->input.mouse.button_state[button].total_bits = 0;
+         return;
+   }
+
+   ENGINE_G->input.mouse.button_state[button] = button_state;
 }

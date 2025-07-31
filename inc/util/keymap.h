@@ -178,4 +178,16 @@ typedef enum Key_t {
    KEY_KP_EQUAL      = 336
 } Key;
 
+typedef enum MouseButton_t
+{
+   MOUSE_BUTTON_LEFT_CLICK = 0,
+   MOUSE_BUTTON_RIGHT_CLICK,
+   MOUSE_BUTTON_MIDDLE_CLICK,
+   MOUSE_BUTTON_4,
+   MOUSE_BUTTON_5,
+   MOUSE_BUTTON_6,
+   MOUSE_BUTTON_7,
+   MOUSE_BUTTON_8
+} MouseButton;
+
 #endif
