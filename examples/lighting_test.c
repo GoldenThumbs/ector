@@ -86,12 +86,12 @@ int main(int argc, char* argv[])
    CreateRandomLights(renderer, 16, 16);
 
    Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
-   Mesh box_mesh = Mesh_CreateBox(1, 1, 1, VEC3(2, 2, 2));
+   Mesh box_mesh = Mesh_CreateBoxAdvanced(16, 16, 16, VEC3(2, 2, 2), true);
 
    Model arrow_model = Mesh_LoadEctorModel(DATABLOB(Arrow_ebmf));
 
    Geometry floor_geo = Graphics_CreateGeometry(graphics, floor_mesh, GFX_DRAWMODE_STATIC);
-   Geometry box_geo = Graphics_CreateGeometry(graphics, arrow_model.meshes[0], GFX_DRAWMODE_STATIC);
+   Geometry box_geo = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);
 
    Shader lit_shader = Renderer_LitShader(graphics);
 
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
       (Transform3D){
          .origin = VEC3(0, 0.5f, 0),
          .rotation = Util_IdentityQuat(),
-         .scale = VEC3(0.3f, 0.3f, 0.6f)
+         .scale = VEC3(0.5f, 0.5f, 0.5f)
       }
    );
 
@@ -205,12 +205,6 @@ int main(int argc, char* argv[])
             Util_ScaleVec3(move_vec, player.move_speed * (f32)frame_delta)
          );
       }
-
-      Transform3D t = Renderer_GetObjectTransform(renderer, box_obj);
-      t.origin.y = player.origin.y + M_SIN(timer) * 1.0f;
-      t.rotation = Util_MakeQuatLookingAt(t.origin, player.origin, VEC3(0, 0,-1), VEC3(0, 1, 0));
-
-      Renderer_SetObjectTransform(renderer, box_obj, t);
 
       timer += (f32)frame_delta * 40.0f;
       

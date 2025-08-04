@@ -8,6 +8,7 @@
 
 //#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 {
@@ -28,6 +29,11 @@ Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 }
 
 Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
+{
+   return Mesh_CreateBoxAdvanced(faces_x, faces_y, faces_z, size, false);
+}
+
+Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bool smooth_seams)
 {
    Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
    mesh.attribute_count = 3;
@@ -55,6 +61,9 @@ Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
    mesh_interface = Mesh_AddQuad(faces_x, faces_z, t5, mesh_interface);
    mesh_interface = Mesh_GenNormals(mesh_interface);
    mesh_interface = Mesh_GenTexcoords(mesh_interface);
+
+   if (smooth_seams)
+      mesh_interface = Mesh_AverageNormalsOverSeams(mesh_interface);
 
    return mesh;
 }
@@ -184,6 +193,41 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
 
       mesh_interface.mesh->vertex_buffer = vertex_buffer;
       mesh_interface.total_bytes += total_bytes;
+   }
+
+   return mesh_interface;
+}
+
+MeshInterface Mesh_AverageNormalsOverSeams(MeshInterface mesh_interface)
+{
+   if ((mesh_interface.atr.position_size == 0) || (mesh_interface.atr.normal_size == 0))
+      return mesh_interface; // TODO: error tracking...
+
+   u16 vertex_count = mesh_interface.mesh->vertex_count;
+
+   vec3* mesh_position = (vec3*)mesh_interface.mesh->vertex_buffer;
+   vec3* mesh_normal = (vec3*)(mesh_interface.mesh->vertex_buffer + mesh_interface.atr.normal_ofs);
+   vec3* normal = malloc(mesh_interface.atr.normal_size);
+   memcpy(normal, mesh_normal, mesh_interface.atr.normal_size);
+
+   if (normal != NULL)
+   {
+      for (u16 i = 0; i < vertex_count; i++)
+      {
+         for (u16 j = 0; j < vertex_count; j++)
+         {
+            vec3 diff = Util_SubVec3(mesh_position[i], mesh_position[j]);
+            if (Util_DotVec3(diff, diff) > 1e-7 || j == i)
+               continue;
+
+            normal[i] = Util_AddVec3(normal[i], mesh_normal[j]);
+         }
+      }
+
+      for (u16 i = 0; i < vertex_count; i++)
+         mesh_normal[i] = Util_NormalizeVec3(normal[i]);
+
+      free(normal);
    }
 
    return mesh_interface;
