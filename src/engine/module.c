@@ -106,6 +106,11 @@ bool Engine_CheckExitConditions(Engine* engine)
       eng_glb->input.keyboard.key_state[key].was_down = eng_glb->input.keyboard.key_state[key].is_down;
    }
 
+   for (i32 button=0; button<MAX_MOUSE_BUTTONS; button++)
+   {
+      eng_glb->input.mouse.button_state[button].was_down = eng_glb->input.mouse.button_state[button].is_down;
+   }
+
    f64 new_time = glfwGetTime();
    eng_glb->frame_delta = new_time - eng_glb->up_time;
    eng_glb->up_time = new_time;
