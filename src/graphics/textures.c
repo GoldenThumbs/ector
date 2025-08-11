@@ -12,100 +12,37 @@
 Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 {
    gfx_Texture texture = { 0 };
-   texture.width = (u16)desc.size.width;
-   texture.height = (u16)desc.size.height;
+   texture.width = M_MAX(0, desc.size.width);
+   texture.height = M_MAX(0, desc.size.height);
+   texture.depth = M_MAX(0, desc.depth);
    texture.mipmap_count = M_MAX(1u, desc.mipmap_count);
    texture.type = desc.texture_type;
    texture.format = desc.texture_format;
    texture.compare.ref = graphics->ref;
 
-   u32 gl_target = GFX_TextureType(texture.type);
-
-   glGenTextures(1, &texture.id.tex);
-   glBindTexture(gl_target, texture.id.tex);
-
-   glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
-   glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-   glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-   glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, (i32)(texture.mipmap_count));
-
-   i32 internal_format = GFX_TextureInternalFormat(texture.format);
-   u32 pixel_format = GFX_TexturePixelFormat(texture.format);
-   u32 format_type = GFX_TextureFormatType(texture.format);
-
-   if (data == NULL)
-   {
-      switch (desc.texture_type) {
-         case GFX_TEXTURETYPE_2D:
-         case GFX_TEXTURETYPE_CUBEMAP:
-            glTexStorage2D(gl_target, texture.mipmap_count, internal_format, desc.size.width, desc.size.height);
-            break;
-         
-         case GFX_TEXTURETYPE_3D:
-         case GFX_TEXTURETYPE_2D_ARRAY:
-         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
-            glTexStorage3D(gl_target, texture.mipmap_count, internal_format, desc.size.width, desc.size.height, desc.depth);
-            break;
-         
-         default:
-            glTexStorage2D(gl_target, 1, internal_format, desc.size.width, desc.size.height);
-      }
-   } else {
-      bool is_cubemap = ((texture.type == GFX_TEXTURETYPE_CUBEMAP) || (texture.type == GFX_TEXTURETYPE_CUBEMAP_ARRAY));
-      u32 face_count = is_cubemap ? 6 : 1;
-      u32 gl_face = is_cubemap ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : gl_target;
-
-      uS pixel_size = GFX_PixelSize(texture.format);
-
-      uS offset = 0;
-      i32 mip_divisor = 1;
-
-      switch (desc.texture_type) {
-         case GFX_TEXTURETYPE_2D:
-         case GFX_TEXTURETYPE_CUBEMAP:
-            for (u32 mip_i = 0; mip_i < texture.mipmap_count; mip_i++)
-            {
-               i32 width = desc.size.width / mip_divisor;
-               i32 height = desc.size.height / mip_divisor;
-               for (u32 face_i = 0; face_i < face_count; face_i++)
-               {
-                  glTexImage2D(gl_face + face_i, mip_i, internal_format, width, height, 0, pixel_format, format_type, data + offset);
-                  offset += width * height * pixel_size;
-               }
-
-               mip_divisor *= 2;
-            }
-            break;
-         
-         case GFX_TEXTURETYPE_3D:
-         case GFX_TEXTURETYPE_2D_ARRAY:
-         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
-            for (u32 mip_i = 0; mip_i < texture.mipmap_count; mip_i++)
-            {
-               i32 width = desc.size.width / mip_divisor;
-               i32 height = desc.size.height / mip_divisor;
-               i32 depth = desc.depth / mip_divisor;
-
-               for (u32 face_i = 0; face_i < face_count; face_i++)
-               {
-                  glTexImage3D(gl_face + face_i, mip_i, internal_format, width, height, depth, 0, pixel_format, format_type, data + offset);
-                  offset += width * height * pixel_size;
-               }
-
-               mip_divisor *= 2;
-            }
-            break;
-         
-         default:
-            glTexImage2D(gl_face, 0, internal_format, desc.size.width, desc.size.height, 0, pixel_format, format_type, data);
-      }
-   }
+   GFX_CreateTexture(&texture, data);
 
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
    return Util_AddResource(&graphics->ref, REF(graphics->textures), &texture);
+}
+
+void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture)
+{
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (texture.compare.ref != res_texture.ref)
+      return;
+
+   glDeleteTextures(1, &texture.id.tex);
+
+   texture.width = M_MAX(0, desc.size.width);
+   texture.height = M_MAX(0, desc.size.height);
+   texture.depth = M_MAX(0, desc.depth);
+   texture.mipmap_count = M_MAX(1u, desc.mipmap_count);
+   texture.type = desc.texture_type;
+   texture.format = desc.texture_format;
+
+   GFX_CreateTexture(&texture, data);
 }
 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
@@ -201,6 +138,46 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bo
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
    return Util_AddResource(&graphics->ref, REF(graphics->framebuffers), &framebuffer);
+}
+
+void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer)
+{
+   gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
+   if (framebuffer.compare.ref != res_framebuffer.ref)
+      return;
+
+   glDeleteFramebuffers(1, &framebuffer.id.fbo);
+   if (framebuffer.id.rbo != 0)
+      glDeleteRenderbuffers(1, &framebuffer.id.rbo);
+
+   framebuffer.id.fbo = 0;
+   framebuffer.id.rbo = 0;
+
+   glGenFramebuffers(1, &framebuffer.id.fbo);
+   
+   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
+   glGenRenderbuffers(1, &framebuffer.id.rbo);
+
+   if (depthstencil_renderbuffer)
+   {
+      glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
+      glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.width, size.height);
+
+      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.id.rbo);
+   }
+
+   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+   {
+      framebuffer.id.fbo = 0;
+      framebuffer.id.rbo = 0;
+
+      return;
+   }
+
+   framebuffer.compare.handle = Util_ArrayLength(graphics->textures);
+
+   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
 
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
@@ -548,5 +525,96 @@ struct gfx_Filtering_s GFX_TextureFilter(u8 filter)
 
       default:
          return (struct gfx_Filtering_s){ GL_NEAREST, GL_NEAREST };
+   }
+}
+
+void GFX_CreateTexture(gfx_Texture* texture, u8* data)
+{
+   u32 gl_target = GFX_TextureType(texture->type);
+
+   glGenTextures(1, &texture->id.tex);
+   glBindTexture(gl_target, texture->id.tex);
+
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, (i32)(texture->mipmap_count));
+
+   i32 width = texture->width;
+   i32 height = texture->height;
+   i32 depth = texture->depth;
+
+   i32 internal_format = GFX_TextureInternalFormat(texture->format);
+   u32 pixel_format = GFX_TexturePixelFormat(texture->format);
+   u32 format_type = GFX_TextureFormatType(texture->format);
+
+   if (data == NULL)
+   {
+      switch (texture->type) {
+         case GFX_TEXTURETYPE_2D:
+         case GFX_TEXTURETYPE_CUBEMAP:
+            glTexStorage2D(gl_target, texture->mipmap_count, internal_format, width, height);
+            break;
+         
+         case GFX_TEXTURETYPE_3D:
+         case GFX_TEXTURETYPE_2D_ARRAY:
+         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
+            glTexStorage3D(gl_target, texture->mipmap_count, internal_format, width, height, depth);
+            break;
+         
+         default:
+            glTexStorage2D(gl_target, 1, internal_format, width, height);
+      }
+   } else {
+      bool is_cubemap = ((texture->type == GFX_TEXTURETYPE_CUBEMAP) || (texture->type == GFX_TEXTURETYPE_CUBEMAP_ARRAY));
+      u32 face_count = is_cubemap ? 6 : 1;
+      u32 gl_face = is_cubemap ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : gl_target;
+
+      uS pixel_size = GFX_PixelSize(texture->format);
+
+      uS offset = 0;
+      i32 mip_divisor = 1;
+
+      switch (texture->type) {
+         case GFX_TEXTURETYPE_2D:
+         case GFX_TEXTURETYPE_CUBEMAP:
+            for (u32 mip_i = 0; mip_i < texture->mipmap_count; mip_i++)
+            {
+               i32 mip_width = width / mip_divisor;
+               i32 mip_height = height / mip_divisor;
+               for (u32 face_i = 0; face_i < face_count; face_i++)
+               {
+                  glTexImage2D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, 0, pixel_format, format_type, data + offset);
+                  offset += mip_width * mip_height * pixel_size;
+               }
+
+               mip_divisor *= 2;
+            }
+            break;
+         
+         case GFX_TEXTURETYPE_3D:
+         case GFX_TEXTURETYPE_2D_ARRAY:
+         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
+            for (u32 mip_i = 0; mip_i < texture->mipmap_count; mip_i++)
+            {
+               i32 mip_width = width / mip_divisor;
+               i32 mip_height = height / mip_divisor;
+               i32 mip_depth = depth / mip_divisor;
+
+               for (u32 face_i = 0; face_i < face_count; face_i++)
+               {
+                  glTexImage3D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, mip_depth, 0, pixel_format, format_type, data + offset);
+                  offset += mip_width * mip_height * pixel_size;
+               }
+
+               mip_divisor *= 2;
+            }
+            break;
+         
+         default:
+            glTexImage2D(gl_face, 0, internal_format, width, height, 0, pixel_format, format_type, data);
+      }
    }
 }

@@ -239,6 +239,7 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);
 void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry);
 
 Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc);
+void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture);
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture);
 
 void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot);
@@ -248,6 +249,7 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture);
 
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer);
+void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer);
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
 
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);

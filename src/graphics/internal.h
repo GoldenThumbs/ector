@@ -49,8 +49,9 @@ typedef struct gfx_Texture_t
       u32 tex;
    } id;
 
-   u16 width;
-   u16 height;
+   i32 width;
+   i32 height;
+   i32 depth;
    u16 mipmap_count;
    u8 type;
    u8 format;
@@ -121,6 +122,8 @@ u32 GFX_TextureFormatType(u8 format);
 u32 GFX_TextureType(u8 type);
 u32 GFX_TextureWrap(u8 wrap);
 struct gfx_Filtering_s GFX_TextureFilter(u8 filter);
+
+void GFX_CreateTexture(gfx_Texture* texture, u8* data);
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
 void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset);
