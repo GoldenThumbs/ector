@@ -115,6 +115,8 @@ bool GFX_AttributeTypeNormalized(u8 attribute);
 uS GFX_AttributeTypeSize(u8 attribute);
 uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count);
 
+void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh);
+
 uS GFX_PixelSize(u8 format);
 i32 GFX_TextureInternalFormat(u8 format);
 u32 GFX_TexturePixelFormat(u8 format);

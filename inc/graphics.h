@@ -236,6 +236,7 @@ void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* dat
 void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);
+void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry);
 void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry);
 
 Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc);
