@@ -306,28 +306,40 @@ i32 GFX_TextureInternalFormat(u8 format)
    switch (format)
    {
       case GFX_TEXTUREFORMAT_R_U8_NORM:
-      case GFX_TEXTUREFORMAT_R_U16_NORM:
-      case GFX_TEXTUREFORMAT_R_F16:
-      case GFX_TEXTUREFORMAT_R_F32:
          return GL_R8;
+      case GFX_TEXTUREFORMAT_R_U16_NORM:
+         return GL_R16;
+      case GFX_TEXTUREFORMAT_R_F16:
+         return GL_R16;
+      case GFX_TEXTUREFORMAT_R_F32:
+         return GL_R32F;
 
       case GFX_TEXTUREFORMAT_RG_U8_NORM:
-      case GFX_TEXTUREFORMAT_RG_U16_NORM:
-      case GFX_TEXTUREFORMAT_RG_F16:
-      case GFX_TEXTUREFORMAT_RG_F32:
          return GL_RG8;
+      case GFX_TEXTUREFORMAT_RG_U16_NORM:
+         return GL_RG16;
+      case GFX_TEXTUREFORMAT_RG_F16:
+         return GL_RG16;
+      case GFX_TEXTUREFORMAT_RG_F32:
+         return GL_RG32F;
       
       case GFX_TEXTUREFORMAT_RGB_U8_NORM:
-      case GFX_TEXTUREFORMAT_RGB_U16_NORM:
-      case GFX_TEXTUREFORMAT_RGB_F16:
-      case GFX_TEXTUREFORMAT_RGB_F32:
          return GL_RGB8;
+      case GFX_TEXTUREFORMAT_RGB_U16_NORM:
+         return GL_RGB16;
+      case GFX_TEXTUREFORMAT_RGB_F16:
+         return GL_RGB16;
+      case GFX_TEXTUREFORMAT_RGB_F32:
+         return GL_RGB32F;
       
       case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
-      case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
-      case GFX_TEXTUREFORMAT_RGBA_F16:
-      case GFX_TEXTUREFORMAT_RGBA_F32:
          return GL_RGBA8;
+      case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
+         return GL_RGBA16;
+      case GFX_TEXTUREFORMAT_RGBA_F16:
+         return GL_RGBA16;
+      case GFX_TEXTUREFORMAT_RGBA_F32:
+         return GL_RGBA32F;
       
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
          return GL_R11F_G11F_B10F;
