@@ -55,10 +55,14 @@ Engine* Engine_Init(EngineDesc* desc)
    engine->modules = NEW_ARRAY_N(Module, 2);
 
    engine->internal = (eng_EngineGlobal){ 0 };
-   engine->internal.frame_size = (resolution2d){ width, height };
    engine->internal.up_time = 0.0;
    engine->internal.window = window;
    ENGINE_G = &engine->internal;
+
+   glfwGetFramebufferSize(window,
+      &ENGINE_G->frame_size.width,
+      &ENGINE_G->frame_size.height
+   );
 
    glfwSetFramebufferSizeCallback(window, ENG_FramebufferSizeCallback);
    glfwSetCursorPosCallback(window, ENG_CursorCallback);
