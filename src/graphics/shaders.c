@@ -1,5 +1,4 @@
 #include "util/types.h"
-#include "util/array.h"
 #include "util/resource.h"
 
 #include "graphics.h"
@@ -41,8 +40,16 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
    glDeleteShader(shd_frg);
    
    shader.id.program = shd_id;
-   shader.compare.handle = Util_ArrayLength(graphics->shaders);
-   return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+
+   if (graphics->freed_shader_root == GFX_INVALID_INDEX)
+      return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+
+   u16 index = (u16)graphics->freed_shader_root;
+   graphics->freed_shader_root = graphics->shaders[index].next_freed;
+   Shader shader_handle = { .handle = index, .ref = graphics->ref++ };
+   graphics->shaders[index] = shader;
+
+   return shader_handle;
 }
 
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader)
@@ -71,7 +78,15 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
    glDeleteShader(shd_cmp);
 
    shader.id.program = shd_id;
-   return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+
+   if (graphics->freed_shader_root == GFX_INVALID_INDEX)
+      return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+
+   u16 index = (u16)graphics->freed_shader_root;
+   graphics->freed_shader_root = graphics->shaders[index].next_freed;
+   Shader shader_handle = { .handle = index, .ref = graphics->ref++ };
+
+   return shader_handle;
 }
 
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
@@ -79,6 +94,9 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
+
+   shader.next_freed = graphics->freed_shader_root;
+   graphics->freed_shader_root = (u32)res_shader.handle;
 
    glDeleteProgram(shader.id.program);
 }

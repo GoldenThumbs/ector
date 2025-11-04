@@ -24,7 +24,15 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
-   return Util_AddResource(&graphics->ref, REF(graphics->textures), &texture);
+   if (graphics->freed_texture_root == GFX_INVALID_INDEX)
+      return Util_AddResource(&graphics->ref, REF(graphics->textures), &texture);
+
+   u16 index = (u16)graphics->freed_texture_root;
+   graphics->freed_texture_root = graphics->textures[index].next_freed;
+   Geometry texture_handle = { .handle = index, .ref = graphics->ref++ };
+   graphics->textures[index] = texture;
+
+   return texture_handle;
 }
 
 void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture)
@@ -50,6 +58,9 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
       return;
+
+   texture.next_freed = graphics->freed_texture_root;
+   graphics->freed_texture_root = (u32)res_texture.handle;
 
    glDeleteTextures(1, &texture.id.tex);
 }
@@ -137,7 +148,15 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bo
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-   return Util_AddResource(&graphics->ref, REF(graphics->framebuffers), &framebuffer);
+   if (graphics->freed_framebuffer_root == GFX_INVALID_INDEX)
+      return Util_AddResource(&graphics->ref, REF(graphics->framebuffers), &framebuffer);
+
+   u16 index = (u16)graphics->freed_framebuffer_root;
+   graphics->freed_framebuffer_root = graphics->framebuffers[index].next_freed;
+   Geometry framebuffer_handle = { .handle = index, .ref = graphics->ref++ };
+   graphics->framebuffers[index] = framebuffer;
+
+   return framebuffer_handle;
 }
 
 void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer)
@@ -185,6 +204,9 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
       return;
+
+   framebuffer.next_freed = graphics->freed_framebuffer_root;
+   graphics->freed_framebuffer_root = (u32)res_framebuffer.handle;
 
    glDeleteFramebuffers(1, &framebuffer.id.fbo);
    if (framebuffer.id.rbo != 0)

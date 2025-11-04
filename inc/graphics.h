@@ -4,6 +4,8 @@
 #include "util/types.h"
 #include "mesh.h"
 
+#define GFX_INVALID_INDEX UINT32_MAX
+
 #define GRAPHICS_MODULE "graphics"
 
 typedef handle Shader;

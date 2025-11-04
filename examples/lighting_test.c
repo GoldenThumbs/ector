@@ -29,7 +29,7 @@ void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y);
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
-      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window", .renderer.enabled = true }
+      &(EngineDesc){ .app_name = "Game", .window.title = "Lighting Test", .renderer.enabled = true }
    );
 
    Module_Defaults(engine, 0, NULL);

@@ -18,7 +18,15 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
 
    GFX_CreateGeometry(&geometry, mesh);
 
-   return Util_AddResource(&graphics->ref, REF(graphics->geometries), &geometry);
+   if (graphics->freed_geometry_root == GFX_INVALID_INDEX)
+      return Util_AddResource(&graphics->ref, REF(graphics->geometries), &geometry);
+
+   u16 index = (u16)graphics->freed_geometry_root;
+   graphics->freed_geometry_root = graphics->geometries[index].next_freed;
+   Geometry geometry_handle = { .handle = index, .ref = graphics->ref++ };
+   graphics->geometries[index] = geometry;
+
+   return geometry_handle;
 }
 
 void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry)
@@ -47,6 +55,9 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
    if (geometry.compare.ref != res_geometry.ref)
       return;
+
+   geometry.next_freed = graphics->freed_geometry_root;
+   graphics->freed_geometry_root = (u32)res_geometry.handle;
 
    glDeleteVertexArrays(1, &geometry.id.vao);
 

@@ -23,6 +23,11 @@ Graphics* Graphics_Init(void)
    graphics->geometries = NEW_ARRAY(gfx_Geometry);
    graphics->textures = NEW_ARRAY(gfx_Texture);
    graphics->framebuffers = NEW_ARRAY(gfx_Framebuffer);
+   graphics->freed_shader_root = GFX_INVALID_INDEX;
+   graphics->freed_buffer_root = GFX_INVALID_INDEX;
+   graphics->freed_geometry_root = GFX_INVALID_INDEX;
+   graphics->freed_texture_root = GFX_INVALID_INDEX;
+   graphics->freed_framebuffer_root = GFX_INVALID_INDEX;
    graphics->ref = 0;
    graphics->state.state_id = 0;
    graphics->clear_color.hex = 0;

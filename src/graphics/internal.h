@@ -11,9 +11,12 @@ typedef struct gfx_Shader_t
       u32 program;
    } id;
 
-   bool is_compute;
-
+   struct {
+      u32 is_compute: 1;
+   };
+   
    handle compare;
+   u32 next_freed;
 } gfx_Shader;
 
 typedef struct gfx_Buffer_t
@@ -22,10 +25,13 @@ typedef struct gfx_Buffer_t
       u32 buf;
    } id;
 
-   u8 type;
-   u8 draw_mode;
-
+   struct {
+      u32 type: 8;
+      u32 draw_mode: 8;
+   };
+   
    handle compare;
+   u32 next_freed;
 } gfx_Buffer;
 
 typedef struct gfx_Geometry_t
@@ -39,8 +45,9 @@ typedef struct gfx_Geometry_t
    u8 face_cull_mode: 4;
    u8 primitive;
    u16 element_count;
-
+   
    handle compare;
+   u32 next_freed;
 } gfx_Geometry;
 
 typedef struct gfx_Texture_t
@@ -55,8 +62,9 @@ typedef struct gfx_Texture_t
    u16 mipmap_count;
    u8 type;
    u8 format;
-
+   
    handle compare;
+   u32 next_freed;
 } gfx_Texture;
 
 typedef struct gfx_Framebuffer_t
@@ -67,6 +75,7 @@ typedef struct gfx_Framebuffer_t
    } id;
 
    handle compare;
+   u32 next_freed;
 } gfx_Framebuffer;
 
 typedef union gfx_State_t
@@ -97,6 +106,13 @@ struct Graphics_t
    gfx_Geometry* geometries;
    gfx_Texture* textures;
    gfx_Framebuffer* framebuffers;
+
+   u32 freed_shader_root;
+   u32 freed_buffer_root;
+   u32 freed_geometry_root;
+   u32 freed_texture_root;
+   u32 freed_framebuffer_root;
+
    struct {
       color8 clear_color;
       u16 ref;
