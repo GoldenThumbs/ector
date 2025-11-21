@@ -95,8 +95,15 @@ void Engine_SetRawMouseInput(Engine* engine, bool raw_mouse_input)
 
 void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode)
 {
-   eng_EngineGlobal eng_glb = engine->internal;
-   glfwSetInputMode(eng_glb.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL + mouse_mode);
+   eng_EngineGlobal* eng_glb = &engine->internal;
+
+   glfwSetInputMode(eng_glb->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL + mouse_mode);
+
+   f64 mouse_pos[2] = { 0 };
+   glfwGetCursorPos(eng_glb->window, &mouse_pos[0], &mouse_pos[1]);
+
+   eng_glb->input.mouse.position[1].x = eng_glb->input.mouse.position[0].x = mouse_pos[0];
+   eng_glb->input.mouse.position[1].y = eng_glb->input.mouse.position[0].y = mouse_pos[1];
 
 }
 
