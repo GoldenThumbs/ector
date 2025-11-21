@@ -6,8 +6,6 @@
 
 #include <GLFW/glfw3.h>
 
-
-
 bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action)
 {
    eng_EngineGlobal eng_glb = engine->internal;
@@ -79,10 +77,27 @@ KeyState Engine_KeyState(Engine* engine, Key key)
    return eng_glb.input.keyboard.key_state[key];
 }
 
+void Engine_SetRawMouseInput(Engine* engine, bool raw_mouse_input)
+{
+   eng_EngineGlobal eng_glb = engine->internal;
+   
+   if (glfwRawMouseMotionSupported())
+   {
+      glfwSetInputMode(
+         eng_glb.window,
+         GLFW_RAW_MOUSE_MOTION,
+         raw_mouse_input ? GLFW_TRUE : GLFW_FALSE
+      );
+
+   }
+
+}
+
 void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode)
 {
    eng_EngineGlobal eng_glb = engine->internal;
    glfwSetInputMode(eng_glb.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL + mouse_mode);
+
 }
 
 vec2 Engine_GetMousePos(Engine* engine)

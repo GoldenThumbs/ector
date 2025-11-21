@@ -52,6 +52,7 @@ bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action);
 bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyModifiers modifiers);
 KeyState Engine_GetKeyState(Engine* engine, Key key);
 
+void Engine_SetRawMouseInput(Engine* engine, bool raw_mouse_input);
 void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode);
 
 void Engine_Present(Engine* engine);
