@@ -134,8 +134,8 @@ vec2 Engine_GetMouseScroll(Engine* engine)
    eng_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
-   res.x = (f32)(eng_glb.input.mouse.scroll[0].x - eng_glb.input.mouse.scroll[1].x);
-   res.y = (f32)(eng_glb.input.mouse.scroll[0].y - eng_glb.input.mouse.scroll[1].y);
+   res.x = (f32)eng_glb.input.mouse.scroll.x;
+   res.y = (f32)eng_glb.input.mouse.scroll.y;
 
    return res;
 }

@@ -24,7 +24,7 @@ typedef struct eng_EngineGlobal_t
 
          struct {
             f64 x, y;
-         } scroll[2];
+         } scroll;
 
          KeyState button_state[MAX_MOUSE_BUTTONS];
 

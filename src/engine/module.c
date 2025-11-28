@@ -103,7 +103,8 @@ bool Engine_CheckExitConditions(Engine* engine)
    eng_EngineGlobal* eng_glb = &engine->internal;
 
    eng_glb->input.mouse.position[1] = eng_glb->input.mouse.position[0];
-   eng_glb->input.mouse.scroll[1] = eng_glb->input.mouse.scroll[0];
+   eng_glb->input.mouse.scroll.x = 0.0;
+   eng_glb->input.mouse.scroll.y = 0.0;
 
    for (i32 key=0; key<MAX_KEYS; key++)
    {
@@ -164,8 +165,8 @@ static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y)
 
 void ENG_ScrollCallback(GLFWwindow* window, f64 x, f64 y)
 {
-   ENGINE_G->input.mouse.scroll[0].x = x;
-   ENGINE_G->input.mouse.scroll[0].y = y;
+   ENGINE_G->input.mouse.scroll.x = x;
+   ENGINE_G->input.mouse.scroll.y = y;
 }
 
 void ENG_KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods)
