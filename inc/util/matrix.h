@@ -194,25 +194,33 @@ static inline mat4x4 Util_ViewMatrix(vec3 origin, vec3 euler, f32 distance)
    f32 b = M_SIN(euler.y);
    f32 c = M_COS(euler.x);
    f32 d = M_SIN(euler.x);
-   f32 e = b * d;
-   f32 f = b * c;
-   f32 g = a * d;
-   f32 h = a * c;
+   f32 e = M_COS(euler.z);
+   f32 f = M_SIN(euler.z);
+   f32 g = b * d;
+   f32 h = b * c;
+   f32 i = a * d;
+   f32 j = a * c;
+   f32 k = a * e - g * f;
+   f32 l = a * f + g * e;
+   f32 m = -c * f;
+   f32 o = c * e;
+   f32 p = -b * e - i * f;
+   f32 q = -b * f + i * e;
 
-   vec3 o = VEC3(
-      origin.x + f * distance,
+   vec3 offs = VEC3(
+      origin.x + h * distance,
       origin.y - d * distance,
-      origin.z + h * distance
+      origin.z + j * distance
    );
 
-   f32 x = a * o.x - b * o.z;
-   f32 y = e * o.x + c * o.y + g * o.z;
-   f32 z = f * o.x - d * o.y + h * o.z;
+   f32 x = k * offs.x + m * offs.y + p * offs.z;
+   f32 y = l * offs.x + o * offs.y + q * offs.z;
+   f32 z = h * offs.x - d * offs.y + j * offs.z;
 
    return MAT4(
-       a, e, f, 0,
-       0, c,-d, 0,
-      -b, g, h, 0,
+       k, l, h, 0,
+       m, o,-d, 0,
+       p, q, j, 0,
       -x,-y,-z, 1
    );
 }
