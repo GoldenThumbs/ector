@@ -259,16 +259,25 @@ void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode)
    }
 }
 
-void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset)
+void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset, u32 instance_count)
 {
    glBindVertexArray(gl_vertex_array);
 
    u32 gl_primitive = GFX_Primitive(primitive);
 
    if (use_index_buffer)
-      glDrawElements(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset));
-   else
-      glDrawArrays(gl_primitive, offset, element_count);
+   {
+      if (instance_count > 1)
+         glDrawElementsInstanced(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset), instance_count);
+      else
+         glDrawElements(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset));
+
+   } else {
+      if (instance_count > 1)
+         glDrawArraysInstanced(gl_primitive, offset, element_count, instance_count);
+      else
+         glDrawArrays(gl_primitive, offset, element_count);
+   }
 
    glBindVertexArray(0);
 }

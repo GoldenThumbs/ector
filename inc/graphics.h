@@ -266,5 +266,6 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode);
 void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask);
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
+void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniform_blocks);
 
 #endif

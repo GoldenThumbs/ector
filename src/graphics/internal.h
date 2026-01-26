@@ -144,7 +144,7 @@ struct gfx_Filtering_s GFX_TextureFilter(u8 filter);
 void GFX_CreateTexture(gfx_Texture* texture, u8* data);
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
-void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset);
+void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset, u32 instance_count);
 
 u32 GFX_Primitive(u8 primitive_type);
 u32 GFX_DrawMode(u8 draw_mode);

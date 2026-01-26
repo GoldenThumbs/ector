@@ -200,6 +200,14 @@ void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x
 
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniforms)
 {
+   Graphics_DrawInstanced(graphics, res_shader, res_geometry, 0, uniforms);
+}
+
+void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniforms)
+{
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID || res_geometry.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -215,7 +223,7 @@ void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry,
    glUseProgram(shader.id.program);
 
    GFX_UseUniformBlocks(graphics, uniforms);
-   GFX_DrawVertices(geometry.primitive, geometry.element_count, (geometry.id.i_buf != 0), geometry.id.vao, 0);
+   GFX_DrawVertices(geometry.primitive, geometry.element_count, (geometry.id.i_buf != 0), geometry.id.vao, 0, instance_count);
 
    glUseProgram(0);
 }

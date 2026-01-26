@@ -8,6 +8,10 @@
 #define ECT_STRINGIFY(x) ECT_STRINGIFY_2(x)
 #define ECT_STRINGIFY_2(x) #x
 
+#define INVALID_HANDLE UINT16_MAX
+#define INVALID_HANDLE_REF UINT16_MAX
+#define INVALID_HANDLE_ID UINT32_MAX
+
 #define DATABLOB(data) (memblob) { (void*)(data), sizeof((data)) }
 
 #define VEC2(...) (vec2)   { { __VA_ARGS__ } }
