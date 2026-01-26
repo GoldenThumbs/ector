@@ -1,13 +1,39 @@
 #ifndef ECT_RENDERER_H
 #define ECT_RENDERER_H
 
+#include "util/extra_types.h"
 #include "util/types.h"
 // #include "util/extra_types.h"
+#include "mesh.h"
 #include "graphics.h"
 
 #define RENDERER_MODULE "renderer"
 
-typedef handle Drawable;
+#define EMPTY_DRAWABLE_TYPE "EmptyDrawable"
+#define GEOMETRY_DRAWABLE_TYPE "GeometryDrawable"
+// #define LIGHT_DRAWABLE_TYPE "LightDrawable"
+
+enum {
+   RNDR_MAT_TEX_WHITE = 0,
+   RNDR_MAT_TEX_GRAY,
+   RNDR_MAT_TEX_BLACK,
+   RNDR_MAT_TEX_NORMAL
+};
+
+typedef union Drawable_t
+{
+   u64 total_bits;
+   u32 id;
+
+   struct {
+      u16 handle;
+      u16 ref;
+      u16 drawable_type_idx;
+      u8 mem_unused_[2];
+
+   };
+
+} Drawable;
 
 typedef struct CameraData_t
 {
@@ -18,23 +44,108 @@ typedef struct CameraData_t
    vec2 u_near_far;
    u32 u_width, u_height;
    vec4 u_proj_info;
+
 } CameraData;
 
 typedef struct ModelData_t
 {
    mat4x4 mat_model;
-   vec4 mat_normal_model[3];
    mat4x4 mat_invmodel;
    mat4x4 mat_mvp;
+   vec4 mat_normal_model[3];
    vec4 u_color;
+
 } ModelData;
+
+typedef struct MaterialTexture_t
+{
+   Texture texture;
+   u8 slot;
+   u8 default_texture: 4;
+   u8 wrap_mode: 4;
+   u8 filter_mode: 7;
+   u8 is_set: 1;
+
+} MaterialTexture;
+
+typedef struct MaterialData_t
+{
+   Shader shader;
+   Buffer material_ubo;
+   MaterialTexture textures[MATERIAL_MAX_TEXTURES];
+   u32 texture_count;
+
+} MaterialData;
 
 struct Renderer_t;
 typedef void (*DrawableFunc)(struct Renderer_t* renderer, Drawable self);
 
+typedef struct DrawableTypeDesc_t
+{
+   DrawableFunc render_func;
+   DrawableFunc on_enable_func;
+   DrawableFunc on_disable_func;
+   uS data_size;
+} DrawableTypeDesc;
+
 typedef struct Renderer_t Renderer;
+
+typedef struct GeometryDrawable_t
+{
+   MaterialData material;
+   Geometry geometry;
+   color8 color;
+   Transform3D transform;
+   
+} GeometryDrawable;
+
+typedef struct LightDrawable_t
+{
+   u32 light_idx;
+   color8 color;
+   f32 brightness;
+   f32 radius;
+   f32 spotlight_angle;
+   f32 theta;
+   f32 phi;
+   vec3 origin;
+   
+   struct {
+      u32 is_dirty: 1;
+   };
+
+} LightDrawable;
 
 Renderer* Renderer_Init(Graphics* graphics);
 void Renderer_Free(Renderer* renderer);
+
+Graphics* Renderer_Graphics(Renderer* renderer);
+void Renderer_Render(Renderer* renderer, resolution2d size);
+
+void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view);
+void Renderer_SetProjectionMatrix(Renderer* renderer, mat4x4 projection);
+void Renderer_SetViewAndProjectionMatrix(Renderer* renderer, mat4x4 view, mat4x4 projection);
+
+mat4x4 Renderer_GetViewMatrix(Renderer* renderer);
+mat4x4 Renderer_GetProjectionMatrix(Renderer* renderer);
+mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer);
+
+void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const DrawableTypeDesc* desc);
+
+Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name);
+void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable);
+
+void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable);
+
+Buffer Renderer_CameraBuffer(Renderer* renderer);
+Buffer Renderer_ModelBuffer(Renderer* renderer);
+
+Shader Renderer_BasicShader(Renderer* renderer);
+Geometry Renderer_PlaneGeometry(Renderer* renderer);
+Geometry Renderer_BoxGeometry(Renderer* renderer);
+Texture Renderer_WhiteTexture(Renderer* renderer);
+Texture Renderer_GrayTexture(Renderer* renderer);
+Texture Renderer_BlackTexture(Renderer* renderer);
+Texture Renderer_NormalTexture(Renderer* renderer);
 
 #endif
