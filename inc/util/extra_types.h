@@ -9,6 +9,9 @@
 #include <math.h>
 
 #define READ_HEAD(PTR, TYPE) *((TYPE*)Util_ReadThenMove(&(PTR), sizeof(TYPE)))
+#define BYTE_RCP (1.0f / 255.0f)
+#define F32_TO_BYTE(F) (u8)M_MIN(M_ABS((F)) * 255.0f, 255.0f)
+#define BYTE_TO_F32(B) (f32)((B) * BYTE_RCP)
 
 typedef struct BBox_t
 {
@@ -49,6 +52,26 @@ static inline vec3 Util_FromRGBE(color8 rgbe_color)
       return Util_ScaleVec3(color, f);
    }
    return VEC3(0, 0, 0);
+}
+
+static inline color8 Util_ColorFromVec4(vec4 vec_color)
+{
+   return (color8){
+      F32_TO_BYTE(vec_color.r),
+      F32_TO_BYTE(vec_color.g),
+      F32_TO_BYTE(vec_color.b),
+      F32_TO_BYTE(vec_color.a)
+   };
+}
+
+static inline vec4 Util_Vec4FromColor(color8 color)
+{
+   return (vec4){
+      BYTE_TO_F32(color.r),
+      BYTE_TO_F32(color.g),
+      BYTE_TO_F32(color.b),
+      BYTE_TO_F32(color.a)
+   };
 }
 
 static inline f32 Util_AreaBBox(BBox bbox)
