@@ -18,21 +18,15 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
    texture.mipmap_count = M_MAX(1u, desc.mipmap_count);
    texture.type = desc.texture_type;
    texture.format = desc.texture_format;
-   texture.compare.ref = graphics->ref;
 
    GFX_CreateTexture(&texture, data);
 
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
-   if (graphics->freed_texture_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->textures), &texture);
+   if (graphics->freed_texture_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->textures, texture);
 
-   u16 index = (u16)graphics->freed_texture_root;
-   graphics->freed_texture_root = graphics->textures[index].next_freed;
-   Geometry texture_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->textures[index] = texture;
-
-   return texture_handle;
+   return REUSE_RESOURCE(graphics->textures, texture, graphics->freed_texture_root);
 }
 
 void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture)
@@ -123,7 +117,6 @@ void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer)
 {
    gfx_Framebuffer framebuffer = { 0 };
-   framebuffer.compare.ref = graphics->ref;
 
    glGenFramebuffers(1, &framebuffer.id.fbo);
    
@@ -148,15 +141,10 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bo
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-   if (graphics->freed_framebuffer_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->framebuffers), &framebuffer);
+   if (graphics->freed_framebuffer_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->framebuffers, framebuffer);
 
-   u16 index = (u16)graphics->freed_framebuffer_root;
-   graphics->freed_framebuffer_root = graphics->framebuffers[index].next_freed;
-   Geometry framebuffer_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->framebuffers[index] = framebuffer;
-
-   return framebuffer_handle;
+   return REUSE_RESOURCE(graphics->framebuffers, framebuffer, graphics->freed_framebuffer_root);
 }
 
 void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer)

@@ -14,19 +14,13 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
    geometry.face_cull_mode = GFX_FACECULL_BACK;
    geometry.primitive = GFX_MeshPrimitive(mesh.primitive);
    geometry.element_count = ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
-   geometry.compare.ref =  graphics->ref;
 
    GFX_CreateGeometry(&geometry, mesh);
 
-   if (graphics->freed_geometry_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->geometries), &geometry);
+   if (graphics->freed_geometry_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->geometries, geometry);
 
-   u16 index = (u16)graphics->freed_geometry_root;
-   graphics->freed_geometry_root = graphics->geometries[index].next_freed;
-   Geometry geometry_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->geometries[index] = geometry;
-
-   return geometry_handle;
+   return REUSE_RESOURCE(graphics->geometries, geometry, graphics->freed_geometry_root);
 }
 
 void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry)

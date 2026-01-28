@@ -13,7 +13,6 @@ Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type
    gfx_Buffer buffer = { 0 };
    buffer.type = buffer_type;
    buffer.draw_mode = draw_mode;
-   buffer.compare.ref = graphics->ref;
 
    u32 gl_target = GFX_BufferType(buffer.type);
 
@@ -30,15 +29,10 @@ Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
    //glBindBuffer(gl_target, 0);
-   if (graphics->freed_buffer_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->buffers), &buffer);
+   if (graphics->freed_buffer_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->buffers, buffer);
 
-   u16 index = (u16)graphics->freed_buffer_root;
-   graphics->freed_buffer_root = graphics->buffers[index].next_freed;
-   Buffer buffer_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->buffers[index] = buffer;
-
-   return buffer_handle;
+   return REUSE_RESOURCE(graphics->buffers, buffer, graphics->freed_buffer_root);
 }
 
 Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8 draw_mode, u8 buffer_type)
@@ -46,7 +40,6 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
    gfx_Buffer buffer = { 0 };
    buffer.type = buffer_type;
    buffer.draw_mode = draw_mode;
-   buffer.compare.ref = graphics->ref;
 
    u32 gl_target = GFX_BufferType(buffer.type);
 
@@ -62,15 +55,10 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
    if (data == NULL)
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
-   if (graphics->freed_buffer_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->buffers), &buffer);
+   if (graphics->freed_buffer_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->buffers, buffer);
 
-   u16 index = (u16)graphics->freed_buffer_root;
-   graphics->freed_buffer_root = graphics->buffers[index].next_freed;
-   Buffer buffer_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->buffers[index] = buffer;
-
-   return buffer_handle;
+   return REUSE_RESOURCE(graphics->buffers, buffer, graphics->freed_buffer_root);
 }
 
 void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer)

@@ -12,7 +12,6 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
 {
    gfx_Shader shader = { 0 };
    shader.is_compute = false;
-   shader.compare.ref = graphics->ref;
 
    u32 shd_vrt = glCreateShader(GL_VERTEX_SHADER);
    glShaderSource(shd_vrt, 1, &vertex_shader, NULL);
@@ -34,6 +33,8 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
       fprintf(stderr, "%s\n", shd_log);
+
+      return (handle){ .id = INVALID_HANDLE_ID };
    }
 
    glDeleteShader(shd_vrt);
@@ -41,22 +42,16 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
    
    shader.id.program = shd_id;
 
-   if (graphics->freed_shader_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+   if (graphics->freed_shader_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->shaders, shader);
 
-   u16 index = (u16)graphics->freed_shader_root;
-   graphics->freed_shader_root = graphics->shaders[index].next_freed;
-   Shader shader_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->shaders[index] = shader;
-
-   return shader_handle;
+   return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
 }
 
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader)
 {
    gfx_Shader shader = { 0 };
    shader.is_compute = true;
-   shader.compare.ref = graphics->ref;
 
    u32 shd_cmp = glCreateShader(GL_COMPUTE_SHADER);
    glShaderSource(shd_cmp, 1, &compute_shader, NULL);
@@ -73,20 +68,18 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
       fprintf(stderr, "%s\n", shd_log);
+
+      return (handle){ .id = INVALID_HANDLE_ID };
    }
 
    glDeleteShader(shd_cmp);
 
    shader.id.program = shd_id;
 
-   if (graphics->freed_shader_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+   if (graphics->freed_shader_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->shaders, shader);
 
-   u16 index = (u16)graphics->freed_shader_root;
-   graphics->freed_shader_root = graphics->shaders[index].next_freed;
-   Shader shader_handle = { .handle = index, .ref = graphics->ref++ };
-
-   return shader_handle;
+   return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
 }
 
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
