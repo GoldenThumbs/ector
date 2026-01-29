@@ -10,6 +10,9 @@
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+   
    gfx_Shader shader = { 0 };
    shader.is_compute = false;
 
@@ -50,6 +53,9 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
 
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+   
    gfx_Shader shader = { 0 };
    shader.is_compute = true;
 
@@ -84,6 +90,8 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
 
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 {
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+      return;
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -96,6 +104,9 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 
 u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name)
 {
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+      return UINT32_MAX;
+
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return UINT32_MAX;
@@ -105,11 +116,17 @@ u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const cha
 
 void Graphics_SetUniform(Graphics* graphics, Uniform uniform)
 {
+   if (graphics == NULL)
+      return;
+
    GFX_SetUniform(uniform);
 }
 
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks)
 {
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -132,6 +149,9 @@ void Graphics_DispatchBarrier(void)
 
 void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks)
 {
+   if (graphics == NULL)
+      return;
+
    for (u32 i=0; i<uniform_blocks.count; i++)
       Graphics_UseBuffer(graphics, uniform_blocks.blocks[i].ubo, uniform_blocks.blocks[i].binding);
 }

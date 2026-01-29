@@ -188,6 +188,7 @@ typedef struct Uniform_t
 
 typedef struct UniformBlock_t
 {
+   uS size;
    u32 binding;
    Buffer ubo;
 } UniformBlock;

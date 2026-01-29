@@ -11,6 +11,9 @@
 
 Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
    gfx_Texture texture = { 0 };
    texture.width = M_MAX(0, desc.size.width);
    texture.height = M_MAX(0, desc.size.height);
@@ -31,6 +34,9 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 
 void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture)
 {
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
       return;
@@ -49,6 +55,9 @@ void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Textu
 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
 {
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
       return;
@@ -61,6 +70,9 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
 
 void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot)
 {
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
       return;
@@ -73,6 +85,9 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
 
 void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type)
 {
+   if (graphics == NULL)
+      return;
+
    u32 gl_target = GFX_TextureType(texture_type);
 
    glBindTexture(gl_target, 0);
@@ -80,6 +95,9 @@ void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type)
 
 void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings)
 {
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
       return;
@@ -102,6 +120,9 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
 void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
 {
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
       return;
@@ -116,6 +137,9 @@ void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
 
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
    gfx_Framebuffer framebuffer = { 0 };
 
    glGenFramebuffers(1, &framebuffer.id.fbo);
@@ -132,11 +156,7 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bo
    }
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-   {
       return (handle){ 0 };
-   }
-
-   framebuffer.compare.handle = Util_ArrayLength(graphics->textures);
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -149,6 +169,9 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bo
 
 void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer)
 {
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
       return;
@@ -189,6 +212,9 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depth
 
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 {
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
       return;
@@ -219,6 +245,9 @@ void Graphics_UnbindFramebuffers(Graphics *graphics)
 
 void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[])
 {
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
       return;
@@ -230,6 +259,9 @@ void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_fr
 
    for (u32 i=0; i<texture_count; i++)
    {
+      if (res_textures[i].id == INVALID_HANDLE_ID)
+         continue;
+
       gfx_Texture texture = graphics->textures[res_textures[i].handle];
       if (texture.compare.ref != res_textures[i].ref)
          continue;
@@ -552,6 +584,9 @@ struct gfx_Filtering_s GFX_TextureFilter(u8 filter)
 
 void GFX_CreateTexture(gfx_Texture* texture, u8* data)
 {
+   if (texture == NULL)
+      return;
+   
    u32 gl_target = GFX_TextureType(texture->type);
 
    glGenTextures(1, &texture->id.tex);
