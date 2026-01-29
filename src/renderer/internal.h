@@ -16,20 +16,24 @@
 
 #define RNDR_NAME_MAX 128
 
+enum {
+   RNDR_SURF_TEXTURE_USER_SET = 16
+};
+
 typedef struct rndr_DrawableType_t
 {
    char* name;
    
    u8* drawable_buffer;
    
-   DrawableFunc render;
+   DrawableRenderFunc render;
    DrawableFunc on_enable;
    DrawableFunc on_disable;
    
    u32 type_size;
    
    u16 visible_drawable_root;
-   u16 free_drawable_root;
+   u16 freed_drawable_root;
    u16 active_drawable_root;
    
    u16 culled_drawable_count;
@@ -88,9 +92,24 @@ typedef struct rndr_Cluster_t
    
 } rndr_Cluster;
 
+typedef struct rndr_Surface_t
+{
+   char* name;
+
+   SurfacePass passes[SURF_MAX_PASSES];
+   u8 textures[SURF_MAX_TEXTURES];
+   
+   handle compare;
+   u16 next_freed;
+
+   u16 pass_count;
+
+} rndr_Surface;
+
 struct Renderer_t {
    Graphics* graphics;
    
+   rndr_Surface* surfaces;
    rndr_Cluster* clusters;
    rndr_PointLightSource* point_lights;
    rndr_DrawableType* drawable_types;
@@ -101,8 +120,8 @@ struct Renderer_t {
    } cluster_dimensions;
 
    struct {
-      Buffer camera_data;
-      Buffer model_data;
+      Buffer camera_buffer;
+      Buffer model_buffer;
    } ubo;
 
    struct {
@@ -111,13 +130,18 @@ struct Renderer_t {
    } ssbo;
    
    struct {
-      struct {
-         Texture white;
-         Texture gray;
-         Texture black;
-         Texture normal;
+      union {
+         Texture textures[4];
+
+         struct {
+            Texture white;
+            Texture gray;
+            Texture black;
+            Texture normal;
+
+         } texture;
          
-      } texture;
+      };
       
       struct {
          Geometry plane;
@@ -135,6 +159,10 @@ struct Renderer_t {
    mat4x4 view;
    mat4x4 projection;
    mat4x4 view_projection;
+
+   u16 freed_surface_root;
+   
+   u8 texture_slots[SURF_MAX_TEXTURES];
    
 };
 
@@ -148,12 +176,17 @@ Texture RNDR_LoadColorTexture(Graphics* graphics, color8 color, u8 texture_type)
 Geometry RNDR_Plane(Graphics* graphics);
 Geometry RNDR_Box(Graphics* graphics);
 
+u16 RNDR_GetSurfaceIndex(Renderer* renderer, const char* surface_name);
 u16 RNDR_GetDrawableTypeIndex(Renderer* renderer, const char* drawable_type_name);
+rndr_Surface* RNDR_GetSurface(Renderer* renderer, Surface res_surface);
 rndr_DrawableType* RNDR_GetDrawableType(Renderer* renderer, u16 drawable_type_idx);
 rndr_Drawable* RNDR_GetDrawable(Renderer* renderer, Drawable res_drawable);
 void RNDR_RegisterDefaultDrawables(Renderer* renderer);
+void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_default, Texture texture);
 
-void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self);
+UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial material, u32 pass_id);
+
+void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
 
 #endif

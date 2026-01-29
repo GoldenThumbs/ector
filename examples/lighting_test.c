@@ -1,9 +1,9 @@
-#include "util/extra_types.h"
-#include "util/matrix.h"
-#include "util/quaternion.h"
-#include <string.h>
 #include <util/types.h>
+#include <util/extra_types.h>
+#include <util/matrix.h>
+#include <util/quaternion.h>
 #include <util/keymap.h>
+#include <util/files.h>
 #include <engine.h>
 #include <graphics.h>
 #include <renderer.h>
@@ -14,9 +14,6 @@
 #include <stb_image.h>
 
 #include <stdio.h>
-
-void ParticleRenderFunc(Renderer* renderer, Drawable self);
-Geometry Plane(Graphics* graphics);
 
 typedef struct ParticleDrawable_t
 {
@@ -33,7 +30,8 @@ typedef struct ParticleDrawable_t
 } ParticleDrawable;
 
 Geometry Plane(Graphics* graphics);
-void ParticleRenderFunc(Renderer* renderer, Drawable self);
+Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path);
+void ParticleRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
 int main(int argc, char* argv[])
 {
@@ -56,6 +54,14 @@ int main(int argc, char* argv[])
       .render_func = ParticleRenderFunc
    });
 
+   Surface basic_surf = Renderer_AddSurface(renderer, "Basic", &(SurfaceDesc){
+      .pass_count = 1,
+      .passes[0] = {
+         .shader = Renderer_BasicShader(renderer),
+         .uniform_block_count = 0
+      }
+   });
+
    // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
    struct {
       vec3 origin;
@@ -75,35 +81,19 @@ int main(int argc, char* argv[])
       KEY_S,
       KEY_A,
       KEY_D
-   };
-
-   i32 directory_length = strnlen(argv[0], 2048);
-   while (directory_length > 0)
-   {
-      char directory_char = argv[0][--directory_length];
-      if (directory_char == '/' || directory_char == '\\')
-         break;
-   }
-
-   const char* image_name = "assets/textures/bubble.png";
-   i32 image_path_length = snprintf(NULL, 0, "%.*s/%s", directory_length, argv[0], image_name) + 1;
-   char* image_path = malloc(image_path_length * sizeof(char));
-   snprintf(image_path, image_path_length, "%.*s/%s", directory_length, argv[0], image_name);
-   printf("%s\n", image_path);
-
-   resolution2d image_size = { 0 };
-   int image_channel_count = 0;
-
-   u8* image = stbi_load(image_path, &image_size.width, &image_size.height, &image_channel_count, 4);
+   };   
 
    Drawable floor_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
    GeometryDrawable* floor_data = Renderer_DrawableData(renderer, floor_object);
    floor_data->geometry = Renderer_PlaneGeometry(renderer);
-   floor_data->color.hex = 0xFF888888;
+   floor_data->color.hex = 0xFFFFFFFF;
    floor_data->transform.scale = VEC3(10, 1, 10);
    floor_data->transform.rotation = Util_IdentityQuat();
    floor_data->transform.origin.y -= 1.0f;
-   floor_data->material.shader = Renderer_BasicShader(renderer);
+   floor_data->material.surface = basic_surf;
+   floor_data->material.texture_count = 1;
+   floor_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/dirt.png", argv[0]);
+   Graphics_SetTextureInterpolation(graphics, floor_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
 
    Drawable box_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
    GeometryDrawable* box_data = Renderer_DrawableData(renderer, box_object);
@@ -111,8 +101,11 @@ int main(int argc, char* argv[])
    box_data->color.hex = 0xFF000088;
    box_data->transform.scale = VEC3(0.6f, 0.6f, 0.6f);
    box_data->transform.rotation = Util_IdentityQuat();
-   box_data->transform.origin.y -= 0.6f;
-   box_data->material.shader = Renderer_BasicShader(renderer);
+   box_data->transform.origin.y += 0.6f;
+   box_data->material.surface = basic_surf;
+   box_data->material.texture_count = 1;
+   box_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/leaves.png", argv[0]);
+   Graphics_SetTextureInterpolation(graphics, box_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
 
    Drawable particle_object = Renderer_CreateDrawable(renderer, "ParticleDrawable");
    ParticleDrawable* particle_data = Renderer_DrawableData(renderer, particle_object);
@@ -123,19 +116,16 @@ int main(int argc, char* argv[])
    particle_data->transform.rotation = Util_MakeQuat(VEC3(0, 1, 0), 25.0f);
    particle_data->transform.origin.y += 1.8f;
    particle_data->shader = Graphics_CreateShader(graphics, particle_vertex_code, particle_fragment_code);
-   particle_data->color_texture = Graphics_CreateTexture(graphics, image, (TextureDesc){ image_size, 1, 1, GFX_TEXTURETYPE_2D, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
+   particle_data->color_texture = LoadTexture(graphics, "assets/textures/bubble.png", argv[0]);
    particle_data->particle_shader = Graphics_CreateComputeShader(graphics, particle_compute_code);
    particle_data->particle_ssbo = Graphics_CreateBuffer(graphics, NULL, particle_data->particle_count, sizeof(mat4x4), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
-
-   Graphics_GenerateTextureMipmaps(graphics, particle_data->color_texture);
+   Graphics_SetTextureInterpolation(graphics, particle_data->color_texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_CLAMP });
 
    Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    
    f32 global_timer = 0.0f;
    f64 fps_timer = 0.0f;
    u32 frames_rendered = 0;
-
-   stbi_image_free(image);
 
    while(!Engine_CheckExitConditions(engine))
    {
@@ -229,46 +219,6 @@ int main(int argc, char* argv[])
    return 0;
 }
 
-void ParticleRenderFunc(Renderer* renderer, Drawable self)
-{
-   ParticleDrawable* drawable_data = Renderer_DrawableData(renderer, self);
-
-   Graphics* graphics = Renderer_Graphics(renderer);
-   Buffer camera_buffer = Renderer_CameraBuffer(renderer);
-   Buffer model_buffer = Renderer_ModelBuffer(renderer);
-   mat4x4 view_projection = Renderer_GetViewAndProjectionMatrix(renderer);
-
-   ModelData model_data = { 0 };
-   model_data.mat_model = Util_TransformationMatrix(drawable_data->transform);
-   model_data.mat_invmodel = Util_InverseMat4(model_data.mat_model);
-   model_data.mat_mvp = Util_MulMat4(view_projection, model_data.mat_model);
-   model_data.u_color = Util_Vec4FromColor(drawable_data->color);
-
-   mat4x4 mat_normal_model = Util_TransposeMat4(model_data.mat_invmodel);
-   model_data.mat_normal_model[0].xyz = mat_normal_model.v[0].xyz;
-   model_data.mat_normal_model[1].xyz = mat_normal_model.v[1].xyz;
-   model_data.mat_normal_model[2].xyz = mat_normal_model.v[2].xyz;
-
-   Graphics_SetBlending(graphics, GFX_BLENDMODE_ADD);
-
-   Graphics_UpdateBuffer(graphics, model_buffer, &model_data, 1, sizeof(ModelData));
-   Graphics_UseBuffer(graphics, model_buffer, 2);
-
-   Graphics_UseBuffer(graphics, camera_buffer, 1);
-
-   Graphics_UseBuffer(graphics, drawable_data->particle_ssbo, 3);
-
-   Graphics_Dispatch(graphics, drawable_data->particle_shader, drawable_data->particle_count, 1, 1, (UniformBlockList){ .count = 0 });
-   Graphics_DispatchBarrier();
-
-   Graphics_SetTextureInterpolation(graphics, drawable_data->color_texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_CLAMP });
-   Graphics_BindTexture(graphics, drawable_data->color_texture, 0);
-
-   Graphics_DrawInstanced(graphics, drawable_data->shader, drawable_data->geometry, drawable_data->particle_count, (UniformBlockList){ .count = 0 });
-
-   Graphics_SetBlending(graphics, GFX_BLENDMODE_NONE);
-}
-
 Geometry Plane(Graphics* graphics)
 {
    Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
@@ -288,4 +238,60 @@ Geometry Plane(Graphics* graphics)
    Mesh_Free(&mesh);
 
    return plane;
+}
+
+Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path)
+{
+   if (graphics == NULL || texture_name == NULL || base_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   char* texture_path = Util_MakeFilePath(base_path, texture_name);
+   if (texture_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   TextureDesc desc = { 0 };
+   desc.depth = 1;
+   desc.mipmap_count = 1;
+   desc.texture_type = GFX_TEXTURETYPE_2D;
+
+   resolution2d image_size = { 0 };
+   i32 channel_count = 0;
+
+   u8* image = stbi_load(texture_path, &desc.size.width, &desc.size.height, &channel_count, 0);
+   desc.texture_format = GFX_TEXTUREFORMAT_R_U8_NORM + (channel_count - 1);
+
+   free(texture_path);
+   if (image == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   Texture texture = Graphics_CreateTexture(graphics, image, desc);
+   Graphics_GenerateTextureMipmaps(graphics, texture);
+
+   stbi_image_free(image);
+
+   return texture;
+}
+
+void ParticleRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
+{
+   Graphics* graphics = Renderer_Graphics(renderer);
+   ParticleDrawable* drawable_data = Renderer_DrawableData(renderer, self);
+
+   Graphics_SetBlending(graphics, GFX_BLENDMODE_MIX);
+
+   Buffer camera_buffer = Renderer_CameraBuffer(renderer);
+   Buffer model_buffer = Renderer_ModelBuffer(renderer);
+   mat4x4 view_projection = Renderer_GetViewAndProjectionMatrix(renderer);
+
+   Renderer_UpdateModelData(renderer, drawable_data->transform, drawable_data->color);
+
+   Graphics_UseBuffer(graphics, drawable_data->particle_ssbo, 3);
+   Graphics_Dispatch(graphics, drawable_data->particle_shader, drawable_data->particle_count, 1, 1, (UniformBlockList){ .count = 0 });
+   Graphics_DispatchBarrier();
+
+   Renderer_SetTexture(renderer, drawable_data->color_texture, 0);
+   Graphics_DrawInstanced(graphics, drawable_data->shader, drawable_data->geometry, drawable_data->particle_count, (UniformBlockList){ .count = 0 });
+
+   Graphics_SetBlending(graphics, GFX_BLENDMODE_NONE);
+
 }

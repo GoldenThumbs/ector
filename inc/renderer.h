@@ -13,12 +13,18 @@
 #define GEOMETRY_DRAWABLE_TYPE "GeometryDrawable"
 // #define LIGHT_DRAWABLE_TYPE "LightDrawable"
 
+#define SURF_MAX_PASSES 4
+#define SURF_MAX_BLOCKS_PER_PASS 4
+#define SURF_MAX_TEXTURES 8
+
 enum {
-   RNDR_MAT_TEX_WHITE = 0,
-   RNDR_MAT_TEX_GRAY,
-   RNDR_MAT_TEX_BLACK,
-   RNDR_MAT_TEX_NORMAL
+   RNDR_SURF_TEXTURE_WHITE = 0,
+   RNDR_SURF_TEXTURE_GRAY,
+   RNDR_SURF_TEXTURE_BLACK,
+   RNDR_SURF_TEXTURE_NORMAL
 };
+
+typedef handle Surface;
 
 typedef union Drawable_t
 {
@@ -57,6 +63,39 @@ typedef struct ModelData_t
 
 } ModelData;
 
+typedef struct SurfacePass_t
+{
+   UniformBlock uniform_blocks[SURF_MAX_BLOCKS_PER_PASS];
+   Shader shader;
+   u8 uniform_block_count;
+   u8 cull_mode;
+   u8 depth_mode;
+   u8 blend_mode;
+} SurfacePass;
+
+typedef struct SurfaceDesc_t
+{
+   SurfacePass passes[SURF_MAX_PASSES];
+   u32 pass_count;
+   u8 texture_defaults[SURF_MAX_TEXTURES];
+} SurfaceDesc;
+
+typedef struct SurfaceTexture_t
+{
+   u32 bind_slot;
+   Texture texture;
+} SurfaceTexture;
+
+typedef struct SurfaceMaterial_t
+{
+   Surface surface;
+   SurfaceTexture textures[SURF_MAX_TEXTURES];
+   u32 texture_count;
+
+   void* uniform_block_data[SURF_MAX_PASSES][SURF_MAX_BLOCKS_PER_PASS];
+
+} SurfaceMaterial;
+
 typedef struct MaterialTexture_t
 {
    Texture texture;
@@ -79,10 +118,11 @@ typedef struct MaterialData_t
 
 struct Renderer_t;
 typedef void (*DrawableFunc)(struct Renderer_t* renderer, Drawable self);
+typedef void (*DrawableRenderFunc)(struct Renderer_t* renderer, Drawable self, u32 pass_id);
 
 typedef struct DrawableTypeDesc_t
 {
-   DrawableFunc render_func;
+   DrawableRenderFunc render_func;
    DrawableFunc on_enable_func;
    DrawableFunc on_disable_func;
    uS data_size;
@@ -92,7 +132,7 @@ typedef struct Renderer_t Renderer;
 
 typedef struct GeometryDrawable_t
 {
-   MaterialData material;
+   SurfaceMaterial material;
    Geometry geometry;
    color8 color;
    Transform3D transform;
@@ -122,6 +162,12 @@ void Renderer_Free(Renderer* renderer);
 Graphics* Renderer_Graphics(Renderer* renderer);
 void Renderer_Render(Renderer* renderer, resolution2d size);
 
+void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
+void Renderer_SetTextureDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);
+void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material);
+
+void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color);
+
 void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view);
 void Renderer_SetProjectionMatrix(Renderer* renderer, mat4x4 projection);
 void Renderer_SetViewAndProjectionMatrix(Renderer* renderer, mat4x4 view, mat4x4 projection);
@@ -129,6 +175,13 @@ void Renderer_SetViewAndProjectionMatrix(Renderer* renderer, mat4x4 view, mat4x4
 mat4x4 Renderer_GetViewMatrix(Renderer* renderer);
 mat4x4 Renderer_GetProjectionMatrix(Renderer* renderer);
 mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer);
+
+Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceDesc* desc);
+void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface);
+
+Surface Renderer_GetSurface(Renderer* renderer, const char* name);
+SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32 pass_id);
+UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id);
 
 void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const DrawableTypeDesc* desc);
 
