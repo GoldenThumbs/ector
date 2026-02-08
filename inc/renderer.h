@@ -116,6 +116,17 @@ typedef struct MaterialData_t
 
 } MaterialData;
 
+typedef struct LightDesc_t
+{
+   vec3 origin;
+   f32 radius;
+   f32 spotlight_angle;
+   color8 color;
+   f32 brightness;
+   f32 theta;
+   f32 phi;
+} LightDesc;
+
 struct Renderer_t;
 typedef void (*DrawableFunc)(struct Renderer_t* renderer, Drawable self);
 typedef void (*DrawableRenderFunc)(struct Renderer_t* renderer, Drawable self, u32 pass_id);
@@ -142,13 +153,13 @@ typedef struct GeometryDrawable_t
 typedef struct LightDrawable_t
 {
    u32 light_idx;
-   color8 color;
-   f32 brightness;
+   vec3 origin;
    f32 radius;
    f32 spotlight_angle;
+   color8 color;
+   f32 brightness;
    f32 theta;
    f32 phi;
-   vec3 origin;
    
    struct {
       u32 is_dirty: 1;
@@ -161,6 +172,10 @@ void Renderer_Free(Renderer* renderer);
 
 Graphics* Renderer_Graphics(Renderer* renderer);
 void Renderer_Render(Renderer* renderer, resolution2d size);
+
+u32 Renderer_AddLight(Renderer* renderer, LightDesc desc);
+void Renderer_RemoveLight(Renderer* renderer, u32 index);
+void Renderer_UpdateLight(Renderer* renderer, u32 index, LightDesc desc);
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
 void Renderer_SetTextureDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);

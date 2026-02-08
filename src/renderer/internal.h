@@ -161,7 +161,11 @@ struct Renderer_t {
    mat4x4 view_projection;
 
    u16 freed_surface_root;
-   
+
+   struct {
+      u16 update_lights: 1;
+   };
+
    u8 texture_slots[SURF_MAX_TEXTURES];
    
 };
@@ -188,5 +192,8 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
 
 void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
+// void RNDR_LightRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
+// void RNDR_LightEnableFunc(Renderer* renderer, Drawable self);
+// void RNDR_LightDisableFunc(Renderer* renderer, Drawable self);
 
 #endif

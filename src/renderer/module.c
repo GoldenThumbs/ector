@@ -1,4 +1,5 @@
 #include "util/extra_types.h"
+#include "util/math.h"
 #include "util/matrix.h"
 #include "util/resource.h"
 #include "util/types.h"
@@ -10,6 +11,7 @@
 
 #include "renderer.h"
 #include "renderer/internal.h"
+#include "util/vec3.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -134,6 +136,15 @@ void Renderer_Render(Renderer* renderer, resolution2d size)
    Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.camera_buffer, &camera_data, 1, sizeof(CameraData));
    Graphics_UseBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
 
+   if (renderer->update_lights)
+   {
+      renderer->update_lights = false;
+      Graphics_ReuseBuffer(renderer->graphics, renderer->point_lights, Util_ArrayLength(renderer->point_lights), sizeof(rndr_PointLightSource), renderer->ssbo.light_buffer);
+
+   }
+
+   Graphics_UseBuffer(renderer->graphics, renderer->ssbo.light_buffer, 2);
+
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
    for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
    {
@@ -158,6 +169,52 @@ void Renderer_Render(Renderer* renderer, resolution2d size)
 
       }
    }
+}
+
+u32 Renderer_AddLight(Renderer* renderer, LightDesc desc)
+{
+   if (renderer == NULL)
+      return INVALID_HANDLE_ID;
+
+   u32 index = Util_ArrayLength(renderer->point_lights);
+   SET_ARRAY_LENGTH(renderer->point_lights, index + 1);
+
+   Renderer_UpdateLight(renderer, index, desc);
+
+   return index;
+}
+
+void Renderer_RemoveLight(Renderer* renderer, u32 index)
+{
+   if (renderer == NULL || Util_ArrayLength(renderer->point_lights) <= index)
+      return;
+
+   Util_RemoveArrayIndex(REF(renderer->point_lights), index);
+
+   renderer->update_lights = true;
+
+}
+
+void Renderer_UpdateLight(Renderer* renderer, u32 index, LightDesc desc)
+{
+   if (renderer == NULL || Util_ArrayLength(renderer->point_lights) <= index)
+      return;
+
+   vec4 base_color = Util_Vec4FromColor(desc.color);
+   vec3 light_color = Util_ScaleVec3(base_color.xyz, base_color.w * desc.brightness);
+
+   rndr_PointLightSource light_src = { 0 };
+   light_src.origin = desc.origin;
+   light_src.radius = desc.radius;
+   light_src.rgbe_color = Util_MakeRGBE(light_color);
+   light_src.cos_half_angle = M_COS(desc.spotlight_angle * 0.5f);
+   light_src.theta_radians = M_TURN(desc.theta);
+   light_src.phi_radians = M_TURN(desc.phi);
+
+   renderer->point_lights[index] = light_src;
+
+   renderer->update_lights = true;
+
 }
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot)

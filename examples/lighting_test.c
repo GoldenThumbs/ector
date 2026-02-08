@@ -12,6 +12,7 @@
 
 #include "mesh.h"
 #include "particle_shader_code.h"
+#include "util/math.h"
 #include "util/vec3.h"
 
 #include <stdlib.h>
@@ -145,11 +146,32 @@ int main(int argc, char* argv[])
    Graphics_SetTextureInterpolation(graphics, player_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
    Graphics_SetTextureInterpolation(graphics, player_data->material.textures[1].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
 
+   const u32 spotlight_count = 30;
+   const f32 inv_spotlight_count = 1.0f / (f32)(spotlight_count - 1);
+
+   for (u32 j = 0; j < 5; j++)
+      for (u32 i = 0; i < spotlight_count; i++)
+   {
+      f32 x = (i * inv_spotlight_count - 0.5f) * 20.0f;
+      f32 z = ((f32)j - 2.0f) * 3.0f;
+      Renderer_AddLight(renderer, (LightDesc){
+         .origin = VEC3(x, 3, 1),
+         .radius = 10.0f,
+         .spotlight_angle = 30.0f,
+         .color = { .hex = 0xFFFFFFFF },
+         .brightness = 1.0f,
+         .theta = 0.0f,
+         .phi = 0.0f
+      });
+   }
+
    Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    
    f32 global_timer = 0.0f;
    f64 fps_timer = 0.0f;
    u32 frames_rendered = 0;
+
+   f32 cam_dist = 2.0f;
 
    while(!Engine_CheckExitConditions(engine))
    {
@@ -158,6 +180,10 @@ int main(int argc, char* argv[])
 
       f64 frame_delta = Engine_GetFrameDelta(engine);
       vec2 mouse_delta = Engine_GetMouseDelta(engine);
+
+      vec2 scroll_delta = Engine_GetMouseScroll(engine);
+      cam_dist = cam_dist - (scroll_delta.y * 0.25f);
+      cam_dist = M_CLAMP(cam_dist, 0.0f, 5.0f);
 
       global_timer += (f32)frame_delta;
       Graphics_UpdateBuffer(graphics, global_ubo, &global_timer, 1, sizeof(f32));
@@ -220,7 +246,7 @@ int main(int argc, char* argv[])
 
       Renderer_SetViewAndProjectionMatrix(
          renderer,
-         Util_ViewMatrix(player.origin, player.euler, 3.0f),
+         Util_ViewMatrix(player.origin, player.euler, cam_dist),
          Util_PerspectiveMatrix(50.0f, (f32)size.height / (f32)size.width, 0.05f, 100.0f)
       );
 
@@ -237,6 +263,23 @@ int main(int argc, char* argv[])
          frames_rendered = 0;
          fps_timer -= 1.0f;
       }
+
+      for (u32 j = 0; j < 5; j++)
+         for (u32 i = 0; i < spotlight_count; i++)
+      {
+         f32 x = (i * inv_spotlight_count - 0.5f) * 20.0f;
+         f32 z = ((f32)j - 2.0f) * 3.0f;
+         Renderer_UpdateLight(renderer, j * spotlight_count + i, (LightDesc){
+            .origin = VEC3(x, 3, z),
+            .radius = 10.0f,
+            .spotlight_angle = M_ABS(M_COS(global_timer * 3.0f + (x + z * 6.0f) * 6.0f)) * 30.0f + 20.0f,
+            .color = { .hex = 0xFFFFFFFF },
+            .brightness =  M_SIN(global_timer * 60.0f + (x + z * 10.0f) * 10.0f) * 0.25f + 0.25f,
+            .theta = 0.0f,
+            .phi = -50.0f + M_SIN(global_timer * 10.0f + (x + z * 2.0f) * 10.0f) * -20.0f
+         });
+      }
+
    }
 
    Engine_Free(engine);
