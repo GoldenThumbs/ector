@@ -34,8 +34,8 @@ Renderer* Renderer_Init(Graphics* graphics)
    
    renderer->built_in.texture.white = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0XFFFFFFFF }, GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.black = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFF000000 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.gray = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFF888888 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.normal = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFFFF8888 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.gray = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.normal = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
    
    renderer->built_in.geometry.plane = RNDR_Plane(graphics);
    renderer->built_in.geometry.box = RNDR_Box(graphics);
