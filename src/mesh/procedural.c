@@ -13,17 +13,16 @@
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 {
    Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
-   mesh.attribute_count = 3;
+   mesh.attribute_count = 4;
    mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
+   mesh.attributes[3] = MESH_ATTRIBUTE_4_CHANNEL;
    
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
    mat4x4 t = Util_ScalingMatrix(VEC3(size.x, 1, size.y));
    mesh_interface = Mesh_AddQuad(faces_x, faces_y, t, mesh_interface);
-   mesh_interface = Mesh_GenNormals(mesh_interface);
-   mesh_interface = Mesh_GenTexcoords(mesh_interface);
 
    return mesh;
 }
@@ -36,10 +35,11 @@ Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
 Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bool smooth_seams)
 {
    Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
-   mesh.attribute_count = 3;
+   mesh.attribute_count = 4;
    mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
+   mesh.attributes[3] = MESH_ATTRIBUTE_4_CHANNEL;
    
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
@@ -59,8 +59,6 @@ Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bo
    mesh_interface = Mesh_AddQuad(faces_x, faces_y, t3, mesh_interface);
    mesh_interface = Mesh_AddQuad(faces_z, faces_y, t4, mesh_interface);
    mesh_interface = Mesh_AddQuad(faces_x, faces_z, t5, mesh_interface);
-   mesh_interface = Mesh_GenNormals(mesh_interface);
-   mesh_interface = Mesh_GenTexcoords(mesh_interface);
 
    if (smooth_seams)
       mesh_interface = Mesh_AverageNormalsOverSeams(mesh_interface);
@@ -76,24 +74,71 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
    u16 last_vrt = mesh_interface.mesh->vertex_count;
    u16 last_idx = mesh_interface.mesh->index_count;
    uS last_byte = mesh_interface.total_bytes;
-   uS total_bytes = (uS)vertex_count * sizeof(vec3);
-   mesh_interface.atr.position_size += total_bytes;
+   uS position_bytes = (uS)vertex_count * sizeof(vec3);
+   uS normal_bytes = (uS)vertex_count * sizeof(vec3);
+   uS texcoord_bytes = (uS)vertex_count * sizeof(vec2);
+   uS tangent_bytes = (uS)vertex_count * sizeof(vec4);
+   uS total_bytes = position_bytes + normal_bytes + texcoord_bytes + tangent_bytes;
 
    u8* vertex_buffer = realloc(mesh_interface.mesh->vertex_buffer, last_byte + total_bytes);
 
    if (vertex_buffer != NULL)
    {
-      vec3* position = (vec3*)(vertex_buffer + last_byte);
+      vec3* position = (vec3*)(vertex_buffer + mesh_interface.atr.position_size);
+      
+      vec3* old_normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs);
+      vec2* old_texcoord = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+      vec4* old_tangent = (vec4*)(vertex_buffer + mesh_interface.atr.tangent_ofs);
+
+      uS old_normal_size = mesh_interface.atr.normal_size; 
+      uS old_texcoord_size = mesh_interface.atr.texcoord_size[0]; 
+      uS old_tangent_size = mesh_interface.atr.tangent_size; 
+
+      mesh_interface.atr.position_size += position_bytes;
+
+      mesh_interface.atr.normal_ofs = mesh_interface.atr.position_size;
+      mesh_interface.atr.normal_size += normal_bytes;
+      mesh_interface.atr.texcoord_ofs[0] = mesh_interface.atr.normal_ofs + mesh_interface.atr.normal_size;
+      mesh_interface.atr.texcoord_size[0] += texcoord_bytes;
+      mesh_interface.atr.tangent_ofs = mesh_interface.atr.texcoord_ofs[0] + mesh_interface.atr.texcoord_size[0];
+      mesh_interface.atr.tangent_size += tangent_bytes;
+
+      vec3* normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs);
+      vec2* texcoord = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+      vec4* tangent = (vec4*)(vertex_buffer + mesh_interface.atr.tangent_ofs);
+
+      memcpy(tangent, old_tangent, old_tangent_size);
+      memcpy(texcoord, old_texcoord, old_texcoord_size);
+      memcpy(normal, old_normal, old_normal_size);
+
+      normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs + old_normal_size);
+      texcoord = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0] + old_texcoord_size);
+      tangent = (vec4*)(vertex_buffer + mesh_interface.atr.tangent_ofs + old_tangent_size);
+
+      mat4x4 normal_transform = Util_InverseMat4(Util_TransposeMat4(transform));
+
+      vec3 plane_normal = Util_MulMat4Vec4(normal_transform, VEC4(0, 1, 0, 0)).xyz;
+      plane_normal = Util_NormalizeVec3(plane_normal);
+
+      vec4 plane_tangent = Util_MulMat4Vec4(normal_transform, VEC4(1, 0, 0, 0));
+      plane_tangent.xyz = Util_NormalizeVec3(plane_tangent.xyz);
+      plane_tangent.w = -1.0f;
 
       u16 vert_idx = 0;
       for (u16 i=0; i < (faces_y + 1); i++)
       {
          for (u16 j=0; j < (faces_x + 1); j++)
          {
-            f32 x = (f32)j / (f32)faces_x - 0.5f;
-            f32 y = (f32)i / (f32)faces_y - 0.5f;
-            vec4 point = VEC4(x, 0, y, 1);
-            position[vert_idx++] = Util_MulMat4Vec4(transform, point).xyz;
+            f32 x = (f32)j / (f32)faces_x;
+            f32 y = (f32)i / (f32)faces_y;
+            vec4 point = VEC4(x - 0.5f, 0, y - 0.5f, 1);
+            position[vert_idx] = Util_MulMat4Vec4(transform, point).xyz;
+            normal[vert_idx] = plane_normal;
+            texcoord[vert_idx] = VEC2(x, 1.0f - y);
+            tangent[vert_idx] = plane_tangent;
+
+            vert_idx++;
+
          }
       }
       
