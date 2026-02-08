@@ -87,11 +87,13 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
       vec3* position = (vec3*)(vertex_buffer + mesh_interface.atr.position_size);
       
       vec3* old_normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs);
-      vec2* old_texcoord = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+      vec2* old_texcoord0 = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+      vec2* old_texcoord1 = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[1]);
       vec4* old_tangent = (vec4*)(vertex_buffer + mesh_interface.atr.tangent_ofs);
 
       uS old_normal_size = mesh_interface.atr.normal_size; 
-      uS old_texcoord_size = mesh_interface.atr.texcoord_size[0]; 
+      uS old_texcoord0_size = mesh_interface.atr.texcoord_size[0];
+      uS old_texcoord1_size = mesh_interface.atr.texcoord_size[1];
       uS old_tangent_size = mesh_interface.atr.tangent_size; 
 
       mesh_interface.atr.position_size += position_bytes;
@@ -100,19 +102,23 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
       mesh_interface.atr.normal_size += normal_bytes;
       mesh_interface.atr.texcoord_ofs[0] = mesh_interface.atr.normal_ofs + mesh_interface.atr.normal_size;
       mesh_interface.atr.texcoord_size[0] += texcoord_bytes;
-      mesh_interface.atr.tangent_ofs = mesh_interface.atr.texcoord_ofs[0] + mesh_interface.atr.texcoord_size[0];
+      mesh_interface.atr.texcoord_ofs[1] = mesh_interface.atr.texcoord_ofs[0] + mesh_interface.atr.texcoord_size[0];
+      mesh_interface.atr.tangent_ofs = mesh_interface.atr.texcoord_ofs[1] + mesh_interface.atr.texcoord_size[1];
       mesh_interface.atr.tangent_size += tangent_bytes;
 
       vec3* normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs);
-      vec2* texcoord = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+      vec2* texcoord0 = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+      vec2* texcoord1 = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[1]);
       vec4* tangent = (vec4*)(vertex_buffer + mesh_interface.atr.tangent_ofs);
 
       memcpy(tangent, old_tangent, old_tangent_size);
-      memcpy(texcoord, old_texcoord, old_texcoord_size);
+      memcpy(texcoord0, old_texcoord0, old_texcoord0_size);
+      if (old_texcoord1_size > 0)
+         memcpy(texcoord1, old_texcoord1, old_texcoord1_size);
       memcpy(normal, old_normal, old_normal_size);
 
       normal = (vec3*)(vertex_buffer + mesh_interface.atr.normal_ofs + old_normal_size);
-      texcoord = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0] + old_texcoord_size);
+      texcoord0 = (vec2*)(vertex_buffer + mesh_interface.atr.texcoord_ofs[0] + old_texcoord0_size);
       tangent = (vec4*)(vertex_buffer + mesh_interface.atr.tangent_ofs + old_tangent_size);
 
       mat4x4 normal_transform = Util_InverseMat4(Util_TransposeMat4(transform));
@@ -134,7 +140,7 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
             vec4 point = VEC4(x - 0.5f, 0, y - 0.5f, 1);
             position[vert_idx] = Util_MulMat4Vec4(transform, point).xyz;
             normal[vert_idx] = plane_normal;
-            texcoord[vert_idx] = VEC2(x, 1.0f - y);
+            texcoord0[vert_idx] = VEC2(x, 1.0f - y);
             tangent[vert_idx] = plane_tangent;
 
             vert_idx++;
