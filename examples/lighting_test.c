@@ -4,15 +4,17 @@
 #include <util/quaternion.h>
 #include <util/keymap.h>
 #include <util/files.h>
+#include <image.h>
 #include <engine.h>
 #include <graphics.h>
 #include <renderer.h>
 #include <default_modules.h>
 
+#include "mesh.h"
 #include "particle_shader_code.h"
+#include "util/vec3.h"
 
-#include <stb_image.h>
-
+#include <stdlib.h>
 #include <stdio.h>
 
 typedef struct ParticleDrawable_t
@@ -30,7 +32,7 @@ typedef struct ParticleDrawable_t
 } ParticleDrawable;
 
 Geometry Plane(Graphics* graphics);
-Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path);
+Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size);
 void ParticleRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
 int main(int argc, char* argv[])
@@ -59,8 +61,14 @@ int main(int argc, char* argv[])
       .passes[0] = {
          .shader = Renderer_BasicShader(renderer),
          .uniform_block_count = 0
-      }
+      },
+      .texture_defaults[1] = RNDR_SURF_TEXTURE_NORMAL
    });
+
+   char* model_path = Util_MakeFilePath(argv[0], "assets/models/bolt.ebmf");
+   memblob model_memory = Util_LoadFileIntoMemory(model_path, true);
+   Model model = Mesh_LoadEctorModel(model_memory);
+   free(model_memory.data);
 
    // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
    struct {
@@ -81,7 +89,31 @@ int main(int argc, char* argv[])
       KEY_S,
       KEY_A,
       KEY_D
-   };   
+   };
+
+   Texture model_color_texture = LoadTexture(graphics, "assets/textures/bolt.png", argv[0], (resolution2d){ 0 });
+   Texture model_normal_texture = LoadTexture(graphics, "assets/textures/bolt_n.png", argv[0], (resolution2d){ 0 });
+   Graphics_SetTextureInterpolation(graphics, model_color_texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   Graphics_SetTextureInterpolation(graphics, model_normal_texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+
+   for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
+   {
+      Drawable mesh_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+      GeometryDrawable* mesh_data = Renderer_DrawableData(renderer, mesh_object);
+      mesh_data->geometry = Graphics_CreateGeometry(graphics, model.meshes[mesh_i], GFX_DRAWMODE_STATIC);
+      mesh_data->color.hex = 0xFFFFFFFF;
+      mesh_data->transform.scale = VEC3(30, 30, 30);
+      mesh_data->transform.rotation = Util_IdentityQuat();
+      mesh_data->transform.origin.y = 1.0f;
+      mesh_data->material.surface = basic_surf;
+      mesh_data->material.texture_count = 2;
+      mesh_data->material.textures[0].texture = model_color_texture;
+      mesh_data->material.textures[1].texture = model_normal_texture;
+      mesh_data->material.textures[1].bind_slot = 1;
+
+   }
+
+   Model_Free(&model);
 
    Drawable floor_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
    GeometryDrawable* floor_data = Renderer_DrawableData(renderer, floor_object);
@@ -91,35 +123,27 @@ int main(int argc, char* argv[])
    floor_data->transform.rotation = Util_IdentityQuat();
    floor_data->transform.origin.y -= 1.0f;
    floor_data->material.surface = basic_surf;
-   floor_data->material.texture_count = 1;
-   floor_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/dirt.png", argv[0]);
+   floor_data->material.texture_count = 2;
+   floor_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/dirt.png", argv[0], (resolution2d){ 0 });
+   floor_data->material.textures[1].texture = LoadTexture(graphics, "assets/textures/dirt_n.png", argv[0], (resolution2d){ 0 });
+   floor_data->material.textures[1].bind_slot = 1;
    Graphics_SetTextureInterpolation(graphics, floor_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   Graphics_SetTextureInterpolation(graphics, floor_data->material.textures[1].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
 
-   Drawable box_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* box_data = Renderer_DrawableData(renderer, box_object);
-   box_data->geometry = Renderer_BoxGeometry(renderer);
-   box_data->color.hex = 0xFF000088;
-   box_data->transform.scale = VEC3(0.6f, 0.6f, 0.6f);
-   box_data->transform.rotation = Util_IdentityQuat();
-   box_data->transform.origin.y += 0.6f;
-   box_data->material.surface = basic_surf;
-   box_data->material.texture_count = 1;
-   box_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/leaves.png", argv[0]);
-   Graphics_SetTextureInterpolation(graphics, box_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-
-   Drawable particle_object = Renderer_CreateDrawable(renderer, "ParticleDrawable");
-   ParticleDrawable* particle_data = Renderer_DrawableData(renderer, particle_object);
-   particle_data->particle_count = 16000;
-   particle_data->geometry = Plane(graphics);
-   particle_data->color.hex = 0xFFFFFFFF;
-   particle_data->transform.scale = VEC3(0.08f, 0.08f, 1.0f);
-   particle_data->transform.rotation = Util_MakeQuat(VEC3(0, 1, 0), 25.0f);
-   particle_data->transform.origin.y += 1.8f;
-   particle_data->shader = Graphics_CreateShader(graphics, particle_vertex_code, particle_fragment_code);
-   particle_data->color_texture = LoadTexture(graphics, "assets/textures/bubble.png", argv[0]);
-   particle_data->particle_shader = Graphics_CreateComputeShader(graphics, particle_compute_code);
-   particle_data->particle_ssbo = Graphics_CreateBuffer(graphics, NULL, particle_data->particle_count, sizeof(mat4x4), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
-   Graphics_SetTextureInterpolation(graphics, particle_data->color_texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_CLAMP });
+   Drawable player_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* player_data = Renderer_DrawableData(renderer, player_object);
+   player_data->geometry = Renderer_BoxGeometry(renderer);
+   player_data->color.hex = 0xFFFFFFFF;
+   player_data->transform.scale = VEC3(0.5f, 0.5, 0.5f);
+   player_data->transform.rotation = Util_IdentityQuat();
+   player_data->transform.origin.y += 1.0f;
+   player_data->material.surface = basic_surf;
+   player_data->material.texture_count = 2;
+   player_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/wood.png", argv[0], (resolution2d){ 0 });
+   player_data->material.textures[1].texture = LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 });
+   player_data->material.textures[1].bind_slot = 1;
+   Graphics_SetTextureInterpolation(graphics, player_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   Graphics_SetTextureInterpolation(graphics, player_data->material.textures[1].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
 
    Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    
@@ -134,8 +158,6 @@ int main(int argc, char* argv[])
 
       f64 frame_delta = Engine_GetFrameDelta(engine);
       vec2 mouse_delta = Engine_GetMouseDelta(engine);
-
-      particle_data->transform.rotation = Util_MulQuat(Util_MakeQuat(VEC3(0, 1, 0), 1.0f * (f32)frame_delta), particle_data->transform.rotation);
 
       global_timer += (f32)frame_delta;
       Graphics_UpdateBuffer(graphics, global_ubo, &global_timer, 1, sizeof(f32));
@@ -189,6 +211,8 @@ int main(int argc, char* argv[])
          );
       }
 
+      player_data->transform.origin = Util_AddVec3(player.origin, VEC3(0,-1, 0));
+
       resolution2d size = Engine_GetFrameSize(engine);
       Graphics_Viewport(graphics, size);
 
@@ -196,7 +220,7 @@ int main(int argc, char* argv[])
 
       Renderer_SetViewAndProjectionMatrix(
          renderer,
-         Util_ViewMatrix(player.origin, player.euler, 0.0f),
+         Util_ViewMatrix(player.origin, player.euler, 3.0f),
          Util_PerspectiveMatrix(50.0f, (f32)size.height / (f32)size.width, 0.05f, 100.0f)
       );
 
@@ -240,7 +264,7 @@ Geometry Plane(Graphics* graphics)
    return plane;
 }
 
-Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path)
+Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size)
 {
    if (graphics == NULL || texture_name == NULL || base_path == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
@@ -249,25 +273,26 @@ Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* ba
    if (texture_path == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
+   memblob memory = Util_LoadFileIntoMemory(texture_path, true);
+   Image image = Image_CreateImage(memory, IMG_TYPE_2D, slice_size, false);
+   Image_GenerateMipmaps(&image);
+   free(memory.data);
+
    TextureDesc desc = { 0 };
-   desc.depth = 1;
-   desc.mipmap_count = 1;
+   desc.size = image.size;
+   desc.depth = image.depth;
+   desc.mipmap_count = image.mipmap_count;
    desc.texture_type = GFX_TEXTURETYPE_2D;
-
-   resolution2d image_size = { 0 };
-   i32 channel_count = 0;
-
-   u8* image = stbi_load(texture_path, &desc.size.width, &desc.size.height, &channel_count, 0);
-   desc.texture_format = GFX_TEXTUREFORMAT_R_U8_NORM + (channel_count - 1);
+   desc.texture_format = ((image.image_format == IMG_FORMAT_F32) ? GFX_TEXTUREFORMAT_R_F32 : GFX_TEXTUREFORMAT_R_U8_NORM) + image.channel_count - 1;
 
    free(texture_path);
-   if (image == NULL)
+   if (image.data == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
-   Texture texture = Graphics_CreateTexture(graphics, image, desc);
-   Graphics_GenerateTextureMipmaps(graphics, texture);
+   Texture texture = Graphics_CreateTexture(graphics, image.data, desc);
+   // Graphics_GenerateTextureMipmaps(graphics, texture);
 
-   stbi_image_free(image);
+   Image_Free(&image);
 
    return texture;
 }
