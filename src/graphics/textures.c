@@ -281,65 +281,65 @@ uS GFX_PixelSize(u8 format)
    switch (format)
    {
       case GFX_TEXTUREFORMAT_R_U8_NORM:
-         return 8;
+         return 1;
       case GFX_TEXTUREFORMAT_RG_U8_NORM:
-         return 16;
+         return 2;
       case GFX_TEXTUREFORMAT_RGB_U8_NORM:
       case GFX_TEXTUREFORMAT_SRGB:
-         return 24;
+         return 3;
       case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
       case GFX_TEXTUREFORMAT_SRGB_ALPHA:
-         return 32;
+         return 4;
       
       case GFX_TEXTUREFORMAT_R_U16_NORM:
-         return 16;
+         return 2;
       case GFX_TEXTUREFORMAT_RG_U16_NORM:
-         return 32;
+         return 4;
       case GFX_TEXTUREFORMAT_RGB_U16_NORM:
-         return 48;
+         return 6;
       case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
-         return 64;
+         return 8;
       
       case GFX_TEXTUREFORMAT_R_F16:
-         return 16;
+         return 2;
       case GFX_TEXTUREFORMAT_RG_F16:
-         return 32;
+         return 4;
       case GFX_TEXTUREFORMAT_RGB_F16:
-         return 48;
+         return 6;
       case GFX_TEXTUREFORMAT_RGBA_F16:
-         return 64;
+         return 8;
       
       case GFX_TEXTUREFORMAT_R_F32:
-         return 32;
+         return 4;
       case GFX_TEXTUREFORMAT_RG_F32:
-         return 64;
+         return 8;
       case GFX_TEXTUREFORMAT_RGB_F32:
-         return 96;
+         return 12;
       case GFX_TEXTUREFORMAT_RGBA_F32:
-         return 128;
+         return 16;
       
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
-         return 32;
+         return 4;
       
       case GFX_TEXTUREFORMAT_DEPTH_16:
-         return 16;
+         return 2;
 
       case GFX_TEXTUREFORMAT_DEPTH_24:
-         return 24;
+         return 3;
 
       case GFX_TEXTUREFORMAT_DEPTH_F32:
-         return 32;
+         return 4;
 
       case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
-         return 32;
+         return 4;
       
       case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
-         return 40;
+         return 5;
       
       // TODO: compressed formats
       
       default:
-         return 32;
+         return 4;
    }
 }
 
@@ -610,11 +610,6 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data)
    if (data == NULL)
    {
       switch (texture->type) {
-         case GFX_TEXTURETYPE_2D:
-         case GFX_TEXTURETYPE_CUBEMAP:
-            glTexStorage2D(gl_target, texture->mipmap_count, internal_format, width, height);
-            break;
-         
          case GFX_TEXTURETYPE_3D:
          case GFX_TEXTURETYPE_2D_ARRAY:
          case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
@@ -622,8 +617,10 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data)
             break;
          
          default:
-            glTexStorage2D(gl_target, 1, internal_format, width, height);
+            glTexStorage2D(gl_target, texture->mipmap_count, internal_format, width, height);
+         
       }
+      
    } else {
       bool is_cubemap = ((texture->type == GFX_TEXTURETYPE_CUBEMAP) || (texture->type == GFX_TEXTURETYPE_CUBEMAP_ARRAY));
       u32 face_count = is_cubemap ? 6 : 1;
@@ -632,46 +629,36 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data)
       uS pixel_size = GFX_PixelSize(texture->format);
 
       uS offset = 0;
-      i32 mip_divisor = 1;
+      i32 mip_width = width;
+      i32 mip_height = height;
+      i32 mip_depth = depth;
 
-      switch (texture->type) {
-         case GFX_TEXTURETYPE_2D:
-         case GFX_TEXTURETYPE_CUBEMAP:
-            for (u32 mip_i = 0; mip_i < texture->mipmap_count; mip_i++)
-            {
-               i32 mip_width = width / mip_divisor;
-               i32 mip_height = height / mip_divisor;
-               for (u32 face_i = 0; face_i < face_count; face_i++)
-               {
-                  glTexImage2D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, 0, pixel_format, format_type, data + offset);
-                  offset += mip_width * mip_height * pixel_size;
-               }
-
-               mip_divisor *= 2;
-            }
-            break;
-         
-         case GFX_TEXTURETYPE_3D:
-         case GFX_TEXTURETYPE_2D_ARRAY:
-         case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
-            for (u32 mip_i = 0; mip_i < texture->mipmap_count; mip_i++)
-            {
-               i32 mip_width = width / mip_divisor;
-               i32 mip_height = height / mip_divisor;
-               i32 mip_depth = depth / mip_divisor;
-
-               for (u32 face_i = 0; face_i < face_count; face_i++)
-               {
+      for (u32 mip_i = 0; mip_i < texture->mipmap_count; mip_i++)
+      {
+         for (u32 face_i = 0; face_i < face_count; face_i++)
+         {
+            switch (texture->type) {
+               case GFX_TEXTURETYPE_3D:
+               case GFX_TEXTURETYPE_2D_ARRAY:
+               case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
                   glTexImage3D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, mip_depth, 0, pixel_format, format_type, data + offset);
-                  offset += mip_width * mip_height * pixel_size;
-               }
-
-               mip_divisor *= 2;
+                  break;
+               
+               default:
+                  glTexImage2D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, 0, pixel_format, format_type, data + offset);
+               
             }
-            break;
-         
-         default:
-            glTexImage2D(gl_face, 0, internal_format, width, height, 0, pixel_format, format_type, data);
+
+            offset += pixel_size * (uS)(mip_width * mip_height * mip_depth);
+
+         }
+
+         mip_width = M_MAX(mip_width / 2, 1);
+         mip_height = M_MAX(mip_height / 2, 1);
+         mip_depth = M_MAX(mip_depth / 2, 1);
+
       }
+
    }
+
 }
