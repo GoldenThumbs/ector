@@ -5,6 +5,7 @@
 #include "util/math.h"
 #include "util/vec3.h"
 #include "util/matrix.h"
+#include "util/vec4.h"
 
 #include <math.h>
 
@@ -72,6 +73,14 @@ static inline vec4 Util_Vec4FromColor(color8 color)
       BYTE_TO_F32(color.b),
       BYTE_TO_F32(color.a)
    };
+}
+
+static inline color8 Util_ColorMix(color8 a, color8 b, f32 factor)
+{
+   vec4 a_vec = Util_ScaleVec4(Util_Vec4FromColor(a), 1.0f - factor);
+   vec4 b_vec = Util_ScaleVec4(Util_Vec4FromColor(b), factor);
+
+   return Util_ColorFromVec4(Util_AddVec4(a_vec, b_vec));
 }
 
 static inline f32 Util_AreaBBox(BBox bbox)
