@@ -164,6 +164,15 @@ static inline bool Util_ContainsBBoxPoint(BBox bbox, vec3 point)
    return (diff.x <= 0) && (diff.y <= 0) && (diff.z <= 0);
 }
 
+static inline Transform3D Util_IdentityTransform(void)
+{
+   return (Transform3D){
+      .origin = { 0, 0, 0 },
+      .rotation = { 0, 0, 0, 1 },
+      .scale = { 1, 1, 1 }
+   };
+}
+
 static inline mat4x4 Util_TransformationMatrix(Transform3D transform)
 {
    mat4x4 t = Util_TranslationMatrix(transform.origin);
