@@ -1,6 +1,7 @@
 #ifndef ECT_MESH_H
 #define ECT_MESH_H
 
+#include "util/extra_types.h"
 #include "util/types.h"
 
 #define MESH_MAX_ATTRIBUTES 8
@@ -18,23 +19,37 @@ enum {
    MESH_PRIMITIVE_INVALID // no clue if i should even be tracking this and why i do at the moment
 };
 
+typedef struct Node_t
+{
+   char* name;
+   Transform3D transform;
+   u32 child_count;
+   i16 parent_id;
+   i16 prev_sibling_id;
+   i16 next_sibling_id;
+   i16 root_child_id;
+} Node;
+
 typedef struct Mesh_t
 {
    u8* vertex_buffer;
    u16* index_buffer;
    
+   u32 vertex_count;
+   u32 index_count;
+   i32 node_id;
    u16 material_id;
-   u16 vertex_count;
-   u16 index_count;
    u8 primitive;
    u8 attribute_count;
    u8 attributes[MESH_MAX_ATTRIBUTES];
+
 } Mesh;
 
 typedef struct MeshInterface_t
 {
    Mesh* mesh;
    uS total_bytes;
+
    struct {
       uS position_size;
       uS normal_ofs;
@@ -43,7 +58,9 @@ typedef struct MeshInterface_t
       uS texcoord_size[2];
       uS tangent_ofs;
       uS tangent_size;
+
    } atr;
+
 } MeshInterface;
 
 #define MATERIAL_MAX_TEXTURES 8
@@ -61,9 +78,13 @@ typedef struct Material_t
 
 typedef struct Model_t
 {
+   Node* nodes;
    Mesh* meshes;
    Material* materials;
    
+   u16 version;
+   i16 root_bone_id;
+   u32 node_count;
    u32 mesh_count;
    u32 material_count;
 
@@ -76,6 +97,8 @@ static inline Mesh Mesh_EmptyMesh(const u8 primitive)
       .index_buffer = NULL,
       .vertex_count = 0,
       .index_count = 0,
+      .node_id = -1,
+      .material_id = 0,
       .primitive = primitive,
       .attribute_count = 0,
       .attributes = { 0 }
