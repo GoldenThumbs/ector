@@ -64,3 +64,50 @@ char* Util_MakeFilePath(const char* base_path, const char* file_name)
 
    return file_path;
 }
+
+
+memblob Util_PrependShaderDefines(memblob shader_data, const char* defines[], const u32 define_count, const char* extra)
+{
+   if (shader_data.data == NULL || shader_data.size == 0)
+      return (memblob){ 0 };
+
+   if (defines == NULL && define_count != 0)
+      return (memblob){ 0 };
+
+   char* shader_code = shader_data.data;
+   char* total_defines = NULL;
+   uS total_defines_size = 0;
+
+   const char* template = "#define %s\n";
+
+   for (u32 define_i = 0; define_i < define_count; define_i++)
+   {
+      i32 define_size = snprintf(NULL, 0, template, defines[define_i]);
+
+      char* tmp_defines = realloc(total_defines, total_defines_size + define_size + 1);
+      if (tmp_defines == NULL)
+         break;
+
+      total_defines = tmp_defines;
+      char* tmp_define = total_defines + total_defines_size;
+      snprintf(tmp_define, define_size + 1, template, defines[define_i]);
+
+      total_defines_size += define_size;
+   }
+
+   const char* glsl_shader_stub = "#version 430 core\n%s%s\n%s";
+   char* inserted_code = (extra != NULL) ? (char*)extra : "";
+   char* inserted_defs = (total_defines != NULL) ? total_defines : "";
+
+   i32 shader_size = snprintf(NULL, 0, glsl_shader_stub, inserted_defs, inserted_code, shader_code) + 1;
+
+   char* full_shader_code = malloc(shader_size);
+   if (full_shader_code == NULL)
+      return (memblob){ 0 };
+
+   snprintf(full_shader_code, shader_size, glsl_shader_stub, inserted_defs, inserted_code, shader_code);
+   if (total_defines != NULL)
+      free(total_defines);
+
+   return (memblob){ full_shader_code, shader_size };
+}

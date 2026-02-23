@@ -11,4 +11,7 @@
 char* Util_MakeFilePath(const char* base_path, const char* file_name);
 memblob Util_LoadFileIntoMemory(const char* file_path, bool read_as_binary);
 
+// NOTE: allocates new memory for result
+memblob Util_PrependShaderDefines(memblob shader_data, const char* defines[], const u32 define_count, const char* extra);
+
 #endif
