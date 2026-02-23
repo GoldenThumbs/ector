@@ -106,6 +106,7 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
    glBindTexture(gl_target, texture.id.tex);
 
+   f32 aniso = M_CLAMP((f32)interpolation_settings.texture_anisotropy, 0.0f, GL_MAX_TEXTURE_MAX_ANISOTROPY);
    u32 wrap = GFX_TextureWrap(interpolation_settings.texture_wrap);
    struct gfx_Filtering_s filter = GFX_TextureFilter(interpolation_settings.texture_filter);
 
@@ -114,6 +115,7 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
    glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, wrap);
    glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, filter.min_filter);
    glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
+   glTexParameterf(gl_target, GL_TEXTURE_MAX_ANISOTROPY, aniso);
 
    glBindTexture(gl_target, 0);
 }
