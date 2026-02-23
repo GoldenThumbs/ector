@@ -101,6 +101,24 @@ struct LightData
 
 };
 
+struct SurfaceData
+{
+   vec3 surf_color;
+   vec3 surf_normal;
+   float surf_roughness;
+   float surf_metallic;
+
+   vec3 position_vs;
+   vec3 view;
+   float nDv;
+
+   float roughness_sqr;
+   float inv_metallic;
+   vec3 albedo;
+   vec3 f0;
+
+};
+
 layout(std430, binding=2) restrict buffer LightSSBO
 {
    PackedLight lights[];
@@ -141,7 +159,7 @@ ivec2 DecodeHalfInts(uint packed_floats)
 
 LightData DecodeLightData(PackedLight packed_light)
 {
-   LightData light = LightData(vec3(0), 1, vec3(1), 0, 0, 0, 0, 0, 0);
+   LightData light;
 
    vec2 cosang_softness = unpackUnorm2x16(packed_light.cosang_softness);
    vec2 angles = unpackUnorm2x16(packed_light.angles);
@@ -161,6 +179,27 @@ LightData DecodeLightData(PackedLight packed_light)
    return light;
 }
 
+SurfaceData FillSurfaceData(vec3 surf_color, vec3 surf_normal, float surf_roughness, float surf_metallic, vec3 position_vs)
+{
+   SurfaceData surf_data;
+
+   surf_data.surf_color = surf_color;
+   surf_data.surf_normal = surf_normal;
+   surf_data.surf_roughness = surf_roughness;
+   surf_data.surf_metallic = surf_metallic;
+
+   surf_data.position_vs = position_vs;
+   surf_data.view = normalize(-position_vs);
+   surf_data.nDv = min(abs(dot(surf_normal, surf_data.view)) + M_EPSILON, 1.0);
+
+   surf_data.roughness_sqr = surf_roughness * surf_roughness;
+   surf_data.inv_metallic = 1.0 - surf_metallic;
+   surf_data.albedo = surf_color * surf_data.inv_metallic;
+   surf_data.f0 = surf_color * surf_metallic + surf_data.inv_metallic * 0.04;
+
+   return surf_data;
+}
+
 float PointAttenution(vec3 light_position)
 {
    return pow(clamp(1.0 - dot(light_position, light_position), 0.0, 1.0), 4.0);
@@ -171,16 +210,26 @@ float SpotAttenuation(vec3 light_dir, LightData light)
    float cos_half_angle = light.cos_half_angle;
    vec4 cs_polar = -vec4(cos(light.theta), sin(light.theta), cos(light.phi), sin(light.phi));
 
-   vec3 light_direction = vec3(cs_polar.y*cs_polar.z, cs_polar.x*cs_polar.z, cs_polar.w);
-   light_direction = mat3(mat_view) * light_direction;
+   vec3 spot_dir = vec3(cs_polar.y * cs_polar.z, cs_polar.x * cs_polar.z, cs_polar.w);
+   spot_dir = mat3(mat_view) * spot_dir;
 
-   float spot_dist = dot(light_dir, light_direction) * 0.5 + 0.5;
-   return smoothstep(cos_half_angle, cos_half_angle + (1.0 - cos_half_angle) * light.spot_softness, spot_dist);
+   float spot_dist = dot(light_dir, spot_dir) * 0.5 + 0.5;
+   float softness = (1.0 - cos_half_angle) * light.spot_softness;
+   
+   return smoothstep(cos_half_angle, cos_half_angle + softness, spot_dist);
 }
 
-vec3 Fresnel(vec3 f0, float cos_theta)
+vec3 NormalMapped(sampler2D normalmap_texture, vec2 coords, vec3 t, vec3 b, vec3 n)
 {
-   return f0 + (1.0 - f0) * pow(1.0 - cos_theta, 5.0);
+   mat3 tbn = mat3(normalize(t), normalize(b), normalize(n));
+   vec3 normalmap = texture(normalmap_texture, coords).rgb - 0.5;
+
+   return normalize(tbn * normalmap);
+}
+
+vec3 Fresnel(vec3 f0, float x)
+{
+   return f0 + (1.0 - f0) * pow(1.0 - x, 5.0);
 }
 float Visibility(float nDl, float nDv, float r)
 {
@@ -193,6 +242,31 @@ float Distribution(float nDh, float r)
    float k = r / (inv_sqrmag + a * a);
    return max(k * k * M_INVPI, M_EPSILON);
 }
+
+vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
+{
+   LightData light = DecodeLightData(packed_light);
+
+   vec3 light_position = (light.origin - surf_data.position_vs) / light.radius;
+   vec3 light_dir = normalize(light_position);
+   vec3 halfway = normalize(light_dir + surf_data.view);
+
+   float nDl = max(0.0, dot(surf_data.surf_normal, light_dir));
+   float nDh = max(0.0, dot(surf_data.surf_normal, halfway));
+   float lDh = clamp(dot(light_dir, halfway), 0.0, 1.0);
+
+   float attenuation = PointAttenution(light_position);
+   attenuation *= SpotAttenuation(light_dir, light);
+
+   vec3 f = Fresnel(surf_data.f0, lDh);
+   float d = Distribution(nDh, surf_data.roughness_sqr);
+   float v = Visibility(nDl, surf_data.nDv, surf_data.roughness_sqr);
+
+   vec3 diffuse = light.color * attenuation * nDl;
+   vec3 specular = f * d * v;
+
+   return (surf_data.albedo + specular) * diffuse;
+}
 #endif // USE_LIGHTING
 
 out vec4 frg_color;
@@ -201,19 +275,15 @@ void main()
    vec4 color = texture(tex_color, v2f_texcoord) * mat_normal_model_u_color[3];
 
 #ifdef USE_LIGHTING
-   float roughness = texture(tex_roughness, v2f_texcoord).r;
-   float metallic = texture(tex_metallic, v2f_texcoord).r;
-   float r_sqr = roughness * roughness;
-   vec3 albedo = color.rgb * (1.0 - metallic);
-   vec3 f0 = mix(vec3(0.04), color.rgb, metallic);
-   vec3 final_color = color.rgb * 0.1;
-   vec3 normalmap = texture(tex_normal, v2f_texcoord).rgb - 0.5;
-   mat3 tbn = mat3(normalize(v2f_tangent), normalize(v2f_bitangent), normalize(v2f_normal));
-   vec3 position = v2f_position;
-   vec3 view = normalize(-v2f_position);
-   vec3 normal = normalize(tbn * normalmap);
+   SurfaceData surf_data = FillSurfaceData(
+      color.rgb,
+      NormalMapped(tex_normal, v2f_texcoord, v2f_tangent, v2f_bitangent, v2f_normal),
+      texture(tex_roughness, v2f_texcoord).r,
+      texture(tex_metallic, v2f_texcoord).r,
+      v2f_position
+   );
 
-   float nDv = min(abs(dot(normal, view)) + M_EPSILON, 1.0);
+   vec3 final_color = surf_data.surf_color * 0.1;
 
 //    vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy); 
 //    uint z_id = uint((log(abs(surface.position.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));   
@@ -235,30 +305,12 @@ void main()
 //       vec3 light_color = DecodeColor(light.rgbe_color);
 //       final_color += (color.rgb + pow(nDh, 64.0)) * light_color * nDl;
 //    }
+
    for (uint light_i = 0; light_i < lights.length(); light_i++)
    {
       PackedLight packed_light = lights[light_i];
-      LightData light = DecodeLightData(packed_light);
+      final_color += LightContribution(surf_data, packed_light);
 
-      vec3 light_position = (light.origin - position) / light.radius;
-      vec3 light_dir = normalize(light_position);
-      vec3 halfway = normalize(light_dir + view);
-
-      float nDl = max(0.0, dot(normal, light_dir));
-      float nDh = max(0.0, dot(normal, halfway));
-      float lDh = clamp(dot(light_dir, halfway), 0.0, 1.0);
-
-      float attenuation = PointAttenution(light_position);
-      attenuation *= SpotAttenuation(light_dir, light);
-
-      vec3 f = Fresnel(f0, lDh);
-      float d = Distribution(nDh, r_sqr);
-      float v = Visibility(nDl, nDv, r_sqr);
-
-      vec3 diffuse = light.color * attenuation * nDl;
-      vec3 specular = f * d * v;
-
-      final_color += (albedo + specular) * diffuse;
    }
 
 #else
