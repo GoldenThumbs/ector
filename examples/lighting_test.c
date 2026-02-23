@@ -18,23 +18,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-typedef struct ParticleDrawable_t
-{
-   Shader shader;
-   Shader particle_shader;
-   Texture color_texture;
-   Geometry geometry;
-   Buffer particle_ssbo;
-   color8 color;
-   Transform3D transform;
-
-   u32 particle_count;
-
-} ParticleDrawable;
-
 Geometry Plane(Graphics* graphics);
 Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb);
-void ParticleRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
 int main(int argc, char* argv[])
 {
@@ -53,17 +38,13 @@ int main(int argc, char* argv[])
 
    Renderer* renderer = Engine_FetchModule(engine, "renderer");
 
-   Renderer_RegisterDrawableType(renderer, "ParticleDrawable", &(DrawableTypeDesc){
-      .data_size = sizeof(ParticleDrawable),
-      .render_func = ParticleRenderFunc
-   });
-
    Surface basic_surf = Renderer_AddSurface(renderer, "Basic", &(SurfaceDesc){
       .pass_count = 1,
       .passes[0] = {
          .shader = Renderer_BasicShader(renderer),
          .uniform_block_count = 0
       },
+      .texture_defaults[0] = RNDR_SURF_TEXTURE_WHITE,
       .texture_defaults[1] = RNDR_SURF_TEXTURE_NORMAL,
       .texture_defaults[2] = RNDR_SURF_TEXTURE_GRAY,
       .texture_defaults[3] = RNDR_SURF_TEXTURE_BLACK
@@ -139,14 +120,8 @@ int main(int argc, char* argv[])
          if (level_model_textures[mesh_i][tex_i] == NULL)
             continue;
 
-         u32 index = mesh_data->material.texture_count;
-         mesh_data->material.texture_count++;
-
          Texture model_texture = LoadTexture(graphics, level_model_textures[mesh_i][tex_i], argv[0], (resolution2d){ 0 }, (tex_i == 0));
-         Graphics_SetTextureInterpolation(graphics, model_texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-
-         mesh_data->material.textures[index].texture = model_texture;
-         mesh_data->material.textures[index].bind_slot = tex_i;
+         Renderer_SetSurfaceMaterialTexture(&mesh_data->material,-1, (i32)tex_i, model_texture);
 
       }
 
@@ -162,13 +137,8 @@ int main(int argc, char* argv[])
    block_data->transform.rotation = Util_IdentityQuat();
    block_data->transform.origin = VEC3(2.0f, 0.0f, -1.0f);
    block_data->material.surface = basic_surf;
-   block_data->material.texture_count = 2;
-   block_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 }, false);
-   block_data->material.textures[0].bind_slot = 1;
-   block_data->material.textures[1].texture = Renderer_WhiteTexture(renderer);
-   block_data->material.textures[1].bind_slot = 3;
-   Graphics_SetTextureInterpolation(graphics, block_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-   Graphics_SetTextureInterpolation(graphics, block_data->material.textures[1].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 1, LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
 
    char* barrel_model_path = Util_MakeFilePath(argv[0], "assets/models/barrel.ebmf");
    memblob barrel_model_memory = Util_LoadFileIntoMemory(barrel_model_path, true);
@@ -184,18 +154,10 @@ int main(int argc, char* argv[])
    barrel_data->transform.origin.y -= 1.0f;
    barrel_data->transform.scale = Util_FillVec3(0.5f);
    barrel_data->material.surface = basic_surf;
-   barrel_data->material.texture_count = 4;
-   barrel_data->material.textures[0].texture = LoadTexture(graphics, "assets/textures/barrel.png", argv[0], (resolution2d){ 0 }, true);
-   barrel_data->material.textures[1].texture = LoadTexture(graphics, "assets/textures/barrel_n.png", argv[0], (resolution2d){ 0 }, false);
-   barrel_data->material.textures[2].texture = LoadTexture(graphics, "assets/textures/barrel_r.png", argv[0], (resolution2d){ 0 }, false);
-   barrel_data->material.textures[3].texture = LoadTexture(graphics, "assets/textures/barrel_m.png", argv[0], (resolution2d){ 0 }, false);
-   barrel_data->material.textures[1].bind_slot = 1;
-   barrel_data->material.textures[2].bind_slot = 2;
-   barrel_data->material.textures[3].bind_slot = 3;
-   Graphics_SetTextureInterpolation(graphics, barrel_data->material.textures[0].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-   Graphics_SetTextureInterpolation(graphics, barrel_data->material.textures[1].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-   Graphics_SetTextureInterpolation(graphics, barrel_data->material.textures[2].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-   Graphics_SetTextureInterpolation(graphics, barrel_data->material.textures[3].texture, (TextureInterpolation){ 1, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel.png", argv[0], (resolution2d){ 0 }, true));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_n.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_r.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_m.png", argv[0], (resolution2d){ 0 }, false));
 
    Model_Free(&barrel_model);
 
@@ -305,10 +267,11 @@ int main(int argc, char* argv[])
       Renderer_UpdateLight(renderer, light_idx, (LightDesc){
          .origin = player.origin,
          .radius = 5.0f,
-         .spotlight_angle = 200.0f,
+         .spotlight_angle = 180.0f,
+         .spotlight_softness = 0.05f,
          .color = { .hex = 0xFFFFFFFF },
          .brightness = 2.5f,
-         .theta = 0.0f,
+         .theta = 100.0f,
          .phi = 0.0f
       });
 
@@ -346,6 +309,7 @@ int main(int argc, char* argv[])
             .origin = VEC3(x, 2.0f + 0.5f * M_SIN((x + z) * 2.0f + global_timer * 15.0f), z),
             .radius = 8.0f,
             .spotlight_angle = M_ABS(M_COS(global_timer * 3.0f + (x + z * 6.0f) * 6.0f)) * 30.0f + 20.0f,
+            .spotlight_softness = 1.0f,
             .color = { .hex = 0xFFFFFFFF },
             .brightness =  M_SIN(global_timer * 60.0f + (x + z * 10.0f) * 10.0f) * 0.25f + 0.25f,
             .theta = 0.0f,
@@ -413,28 +377,4 @@ Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* ba
    Image_Free(&image);
 
    return texture;
-}
-
-void ParticleRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
-{
-   Graphics* graphics = Renderer_Graphics(renderer);
-   ParticleDrawable* drawable_data = Renderer_DrawableData(renderer, self);
-
-   Graphics_SetBlending(graphics, GFX_BLENDMODE_MIX);
-
-   Buffer camera_buffer = Renderer_CameraBuffer(renderer);
-   Buffer model_buffer = Renderer_ModelBuffer(renderer);
-   mat4x4 view_projection = Renderer_GetViewAndProjectionMatrix(renderer);
-
-   Renderer_UpdateModelData(renderer, drawable_data->transform, drawable_data->color);
-
-   Graphics_UseBuffer(graphics, drawable_data->particle_ssbo, 3);
-   Graphics_Dispatch(graphics, drawable_data->particle_shader, drawable_data->particle_count, 1, 1, (UniformBlockList){ .count = 0 });
-   Graphics_DispatchBarrier();
-
-   Renderer_SetTexture(renderer, drawable_data->color_texture, 0);
-   Graphics_DrawInstanced(graphics, drawable_data->shader, drawable_data->geometry, drawable_data->particle_count, (UniformBlockList){ .count = 0 });
-
-   Graphics_SetBlending(graphics, GFX_BLENDMODE_NONE);
-
 }

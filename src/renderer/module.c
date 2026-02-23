@@ -1,23 +1,22 @@
 #include "util/extra_types.h"
+#include "util/files.h"
 #include "util/math.h"
+#include "util/vec3.h"
 #include "util/matrix.h"
 #include "util/resource.h"
 #include "util/types.h"
 #include "util/array.h"
-// #include "util/extra_types.h"
 #include "graphics.h"
-
-#include "renderer/default_shaders.h"
 
 #include "renderer.h"
 #include "renderer/internal.h"
-#include "util/vec3.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-Renderer* Renderer_Init(Graphics* graphics)
+Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
 {
    if (graphics == NULL)
       return NULL;
@@ -41,8 +40,15 @@ Renderer* Renderer_Init(Graphics* graphics)
    
    renderer->built_in.geometry.plane = RNDR_Plane(graphics);
    renderer->built_in.geometry.box = RNDR_Box(graphics);
+
+   const char* defines[] = {
+      "USE_LIGHTING"
+   };
    
-   renderer->built_in.shader.basic = Graphics_CreateShader(graphics, builtin_vertex_code, builtin_fragment_code);
+   char* file_path = Util_MakeFilePath(app_path, "assets/core/shaders/builtin.glsl");
+   renderer->built_in.shader.basic = Graphics_LoadShaderFromFile(renderer->graphics, file_path, defines, 1, false);
+   if (file_path != NULL)
+      free(file_path);
    
    renderer->cluster_dimensions.x = RNDR_CLUSTER_X;
    renderer->cluster_dimensions.y = RNDR_CLUSTER_Y;
@@ -203,13 +209,21 @@ void Renderer_UpdateLight(Renderer* renderer, u32 index, LightDesc desc)
    vec4 base_color = Util_Vec4FromColor(desc.color);
    vec3 light_color = Util_ScaleVec3(base_color.xyz, base_color.w * desc.brightness);
 
+   f32 cos_half_angle = M_COS(desc.spotlight_angle * 0.5f) * 0.5f + 0.5f;
+   f32 spot_softness = desc.spotlight_softness;
+   f32 theta = desc.theta * 0.005f;
+   f32 phi = desc.phi * 0.005f;
+
    rndr_PointLightSource light_src = { 0 };
    light_src.origin = desc.origin;
    light_src.radius = desc.radius;
    light_src.rgbe_color = Util_MakeRGBE(light_color);
-   light_src.cos_half_angle = M_COS(desc.spotlight_angle * 0.5f);
-   light_src.theta_radians = M_TURN(desc.theta);
-   light_src.phi_radians = M_TURN(desc.phi);
+   light_src.cos_half_angle = RNDR_NormF16(cos_half_angle);
+   light_src.spot_softness = RNDR_NormF16(spot_softness);
+   light_src.theta = RNDR_NormF16(theta);
+   light_src.phi = RNDR_NormF16(phi);
+   light_src.shadow_id = 0;
+   light_src.next_light = 0;
 
    renderer->point_lights[index] = light_src;
 
@@ -246,6 +260,9 @@ void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material)
 
       user_texture_slots[surf_tex.bind_slot][0] = 1;
       user_texture_slots[surf_tex.bind_slot][1] = surf_tex.texture.id;
+
+      Graphics_SetTextureInterpolation(renderer->graphics, surf_tex.texture, surf_tex.interpolation_settings);
+      
    }
 
    for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)

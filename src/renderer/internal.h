@@ -18,6 +18,7 @@
 
 enum {
    RNDR_SURF_TEXTURE_USER_SET = 16
+   
 };
 
 typedef struct rndr_DrawableType_t
@@ -71,12 +72,27 @@ typedef struct rndr_Drawable_t
 
 typedef struct rndr_PointLightSource_t
 {
+   // -< 16 bytes
+
    vec3 origin;
    f32 radius;
+
+   // >- 16 bytes
+
+   // -< 16 bytes
+
    color8 rgbe_color; // RGBE encoded HDR color value
-   f32 cos_half_angle; // cosine of spotlight cone half angle
-   f32 theta_radians; // angle theta in radians
-   f32 phi_radians; // angle phi in radians
+
+   u16 cos_half_angle; // cosine of spotlight cone half angle. bfloat16 encoding
+   u16 spot_softness; // spotlight softness factor. bfloat16 encoding
+
+   u16 theta; // angle theta in radians. bfloat16 encoding
+   u16 phi; // angle phi in radians. bfloat16 encoding
+
+   i16 shadow_id; // id of shadow map. 0 is no shadows, negative sign is for cubemap shadows. when shadow_id != 0 the index is abs(shadow_id) - 1
+   i16 next_light; // index of next light. if sign is negative then there is no next light
+
+   // >- 16 bytes
    
 } rndr_PointLightSource;
 
@@ -170,6 +186,14 @@ struct Renderer_t {
    
 };
 
+static inline u16 RNDR_NormF16(f32 value)
+{
+   const f32 u32_maxf = (f32)UINT16_MAX;
+   f32 f = M_CLAMP(value, 0.0f, 1.0f);
+
+   return (u16)(f * u32_maxf);
+}
+
 static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_type, u16 drawable_idx)
 {
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
@@ -192,8 +216,8 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
 
 void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
-// void RNDR_LightRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
-// void RNDR_LightEnableFunc(Renderer* renderer, Drawable self);
-// void RNDR_LightDisableFunc(Renderer* renderer, Drawable self);
+void RNDR_LightRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
+void RNDR_LightEnableFunc(Renderer* renderer, Drawable self);
+void RNDR_LightDisableFunc(Renderer* renderer, Drawable self);
 
 #endif

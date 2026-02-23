@@ -88,7 +88,7 @@ error MOD_RendererInit(Module* self, Engine* engine)
       return res;
    }
 
-   self->data = Renderer_Init(graphics);
+   self->data = Renderer_Init(graphics, Engine_GetAppPath(engine));
 
    if (self->data == NULL)
    {

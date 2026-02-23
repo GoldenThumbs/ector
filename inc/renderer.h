@@ -84,6 +84,18 @@ typedef struct SurfaceTexture_t
 {
    u32 bind_slot;
    Texture texture;
+
+   union {
+      TextureInterpolation interpolation_settings;
+
+      struct {
+         u16 anisotropy;
+         u8 filter;
+         u8 wrap;
+      };
+
+   };
+
 } SurfaceTexture;
 
 typedef struct SurfaceMaterial_t
@@ -121,10 +133,12 @@ typedef struct LightDesc_t
    vec3 origin;
    f32 radius;
    f32 spotlight_angle;
+   f32 spotlight_softness;
    color8 color;
    f32 brightness;
    f32 theta;
    f32 phi;
+
 } LightDesc;
 
 struct Renderer_t;
@@ -167,7 +181,26 @@ typedef struct LightDrawable_t
 
 } LightDrawable;
 
-Renderer* Renderer_Init(Graphics* graphics);
+static inline void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings)
+{
+   if (material == NULL)
+      return;
+
+   u32 tex_idx = (index >= 0) ? (u32)index : material->texture_count;
+   material->texture_count = M_MAX(material->texture_count, tex_idx + 1);
+   material->textures[tex_idx].bind_slot = (bind_slot >= 0) ? (u32)bind_slot : tex_idx;
+   material->textures[tex_idx].texture = texture;
+   material->textures[tex_idx].interpolation_settings = interpolation_settings;
+
+}
+
+static inline void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture)
+{
+   Renderer_SetSurfaceMaterialTextureAdvanced(material, index, bind_slot, texture, (TextureInterpolation){ 0, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   
+}
+
+Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
 Graphics* Renderer_Graphics(Renderer* renderer);
