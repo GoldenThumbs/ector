@@ -1,3 +1,4 @@
+#include "util/files.h"
 #include "util/types.h"
 #include "util/resource.h"
 
@@ -7,6 +8,7 @@
 #include <glad/gl.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader)
 {
@@ -86,6 +88,39 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
       return ADD_RESOURCE(graphics->shaders, shader);
 
    return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
+}
+
+Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, const char* defines[], const u32 define_count, bool is_compute)
+{
+   if (graphics == NULL || file_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   memblob shader_data = Util_LoadFileIntoMemory(file_path, false);
+   if (shader_data.data == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   Shader res_shader = (handle){ .id = INVALID_HANDLE_ID };
+
+   if (is_compute)
+   {
+      memblob compute_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, NULL);
+
+      res_shader = Graphics_CreateComputeShader(graphics, compute_shader_code.data);
+      free(compute_shader_code.data);
+
+   } else {
+      memblob vert_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, "#define VERT");
+      memblob frag_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, "#define FRAG");
+
+      res_shader = Graphics_CreateShader(graphics, vert_shader_code.data, frag_shader_code.data);
+      free(vert_shader_code.data);
+      free(frag_shader_code.data);
+
+   }
+
+   free(shader_data.data);
+
+   return res_shader;
 }
 
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader)

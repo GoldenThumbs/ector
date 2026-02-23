@@ -224,6 +224,7 @@ void Graphics_Free(Graphics* graphics);
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader);
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader);
+Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, const char* defines[], const u32 define_count, bool is_compute);
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader);
 u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name);
 void Graphics_SetUniform(Graphics* graphics, Uniform uniform);
