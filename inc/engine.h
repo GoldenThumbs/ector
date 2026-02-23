@@ -39,7 +39,7 @@ typedef struct Module_t
    void* data;
 } Module;
 
-Engine* Engine_Init(EngineDesc* desc);
+Engine* Engine_Init(i32 argc, char* argv[], EngineDesc* desc);
 void Engine_Free(Engine* engine);
 
 void Engine_RequestExit(Engine* engine);
@@ -67,5 +67,7 @@ vec2 Engine_GetMouseScroll(Engine* engine);
 bool Engine_CheckMouseButton(Engine* engine, MouseButton button, KeyAction button_action);
 bool Engine_CheckMouseButtonAdvanced(Engine* engine, MouseButton button, KeyAction button_action, KeyModifiers modifiers);
 KeyState Engine_GetMouseButtonState(Engine* engine, MouseButton button);
+
+const char* Engine_GetAppPath(Engine* engine);
 
 #endif

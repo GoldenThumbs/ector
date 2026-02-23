@@ -46,10 +46,18 @@ typedef struct eng_EngineGlobal_t
 struct Engine_t
 {
    char* app_name;
-   eng_EngineGlobal internal;
-   bool exit_requested;
-
+   char* app_path;
    Module* modules;
+
+   union {
+      u64 state;
+      struct {
+         u64 exit_requested: 1;
+      };
+   };
+
+   eng_EngineGlobal internal;
+
 };
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height);

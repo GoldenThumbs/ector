@@ -39,6 +39,7 @@ void ParticleRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
+      argc, argv,
       &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
    );
 
