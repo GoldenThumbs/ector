@@ -148,6 +148,16 @@ typedef union mat4x4_t
    f32 arr[16];
 } mat4x4;
 
+static inline color8 Util_IntToColor(u32 hex)
+{
+   color8 color = { 0 };
+   color.r = hex >> 24u;
+   color.g = (hex >> 16u) & 255u;
+   color.b = (hex >> 8u) & 255u;
+   color.a = hex & 255u;
+   return color;
+}
+
 static inline vec3 Util_VecF32Vec3(vec2 xy, f32 z)
 {
    vec3 res = { 0 };
