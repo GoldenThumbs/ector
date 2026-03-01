@@ -44,6 +44,12 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
 
 void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer)
 {
+   Graphics_ReuseBufferExplicit(graphics, data, (uS)length * type_size, res_buffer);
+
+}
+
+void Graphics_ReuseBufferExplicit(Graphics* graphics, void* data, uS total_size, Buffer res_buffer)
+{
    if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
       return;
 
@@ -57,11 +63,11 @@ void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_si
 
    glBufferData(
       gl_target,
-      (uS)length * type_size,
+      total_size,
       data,
       GFX_DrawMode(buffer.draw_mode)
    );
-
+   
 }
 
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
@@ -82,11 +88,17 @@ void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
 
 void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size)
 {
-   Graphics_UpdateBufferRange(graphics, res_buffer, data, 0, length, type_size);
+   Graphics_UpdateBufferExplicit(graphics, res_buffer, data, 0, (uS)length * type_size);
 
 }
 
 void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size)
+{
+   Graphics_UpdateBufferExplicit(graphics, res_buffer, data, (uS)offset * type_size, (uS)length * type_size);
+   
+}
+
+void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* data, uS offset_bytes, uS total_size)
 {
    if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
       return;
@@ -98,7 +110,7 @@ void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* dat
    u32 gl_target = GFX_BufferType(buffer.type);
    
    glBindBuffer(gl_target, buffer.id.buf);
-   glBufferSubData(gl_target, (uS)offset * type_size, (uS)length * type_size, data);
+   glBufferSubData(gl_target, offset_bytes, total_size, data);
    glBindBuffer(gl_target, 0);
    
 }

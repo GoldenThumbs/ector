@@ -106,6 +106,19 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
       memblob compute_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, NULL);
 
       res_shader = Graphics_CreateComputeShader(graphics, compute_shader_code.data);
+
+      if (res_shader.id == INVALID_HANDLE_ID)
+      {
+         fprintf(stderr,
+            "SHADER FAILED TO COMPILE! Printing Code...\n\n"
+            "\e[0;33m-< COMPUTE\e[0m:\n"
+            "%s"
+            "\e[0;33m>- COMPUTE\e[0m:\n",
+            (char*)compute_shader_code.data
+         );
+         
+      }
+
       free(compute_shader_code.data);
 
    } else {
@@ -113,6 +126,23 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
       memblob frag_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, "#define FRAG");
 
       res_shader = Graphics_CreateShader(graphics, vert_shader_code.data, frag_shader_code.data);
+
+      if (res_shader.id == INVALID_HANDLE_ID)
+      {
+         fprintf(stderr,
+            "SHADER FAILED TO COMPILE! Printing Code...\n\n"
+            "\e[0;33m-< VERTEX\e[0m:\n"
+            "%s"
+            "\e[0;33m>- VERTEX\e[0m:\n"
+            "\e[0;33m-< FRAGMENT\e[0m:\n"
+            "%s"
+            "\e[0;33m>- FRAGMENT\e[0m:\n",
+            (char*)vert_shader_code.data,
+            (char*)frag_shader_code.data
+         );
+
+      }
+
       free(vert_shader_code.data);
       free(frag_shader_code.data);
 

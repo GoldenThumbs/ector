@@ -1,3 +1,4 @@
 add_module(
-    "module.c"
+   "module.c"
+   "default_lightmanager/lightmanager.c"
 )

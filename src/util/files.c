@@ -24,7 +24,7 @@ memblob Util_LoadFileIntoMemory(const char* file_path, bool read_as_binary)
       return memory;
 
    fseek(input_file, 0, SEEK_END);
-   uS num_bytes = ftell(input_file);
+   uS num_bytes = ftell(input_file) + (uS)(!read_as_binary);
 
    u8* data = calloc(num_bytes, sizeof(u8));
 
@@ -95,7 +95,7 @@ memblob Util_PrependShaderDefines(memblob shader_data, const char* defines[], co
       total_defines_size += define_size;
    }
 
-   const char* glsl_shader_stub = "#version 430 core\n%s%s\n%s";
+   const char* glsl_shader_stub = "#version 430 core\n%s%s\n%s\n";
    char* inserted_code = (extra != NULL) ? (char*)extra : "";
    char* inserted_defs = (total_defines != NULL) ? total_defines : "";
 

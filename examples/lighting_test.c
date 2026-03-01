@@ -1,4 +1,5 @@
 #include <util/types.h>
+#include <util/array.h>
 #include <util/extra_types.h>
 #include <util/matrix.h>
 #include <util/quaternion.h>
@@ -9,6 +10,7 @@
 #include <graphics.h>
 #include <renderer.h>
 #include <default_modules.h>
+#include <default_lightmanager.h>
 
 #include "mesh.h"
 #include "particle_shader_code.h"
@@ -18,8 +20,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-Geometry Plane(Graphics* graphics);
+struct LampInfo_t
+{
+   Geometry* geometries;
+   SurfaceMaterial* materials;
+
+} LampInfo;
+
 Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb);
+Model LoadModel(const char* model_name, const char* base_path);
+void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path);
+
+void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness);
 
 int main(int argc, char* argv[])
 {
@@ -36,7 +48,22 @@ int main(int argc, char* argv[])
    Graphics* graphics = Engine_FetchModule(engine, "graphics");
    Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
 
+   Mesh sphere_mesh = Mesh_CreateSphere(32, 1.0f);
+   Geometry sphere = Graphics_CreateGeometry(graphics, sphere_mesh, GFX_DRAWMODE_STATIC);
+   Mesh_Free(&sphere_mesh);
+
    Renderer* renderer = Engine_FetchModule(engine, "renderer");
+   Renderer_SetLightManager(renderer, DefaultLightManager_Info(renderer));
+
+
+   Surface unlit_surf = Renderer_AddSurface(renderer, "Unlit", &(SurfaceDesc){
+      .pass_count = 1,
+      .passes[0] = {
+         .shader = Renderer_UnlitShader(renderer),
+         .uniform_block_count = 0
+      },
+      .texture_defaults[0] = RNDR_SURF_TEXTURE_WHITE
+   });
 
    Surface basic_surf = Renderer_AddSurface(renderer, "Basic", &(SurfaceDesc){
       .pass_count = 1,
@@ -50,13 +77,9 @@ int main(int argc, char* argv[])
       .texture_defaults[3] = RNDR_SURF_TEXTURE_BLACK
    });
 
-   char* level_model_path = Util_MakeFilePath(argv[0], "assets/models/rocks.ebmf");
-   memblob level_model_memory = Util_LoadFileIntoMemory(level_model_path, true);
-   Model level_model = Mesh_LoadEctorModel(level_model_memory);
-   free(level_model_path);
-   free(level_model_memory.data);
+   Model level_model = LoadModel("assets/models/rocks.ebmf", argv[0]);
 
-   // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
+   // NOTE: all angles are in half-turns (50 half-turns == 90 degrees, 100 half-turns == 180, etc...)
    struct {
       vec3 origin;
       vec3 euler;
@@ -94,9 +117,9 @@ int main(int argc, char* argv[])
          "assets/textures/rock2_roughness.png"
       },
       {
-         "assets/textures/wood.png",
+         "assets/textures/grass.png",
          NULL,
-         "assets/textures/wood_r.png"
+         "assets/textures/grass_r.png"
       }
    };
 
@@ -129,29 +152,61 @@ int main(int argc, char* argv[])
 
    Model_Free(&level_model);
 
+   LampInfo.geometries = NEW_ARRAY(Geometry);
+   CreateModelGeometry(graphics, &LampInfo.geometries, "assets/models/floor_torch.ebmf", argv[0]);
+   LampInfo.materials = NEW_ARRAY_N(SurfaceMaterial, Util_ArrayLength(LampInfo.geometries));
+   LampInfo.materials[0].surface = basic_surf;
+   LampInfo.materials[1].surface = unlit_surf;
+
+   for (i32 y =-1; y <= 1; y++)
+      for (i32 x =-1; x <= 1; x++)
+   {
+      f32 x_f = (f32)x * 10.0f;
+      f32 y_f = (f32)y * 10.0f;
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1,-3 + y_f), 1.0f, Util_IntToColor(0xFF8080FF), 1.0f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1,-3 + y_f), 0.6f, Util_IntToColor(0xFF8080FF), 0.6f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1,-3 + y_f), 0.3f, Util_IntToColor(0xFF8080FF), 0.3f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1,-3 + y_f), 1.2f, Util_IntToColor(0xFF8080FF), 1.2f);
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1,-1 + y_f), 0.3f, Util_IntToColor(0xFFFF00FF), 0.3f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1,-1 + y_f), 1.2f, Util_IntToColor(0xFFFF00FF), 1.2f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1,-1 + y_f), 1.0f, Util_IntToColor(0xFFFF00FF), 1.0f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1,-1 + y_f), 0.6f, Util_IntToColor(0xFFFF00FF), 0.6f);
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1, 1 + y_f), 0.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1, 1 + y_f), 1.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1, 1 + y_f), 2.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1, 1 + y_f), 3.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1, 3 + y_f), 1.0f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1, 3 + y_f), 0.5f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1, 3 + y_f), 0.25f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1, 3 + y_f), 0.125f, Util_IntToColor(0x1616FFFF), 0.5f);
+   }
+
+   Texture toybox_normal = LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 }, false);
+
    Drawable block_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
    GeometryDrawable* block_data = Renderer_DrawableData(renderer, block_object);
    block_data->geometry = Renderer_BoxGeometry(renderer);
    block_data->color.hex = 0xFF10E0FF;
-   block_data->transform.scale = VEC3(0.5f, 0.5, 0.5f);
+   block_data->transform.scale = Util_FillVec3(0.5f);
    block_data->transform.rotation = Util_IdentityQuat();
-   block_data->transform.origin = VEC3(2.0f, 0.0f, -1.0f);
+   block_data->transform.origin = VEC3(0.0f);
    block_data->material.surface = basic_surf;
-   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 1, LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 1, toybox_normal);
    Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
 
-   char* barrel_model_path = Util_MakeFilePath(argv[0], "assets/models/barrel.ebmf");
-   memblob barrel_model_memory = Util_LoadFileIntoMemory(barrel_model_path, true);
-   Model barrel_model = Mesh_LoadEctorModel(barrel_model_memory);
-   free(barrel_model_path);
-   free(barrel_model_memory.data);
+   Model barrel_model = LoadModel("assets/models/barrel.ebmf", argv[0]);
 
    Drawable barrel_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
    GeometryDrawable* barrel_data = Renderer_DrawableData(renderer, barrel_object);
    barrel_data->geometry = Graphics_CreateGeometry(graphics, barrel_model.meshes[0], GFX_DRAWMODE_STATIC);
    barrel_data->color.hex = 0xFFFFFFFF;
    barrel_data->transform = Util_IdentityTransform();
-   barrel_data->transform.origin.y -= 1.0f;
+   barrel_data->transform.origin.z -= 7.0f;
+   barrel_data->transform.origin.y -= 0.5f;
    barrel_data->transform.scale = Util_FillVec3(0.5f);
    barrel_data->material.surface = basic_surf;
    Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel.png", argv[0], (resolution2d){ 0 }, true));
@@ -161,34 +216,16 @@ int main(int argc, char* argv[])
 
    Model_Free(&barrel_model);
 
-   const u32 spotlight_count = 30;
-   const f32 inv_spotlight_count = 1.0f / (f32)(spotlight_count - 1);
-
-   for (u32 j = 0; j < 5; j++)
-      for (u32 i = 0; i < spotlight_count; i++)
-   {
-      f32 x = (i * inv_spotlight_count - 0.5f) * 20.0f;
-      f32 z = ((f32)j - 2.0f) * 3.0f;
-      Renderer_AddLight(renderer, (LightDesc){
-         .origin = VEC3(x, 3, 1),
-         .radius = 8.0f,
-         .spotlight_angle = 30.0f,
-         .color = { .hex = 0xFFFFFFFF },
-         .brightness = 1.0f,
-         .theta = 0.0f,
-         .phi = 0.0f
-      });
-   }
-
-   u32 light_idx = Renderer_AddLight(renderer, (LightDesc){
-      .origin = VEC3(0),
-      .radius = 15.0f,
-      .spotlight_angle = 200.0f,
-      .color = { .hex = 0xFFFFFFFF },
-      .brightness = 1.0f,
-      .theta = 0.0f,
-      .phi = 0.0f
-   });
+   Drawable player_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* player_data = Renderer_DrawableData(renderer, player_object);
+   player_data->geometry = sphere;
+   player_data->color.hex = 0xFFFFFFFF;
+   player_data->transform.scale = Util_FillVec3(0.5f);
+   player_data->transform.rotation = Util_IdentityQuat();
+   player_data->material.surface = basic_surf;
+   // Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 0, LoadTexture(graphics, "assets/textures/conBrick_albedo.png", argv[0], (resolution2d){ 0 }, true));
+   // Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 1, LoadTexture(graphics, "assets/textures/conBrick_normal.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 2, LoadTexture(graphics, "assets/textures/smooth.png", argv[0], (resolution2d){ 0 }, false));
 
    Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    
@@ -262,30 +299,17 @@ int main(int argc, char* argv[])
             player.origin,
             Util_ScaleVec3(move_vec, player.move_speed * (f32)frame_delta)
          );
-      }
 
-      Renderer_UpdateLight(renderer, light_idx, (LightDesc){
-         .origin = player.origin,
-         .radius = 5.0f,
-         .spotlight_angle = 180.0f,
-         .spotlight_softness = 0.05f,
-         .color = { .hex = 0xFFFFFFFF },
-         .brightness = 2.5f,
-         .theta = 100.0f,
-         .phi = 0.0f
-      });
+         player_data->transform.origin = player.origin;
+
+      }
 
       resolution2d size = Engine_GetFrameSize(engine);
       Graphics_Viewport(graphics, size);
 
       Graphics_UseBuffer(graphics, global_ubo, 0);
 
-      Renderer_SetViewAndProjectionMatrix(
-         renderer,
-         Util_ViewMatrix(player.origin, player.euler, cam_dist),
-         Util_PerspectiveMatrix(50.0f, (f32)size.height / (f32)size.width, 0.05f, 100.0f)
-      );
-
+      Renderer_UpdateCamera(renderer, player.origin, player.euler, cam_dist);
       Renderer_Render(renderer, size);
       
       Engine_Present(engine);
@@ -300,48 +324,13 @@ int main(int argc, char* argv[])
          fps_timer -= 1.0f;
       }
 
-      for (u32 j = 0; j < 5; j++)
-         for (u32 i = 0; i < spotlight_count; i++)
-      {
-         f32 x = (i * inv_spotlight_count - 0.5f) * 20.0f;
-         f32 z = ((f32)j - 2.0f) * 3.0f;
-         Renderer_UpdateLight(renderer, j * spotlight_count + i, (LightDesc){
-            .origin = VEC3(x, 2.0f + 0.5f * M_SIN((x + z) * 2.0f + global_timer * 15.0f), z),
-            .radius = 8.0f,
-            .spotlight_angle = M_ABS(M_COS(global_timer * 3.0f + (x + z * 6.0f) * 6.0f)) * 30.0f + 20.0f,
-            .spotlight_softness = 1.0f,
-            .color = { .hex = 0xFFFFFFFF },
-            .brightness =  M_SIN(global_timer * 60.0f + (x + z * 10.0f) * 10.0f) * 0.25f + 0.25f,
-            .theta = 0.0f,
-            .phi = -50.0f + M_SIN(global_timer * 10.0f + (x + z * 2.0f) * 10.0f) * -20.0f
-         });
-      }
-
    }
+
+   FREE_ARRAY(LampInfo.materials);
+   FREE_ARRAY(LampInfo.geometries);
 
    Engine_Free(engine);
    return 0;
-}
-
-Geometry Plane(Graphics* graphics)
-{
-   Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
-   mesh.attribute_count = 3;
-   mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
-   mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
-   mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
-   
-   MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
-
-   mat4x4 t = Util_MulMat4(Util_RotationMatrix(VEC3(1, 0, 0), 50), Util_ScalingMatrix(VEC3(2, 1, 2)));
-   mesh_interface = Mesh_AddQuad(1, 1, t, mesh_interface);
-   mesh_interface = Mesh_GenNormals(mesh_interface);
-   mesh_interface = Mesh_GenTexcoords(mesh_interface);
-
-   Geometry plane = Graphics_CreateGeometry(graphics, mesh, GFX_DRAWMODE_STATIC);
-   Mesh_Free(&mesh);
-
-   return plane;
 }
 
 Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb)
@@ -377,4 +366,67 @@ Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* ba
    Image_Free(&image);
 
    return texture;
+}
+
+Model LoadModel(const char* model_name, const char* base_path)
+{
+   char* model_path = Util_MakeFilePath(base_path, model_name);
+   memblob model_memory = Util_LoadFileIntoMemory(model_path, true);
+   Model model = Mesh_LoadEctorModel(model_memory);
+   free(model_path);
+   free(model_memory.data);
+
+   return model;
+}
+
+void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path)
+{
+   Model model = LoadModel(model_name, base_path);
+
+   for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
+   {
+      u32 index = Util_ArrayLength(*geometries);
+
+      Geometry geometry = Graphics_CreateGeometry(graphics, model.meshes[mesh_i], GFX_DRAWMODE_STATIC);
+      Util_InsertArrayIndex((void**)geometries, index);
+      (*geometries)[index] = geometry;
+      
+   }
+
+   Model_Free(&model);
+}
+
+void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness)
+{
+   // for (u32 object_i = 0; object_i < Util_ArrayLength(LampInfo.geometries); object_i++)
+   // {
+   //    Drawable lamp_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   //    GeometryDrawable* lamp_data = Renderer_DrawableData(renderer, lamp_object);
+   //    lamp_data->geometry = LampInfo.geometries[object_i];
+   //    lamp_data->color.hex = (object_i != 1) ? 0xFFFFFFFF : color.hex;
+   //    lamp_data->transform = Util_IdentityTransform();
+   //    lamp_data->transform.origin = origin;
+   //    lamp_data->transform.scale = Util_FillVec3(3.0f * scale);
+   //    lamp_data->material = LampInfo.materials[object_i];
+   // }
+
+   Drawable light1 = DefaultLightManager_CreateLight(renderer);
+
+   DefaultLightManager_SetLightOrigin(renderer, light1, Util_AddVec3(origin, VEC3(0, 2.0f * scale, 0)));
+   DefaultLightManager_SetLightRadius(renderer, light1, 2.5f * scale);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light1, 60.0f);
+   DefaultLightManager_SetLightSpotlightSoftness(renderer, light1, 0.4f);
+   DefaultLightManager_SetLightColor(renderer, light1, color);
+   DefaultLightManager_SetLightBrightness(renderer, light1, brightness);
+   DefaultLightManager_SetLightAngles(renderer, light1, 0.0f, 0.0f);
+
+   Drawable light2 = DefaultLightManager_CreateLight(renderer);
+
+   DefaultLightManager_SetLightOrigin(renderer, light2, Util_AddVec3(origin, VEC3(0, 1.8f * scale, 0)));
+   DefaultLightManager_SetLightRadius(renderer, light2, 4.0f * scale);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light2, 200.0f);
+   DefaultLightManager_SetLightColor(renderer, light2, color);
+   DefaultLightManager_SetLightBrightness(renderer, light2, brightness * 0.6f);
+   DefaultLightManager_SetLightAngles(renderer, light2, 100.0f, 0.0f);
+
 }

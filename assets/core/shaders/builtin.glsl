@@ -10,6 +10,7 @@ layout(std140, binding=1) uniform CameraUBO
    vec4 u_proj_info;
 
 };
+
 layout(std140, binding=2) uniform ModelUBO
 {
    mat4 mat_model;
@@ -63,6 +64,11 @@ layout(binding=0) uniform sampler2D tex_color;
 in vec2 v2f_texcoord;
 
 #ifdef USE_LIGHTING
+
+#ifndef LIGHTS_PER_CLUSTER
+#define LIGHTS_PER_CLUSTER 200
+#endif
+
 const float M_EPSILON = 1e-4;
 const float M_PI = 3.141592;
 const float M_TAU = 6.283185;
@@ -76,6 +82,15 @@ in vec3 v2f_normal;
 in vec3 v2f_tangent;
 in vec3 v2f_bitangent;
 in vec3 v2f_position;
+
+struct Cluster
+{
+   vec4 center;
+   vec4 extents;
+   uvec4 light_count;
+   uint indices[LIGHTS_PER_CLUSTER];
+   
+};
 
 struct PackedLight
 {
@@ -119,9 +134,18 @@ struct SurfaceData
 
 };
 
+layout(std430, binding=1) restrict buffer ClusterSSBO
+{
+   uvec4 u_cluster_dimensions;
+   Cluster clusters[];
+
+};
+
 layout(std430, binding=2) restrict buffer LightSSBO
 {
+   ivec4 u_light_list;
    PackedLight lights[];
+
 };
 
 vec3 DecodeColor(uint rgbe_color)
@@ -221,8 +245,8 @@ float SpotAttenuation(vec3 light_dir, LightData light)
 
 vec3 NormalMapped(sampler2D normalmap_texture, vec2 coords, vec3 t, vec3 b, vec3 n)
 {
-   mat3 tbn = mat3(normalize(t), normalize(b), normalize(n));
-   vec3 normalmap = texture(normalmap_texture, coords).rgb - 0.5;
+   mat3 tbn = mat3(t, b, normalize(n));
+   vec3 normalmap = texture(normalmap_texture, coords).xyz * 2.0 - 1.0;
 
    return normalize(tbn * normalmap);
 }
@@ -283,35 +307,36 @@ void main()
       v2f_position
    );
 
-   vec3 final_color = surf_data.surf_color * 0.1;
+   vec3 final_color = surf_data.surf_color * 0.01;
 
-//    vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy); 
-//    uint z_id = uint((log(abs(surface.position.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));   
-//    uvec3 tile = uvec3(gl_FragCoord.xy / tile_size, z_id);
-//    uint tile_id = (tile.y * u_cluster_dimensions.x) + (tile.z * u_cluster_dimensions.x * u_cluster_dimensions.y) + tile.x;
-//    uint light_count = clusters[tile_id].frustum_info.w;
-//    for (uint light_i=0; light_i<light_count; light_i++)
-//    {
-//       uint light_idx = clusters[tile_id].indices[light_i];
-//       PointLight light = lights[light_idx];
-//       vec3 light_origin = (mat_view * vec4(light.origin_radius.xyz, 1.0)).xyz;
-//       float light_radius = = light.origin_radius.w;
-//       vec3 light_position = (light_origin - position) / light_radius;
-//       vec3 light_vector = normalize(light_position);
-//       vec3 halfway = normalize(light_vector + view);
-//       float nDl = max(0.0, dot(normal, light_vector));
-//       float nDh = max(0.0, dot(normal, halfway));
-//       float attenuation = PointAttenution(light_position) * SpotAttenuation(light_vector, light.theta_radians, light.phi_radians, light.cos_half_angle, 0.0);
-//       vec3 light_color = DecodeColor(light.rgbe_color);
-//       final_color += (color.rgb + pow(nDh, 64.0)) * light_color * nDl;
-//    }
+   vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy); 
+   uint z_id = uint((log(abs(surf_data.position_vs.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));   
+   uvec3 tile = uvec3(gl_FragCoord.xy / tile_size, z_id);
+   uint tile_id = (tile.y * u_cluster_dimensions.x) + (tile.z * u_cluster_dimensions.x * u_cluster_dimensions.y) + tile.x;
 
-   for (uint light_i = 0; light_i < lights.length(); light_i++)
+   for (uint light_i = 0; light_i < clusters[tile_id].light_count.w; light_i++)
    {
-      PackedLight packed_light = lights[light_i];
+      PackedLight packed_light = lights[clusters[tile_id].indices[light_i]];
       final_color += LightContribution(surf_data, packed_light);
 
    }
+
+// #define CLUSTER_DEBUG_VIZ
+
+#ifdef CLUSTER_DEBUG_VIZ
+
+   const vec3 cool = vec3(0.0, 0.0, 0.5);
+   const vec3 warm = vec3(1.0, 1.0, 0.0);
+   const vec3 hot = vec3(1.0, 0.0, 0.0);
+
+   float light_fac = (float(clusters[tile_id].light_count.w) / float(100)) * 2.0;
+   float a = max(light_fac - 1, 0);
+   float b = min(light_fac, 1);
+
+   final_color = clamp(final_color, 0.0, 1.0) * 0.25;
+   final_color += mix(cool, mix(warm, hot, a), b);
+
+#endif
 
 #else
    vec3 final_color = color.rgb;

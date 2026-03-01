@@ -234,9 +234,11 @@ void Graphics_DispatchBarrier(void);
 Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
 Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS total_size, u8 draw_mode, u8 buffer_type);
 void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer);
+void Graphics_ReuseBufferExplicit(Graphics* graphics, void* data, uS total_size, Buffer res_buffer);
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer);
 void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size);
 void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size);
+void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* data, uS offset_bytes, uS total_size);
 void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);

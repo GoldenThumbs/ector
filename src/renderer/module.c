@@ -1,7 +1,5 @@
 #include "util/extra_types.h"
 #include "util/files.h"
-#include "util/math.h"
-#include "util/vec3.h"
 #include "util/matrix.h"
 #include "util/resource.h"
 #include "util/types.h"
@@ -11,6 +9,7 @@
 #include "renderer.h"
 #include "renderer/internal.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -25,62 +24,42 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    if (renderer == NULL)
       return NULL;
    
+   renderer->app_path = (char*)app_path;
    renderer->graphics = graphics;
    
    renderer->surfaces = NEW_ARRAY_N(rndr_Surface, 16);
-   renderer->point_lights = NEW_ARRAY_N(rndr_PointLightSource, 16);
    renderer->drawable_types = NEW_ARRAY_N(rndr_DrawableType, 8);
+
+   renderer->lightmanager_info = (LightManagerInfo){ 0 };
 
    renderer->freed_surface_root = RNDR_INVALID_LIST_LINK;
    
-   renderer->built_in.texture.white = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0XFFFFFFFF }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.black = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFF000000 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.gray = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.normal = RNDR_LoadColorTexture(renderer->graphics, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.white = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0XFFFFFFFF }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.black = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFF000000 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.gray = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.normal = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
    
    renderer->built_in.geometry.plane = RNDR_Plane(graphics);
    renderer->built_in.geometry.box = RNDR_Box(graphics);
-
-   const char* defines[] = {
-      "USE_LIGHTING"
-   };
    
-   char* file_path = Util_MakeFilePath(app_path, "assets/core/shaders/builtin.glsl");
-   renderer->built_in.shader.basic = Graphics_LoadShaderFromFile(renderer->graphics, file_path, defines, 1, false);
-   if (file_path != NULL)
-      free(file_path);
-   
-   renderer->cluster_dimensions.x = RNDR_CLUSTER_X;
-   renderer->cluster_dimensions.y = RNDR_CLUSTER_Y;
-   renderer->cluster_dimensions.z = RNDR_CLUSTER_Z;
-   
-   u32 xy_cluster_count = renderer->cluster_dimensions.x * renderer->cluster_dimensions.y;
-   renderer->cluster_dimensions.total_clusters = xy_cluster_count * renderer->cluster_dimensions.z;
-   renderer->clusters = calloc((uS)renderer->cluster_dimensions.total_clusters, sizeof(rndr_Cluster));
-   
-   for (u32 z_i = 0; z_i < renderer->cluster_dimensions.z; z_i++)
-      for (u32 y_i = 0; y_i < renderer->cluster_dimensions.y; y_i++)
-         for (u32 x_i = 0; x_i < renderer->cluster_dimensions.x; x_i++)
-   {
-      u32 cluster_idx = z_i * xy_cluster_count + y_i * renderer->cluster_dimensions.x + x_i;
-      renderer->clusters[cluster_idx].frustum_idx[0] = x_i;
-      renderer->clusters[cluster_idx].frustum_idx[1] = y_i;
-      renderer->clusters[cluster_idx].frustum_idx[2] = z_i;
-   }
+   renderer->built_in.shader.unlit = RNDR_LoadShader(graphics, app_path, "assets/core/shaders/builtin.glsl", NULL, 0, false);
+   renderer->built_in.shader.basic.id = INVALID_HANDLE_ID;
 
    renderer->ubo.camera_buffer = Graphics_CreateBufferExplicit(
       renderer->graphics, NULL, sizeof(CameraData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    renderer->ubo.model_buffer = Graphics_CreateBufferExplicit(
       renderer->graphics, NULL, sizeof(ModelData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
 
-   renderer->ssbo.light_buffer = Graphics_CreateBuffer(
-      renderer->graphics, NULL, 0, sizeof(rndr_PointLightSource), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
-   renderer->ssbo.cluster_buffer = Graphics_CreateBufferExplicit(
-      renderer->graphics, NULL, sizeof(renderer->cluster_dimensions) + sizeof(rndr_Cluster) * renderer->cluster_dimensions.total_clusters, GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_STORAGE);
+   renderer->near_clip = 0.05f;
+   renderer->far_clip = 100.0f;
+   renderer->fov = 40.0f;
+   renderer->aspect_ratio = 1.0f;
+   renderer->size = (resolution2d){ 1, 1 };
+   renderer->update_projection = true;
+   renderer->update_view_projection = true;
 
    renderer->view = Util_IdentityMat4();
-   renderer->projection = Util_IdentityMat4();
-   renderer->view_projection = Util_IdentityMat4();
+   renderer->inv_view = Util_IdentityMat4();
 
    RNDR_RegisterDefaultDrawables(renderer);
     
@@ -110,9 +89,7 @@ void Renderer_Free(Renderer* renderer)
    }
 
    FREE_ARRAY(renderer->surfaces);
-   FREE_ARRAY(renderer->point_lights);
    FREE_ARRAY(renderer->drawable_types);
-   free(renderer->clusters);
 
    free(renderer);
 
@@ -131,25 +108,23 @@ void Renderer_Render(Renderer* renderer, resolution2d size)
    if (renderer == NULL)
       return;
 
+   RNDR_HandleMatrices(renderer, size);
+
    CameraData camera_data = { 0 };
    camera_data.mat_view = renderer->view;
    camera_data.mat_proj = renderer->projection;
-   camera_data.mat_invview = Util_InverseViewMatrix(renderer->view);
-   camera_data.mat_invproj = Util_InversePerspectiveMatrix(renderer->projection);
+   camera_data.mat_invview = renderer->inv_view;
+   camera_data.mat_invproj = renderer->inv_projection;
    camera_data.u_width = (u32)size.width;
    camera_data.u_height = (u32)size.height;
+   camera_data.u_near_clip = renderer->near_clip;
+   camera_data.u_far_clip = renderer->far_clip;
 
    Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.camera_buffer, &camera_data, 1, sizeof(CameraData));
    Graphics_UseBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
 
-   if (renderer->update_lights)
-   {
-      renderer->update_lights = false;
-      Graphics_ReuseBuffer(renderer->graphics, renderer->point_lights, Util_ArrayLength(renderer->point_lights), sizeof(rndr_PointLightSource), renderer->ssbo.light_buffer);
-
-   }
-
-   Graphics_UseBuffer(renderer->graphics, renderer->ssbo.light_buffer, 2);
+   if (renderer->lightmanager_info.lightman_prerender != NULL)
+      renderer->lightmanager_info.lightman_prerender(renderer);
 
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
    for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
@@ -170,65 +145,14 @@ void Renderer_Render(Renderer* renderer, resolution2d size)
          Drawable drawable_handle = { 0 };
          drawable_handle.id = drawable->compare.id;
          drawable_handle.drawable_type_idx = type_i;
+
+         if (renderer->lightmanager_info.lightman_on_render != NULL)
+            renderer->lightmanager_info.lightman_on_render(renderer);
          
          drawable_type->render(renderer, drawable_handle, 0);
 
       }
    }
-}
-
-u32 Renderer_AddLight(Renderer* renderer, LightDesc desc)
-{
-   if (renderer == NULL)
-      return INVALID_HANDLE_ID;
-
-   u32 index = Util_ArrayLength(renderer->point_lights);
-   SET_ARRAY_LENGTH(renderer->point_lights, index + 1);
-
-   Renderer_UpdateLight(renderer, index, desc);
-
-   return index;
-}
-
-void Renderer_RemoveLight(Renderer* renderer, u32 index)
-{
-   if (renderer == NULL || Util_ArrayLength(renderer->point_lights) <= index)
-      return;
-
-   Util_RemoveArrayIndex(REF(renderer->point_lights), index);
-
-   renderer->update_lights = true;
-
-}
-
-void Renderer_UpdateLight(Renderer* renderer, u32 index, LightDesc desc)
-{
-   if (renderer == NULL || Util_ArrayLength(renderer->point_lights) <= index)
-      return;
-
-   vec4 base_color = Util_Vec4FromColor(desc.color);
-   vec3 light_color = Util_ScaleVec3(base_color.xyz, base_color.w * desc.brightness);
-
-   f32 cos_half_angle = M_COS(desc.spotlight_angle * 0.5f) * 0.5f + 0.5f;
-   f32 spot_softness = desc.spotlight_softness;
-   f32 theta = desc.theta * 0.005f;
-   f32 phi = desc.phi * 0.005f;
-
-   rndr_PointLightSource light_src = { 0 };
-   light_src.origin = desc.origin;
-   light_src.radius = desc.radius;
-   light_src.rgbe_color = Util_MakeRGBE(light_color);
-   light_src.cos_half_angle = RNDR_NormF16(cos_half_angle);
-   light_src.spot_softness = RNDR_NormF16(spot_softness);
-   light_src.theta = RNDR_NormF16(theta);
-   light_src.phi = RNDR_NormF16(phi);
-   light_src.shadow_id = 0;
-   light_src.next_light = 0;
-
-   renderer->point_lights[index] = light_src;
-
-   renderer->update_lights = true;
-
 }
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot)
@@ -301,25 +225,41 @@ void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view)
    if (renderer == NULL)
       return;
 
-   Renderer_SetViewAndProjectionMatrix(renderer, view, renderer->projection);
-}
-
-void Renderer_SetProjectionMatrix(Renderer* renderer, mat4x4 projection)
-{
-   if (renderer == NULL)
-      return;
-
-   Renderer_SetViewAndProjectionMatrix(renderer, renderer->view, projection);
-}
-
-void Renderer_SetViewAndProjectionMatrix(Renderer* renderer, mat4x4 view, mat4x4 projection)
-{
-   if (renderer == NULL)
-      return;
-
    renderer->view = view;
-   renderer->projection = projection;
-   renderer->view_projection = Util_MulMat4(projection, view);
+   renderer->inv_view = Util_InverseMat4(renderer->view);
+
+   renderer->update_view_projection = true;
+
+}
+
+void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov)
+{
+   if (renderer == NULL)
+      return;
+
+   renderer->fov = vertical_fov;
+   renderer->update_projection = true;
+   
+}
+
+void Renderer_SetClippingPlanes(Renderer* renderer, f32 near_clip, f32 far_clip)
+{
+   if (renderer == NULL)
+      return;
+
+   renderer->near_clip = near_clip;
+   renderer->far_clip = far_clip;
+   renderer->update_projection = true;
+
+}
+
+void Renderer_UpdateCamera(Renderer* renderer, vec3 origin, vec3 euler, f32 distance)
+{
+   if (renderer == NULL)
+      return;
+
+   Renderer_SetViewMatrix(renderer, Util_ViewMatrix(origin, euler, distance));
+
 }
 
 mat4x4 Renderer_GetViewMatrix(Renderer* renderer)
@@ -515,7 +455,7 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
       if (free_drawable->next_freed != RNDR_INVALID_LIST_LINK)
       {
          rndr_Drawable* next_free_drawable = RNDR_DrawableAtIndex(drawable_type, free_drawable->next_freed);
-         next_free_drawable->last_freed = RNDR_INVALID_LIST_LINK;
+         next_free_drawable->prev_freed = RNDR_INVALID_LIST_LINK;
 
       }
 
@@ -531,7 +471,7 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    drawable->compare.ref = ref;
    drawable->drawable_type_idx = drawable_type_idx;
    drawable->enabled = true;
-   drawable->last_active = RNDR_INVALID_LIST_LINK;
+   drawable->prev_active = RNDR_INVALID_LIST_LINK;
 
    drawable->next_active = drawable_type->active_drawable_root;
    drawable_type->active_drawable_root = drawable_idx;
@@ -539,7 +479,7 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    if (drawable->next_active != RNDR_INVALID_LIST_LINK)
    {
       rndr_Drawable* next_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_active);
-      next_drawable->last_active = drawable_idx;
+      next_drawable->prev_active = drawable_idx;
 
    }
 
@@ -573,25 +513,25 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
    if (drawable->next_active != RNDR_INVALID_LIST_LINK)
    {
       rndr_Drawable* next_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_active);
-      next_drawable->last_active = drawable->last_active;
+      next_drawable->prev_active = drawable->prev_active;
 
    }
 
-   if (drawable->last_active != RNDR_INVALID_LIST_LINK)
+   if (drawable->prev_active != RNDR_INVALID_LIST_LINK)
    {
-      rndr_Drawable* last_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->last_active);
+      rndr_Drawable* last_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->prev_active);
       last_drawable->next_active = drawable->next_active;
       
    } else
       drawable_type->active_drawable_root = drawable->next_active;
    
-   drawable->last_freed = RNDR_INVALID_LIST_LINK;
+   drawable->prev_freed = RNDR_INVALID_LIST_LINK;
    drawable->next_freed = drawable_type->freed_drawable_root;
 
    if (drawable->next_freed != RNDR_INVALID_LIST_LINK)
    {
       rndr_Drawable* next_free_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_freed);
-      next_free_drawable->last_freed = res_drawable.handle;
+      next_free_drawable->prev_freed = res_drawable.handle;
 
    }
 }
@@ -622,6 +562,14 @@ Buffer Renderer_ModelBuffer(Renderer* renderer)
       return (handle){ .id = INVALID_HANDLE_ID };
 
    return renderer->ubo.model_buffer;
+}
+
+Shader Renderer_UnlitShader(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.shader.unlit;
 }
 
 Shader Renderer_BasicShader(Renderer* renderer)
@@ -680,14 +628,74 @@ Texture Renderer_NormalTexture(Renderer* renderer)
    return renderer->built_in.texture.normal;
 }
 
+void* Renderer_LightManager(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return NULL;
 
-Texture RNDR_LoadColorTexture(Graphics* graphics, color8 color, u8 texture_type)
+   return renderer->lightmanager_info.data;
+}
+
+LightManagerInfo* Renderer_LightManagerInfo(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return NULL;
+
+   return &renderer->lightmanager_info;
+}
+
+void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_info)
+{
+   if (renderer == NULL)
+      return;
+
+   Graphics* graphics = renderer->graphics;
+   char* app_path = renderer->app_path;
+
+   ShaderDefines shader_defines = { 0 };
+   renderer->lightmanager_info = lightmanager_info;
+   
+   if (lightmanager_info.lightman_init != NULL)
+      lightmanager_info.lightman_init(renderer);
+
+   if (lightmanager_info.lightman_defs != NULL)
+      shader_defines = lightmanager_info.lightman_defs(renderer);
+
+   if (renderer->built_in.shader.basic.id != INVALID_HANDLE_ID)
+      Graphics_FreeShader(graphics, renderer->built_in.shader.basic);
+
+   renderer->built_in.shader.basic = RNDR_LoadShader(graphics, app_path, "assets/core/shaders/builtin.glsl", (const char**)shader_defines.defines, shader_defines.define_count, false);
+
+}
+
+bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id)
+{
+   return (renderer != NULL && renderer->lightmanager_info.data != NULL && renderer->lightmanager_info.id == desired_id);
+}
+
+Shader RNDR_LoadShader(Graphics* graphics, const char* app_path, const char* shader_file, const char* defines[], const u32 defines_count, bool is_compute)
+{
+   if (graphics == NULL || app_path == NULL || shader_file == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   char* file_path = Util_MakeFilePath(app_path, shader_file);
+   Shader shader = Graphics_LoadShaderFromFile(graphics, file_path, defines, defines_count, is_compute);
+   if (file_path != NULL)
+      free(file_path);
+
+   return shader;
+}
+
+Texture RNDR_CreateColorTexture(Graphics* graphics, color8 color, u8 texture_type)
 {
    return Graphics_CreateTexture(graphics, color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
 }
 
 Geometry RNDR_Plane(Graphics* graphics)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
    Mesh plane_mesh = Mesh_CreatePlane(1, 1, VEC2(2, 2));
    Geometry plane = Graphics_CreateGeometry(graphics, plane_mesh, GFX_DRAWMODE_STATIC);
    Mesh_Free(&plane_mesh);
@@ -696,10 +704,45 @@ Geometry RNDR_Plane(Graphics* graphics)
 
 Geometry RNDR_Box(Graphics* graphics)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
    Mesh box_mesh = Mesh_CreateBoxAdvanced(1, 1, 1, VEC3(2, 2, 2), false);
    Geometry box = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);
    Mesh_Free(&box_mesh);
    return box;
+}
+
+void RNDR_HandleMatrices(Renderer* renderer, resolution2d size)
+{
+   if (renderer == NULL)
+      return;
+
+   if (renderer->size.width != size.width || renderer->size.height != size.height)
+   {
+      renderer->size = size;
+      renderer->aspect_ratio = (f32)size.height / (f32)size.width;
+
+      renderer->update_projection = true;
+
+   }
+
+   if (renderer->update_projection)
+   {
+      renderer->projection = Util_PerspectiveMatrix(renderer->fov, renderer->aspect_ratio, renderer->near_clip, renderer->far_clip);
+      renderer->inv_projection = Util_InverseMat4(renderer->projection);
+      renderer->update_view_projection = true;
+      renderer->update_projection = false;
+
+   }
+
+   if (renderer->update_view_projection)
+   {
+      renderer->view_projection = Util_MulMat4(renderer->projection, renderer->view);
+      renderer->update_view_projection = false;
+
+   }
+
 }
 
 u16 RNDR_GetSurfaceIndex(Renderer* renderer, const char* surface_name)

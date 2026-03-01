@@ -114,17 +114,35 @@ static inline MeshInterface Mesh_NewInterface(Mesh* mesh)
    };
 }
 
+static inline bool Mesh_InterfaceIsValid(MeshInterface mesh_interface, bool need_position, bool need_normal, bool need_texcoord0, bool need_texcoord1, bool need_tangent)
+{
+   if (mesh_interface.mesh == NULL)
+      return false;
+
+   bool has_position = !need_position || (need_position && mesh_interface.mesh->vertex_buffer != NULL && mesh_interface.atr.position_size != 0);
+   bool has_normal = !need_normal || (need_normal && mesh_interface.atr.normal_size != 0);
+   bool has_texcoord0 = !need_texcoord0 || (need_texcoord0 && mesh_interface.atr.texcoord_size[0] != 0);
+   bool has_texcoord1 = !need_texcoord1 || (need_texcoord1 && mesh_interface.atr.texcoord_size[1] != 0);
+   bool has_tangent = !need_tangent || (need_tangent && mesh_interface.atr.tangent_size != 0);
+
+   return has_position && has_normal && has_texcoord0 && has_texcoord1 && has_tangent;
+}
+
 void Model_Free(Model* model);
 void Mesh_Free(Mesh* mesh);
+
+MeshInterface Mesh_ReallocVertices(u32 vertex_count, bool use_normal, bool use_texcoord0, bool use_texcoord1, bool use_tangent, MeshInterface mesh_interface);
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface);
 MeshInterface Mesh_GenNormals(MeshInterface mesh_interface);
 MeshInterface Mesh_AverageNormalsOverSeams(MeshInterface mesh_interface);
-MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface);
+MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface, vec3 triplanar_scale);
+MeshInterface Mesh_GenTangents(MeshInterface mesh_interface);
 
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size);
 Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size);
 Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bool smooth_seams);
+Mesh Mesh_CreateSphere(u32 faces, f32 size);
 
 Mesh Mesh_LoadEctorMesh(memblob memory);
 Model Mesh_LoadEctorModel(memblob memory);
