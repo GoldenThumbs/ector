@@ -425,6 +425,11 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
       Graphics_BindTexture(renderer->graphics, renderer->built_in.texture.white, slot_i);
 }
 
+u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawable_type_name)
+{
+   return RNDR_GetDrawableTypeIndex(renderer, drawable_type_name);
+}
+
 Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name)
 {
    Drawable drawable_handle = { 0 };
@@ -542,6 +547,23 @@ void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable)
       return NULL;
 
    rndr_Drawable* drawable = RNDR_GetDrawable(renderer, res_drawable);
+   if (drawable == NULL)
+      return NULL;
+
+   return (void*)drawable->data;
+}
+
+void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx)
+{
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, drawable_type_idx);
+   if (drawable_type == NULL)
+      return NULL;
+
+   u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
+   if (drawable_count <= (u32)drawable_idx)
+      return NULL;
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, drawable_idx);
    if (drawable == NULL)
       return NULL;
 

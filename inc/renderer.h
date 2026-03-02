@@ -209,11 +209,13 @@ SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32
 UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id);
 
 void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const DrawableTypeDesc* desc);
+u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawable_type_name);
 
 Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name);
 void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable);
 
 void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable);
+void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx);
 
 Buffer Renderer_CameraBuffer(Renderer* renderer);
 Buffer Renderer_ModelBuffer(Renderer* renderer);

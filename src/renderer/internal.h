@@ -204,6 +204,9 @@ static inline u16 RNDR_U16Norm(f32 value)
 
 static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_type, u16 drawable_idx)
 {
+   if (drawable_idx == INVALID_HANDLE)
+      return NULL;
+   
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
 }
 
