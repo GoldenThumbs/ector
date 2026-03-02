@@ -72,8 +72,8 @@ typedef struct lightman_LightDrawable_t
    f32 theta;
    f32 phi;
 
-   u32 next_id;
-   u32 prev_id;
+   u16 next_idx;
+   u16 prev_idx;
 
    u16 light_idx;
    i16 next_light_idx;
@@ -107,8 +107,8 @@ struct DefaultLightManager_t
 
    i32 light_list;
 
-   u32 freed_light_root_id;
-   u32 active_light_root_id;
+   u16 freed_light_root_idx;
+   u16 active_light_root_idx;
 
    Texture shadow_cascades;
    Texture shadow_atlas;

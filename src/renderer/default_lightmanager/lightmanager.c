@@ -59,8 +59,8 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    
    lightmanager->lights_per_cluster = lights_per_cluster;
 
-   lightmanager->freed_light_root_id = INVALID_HANDLE_ID;
-   lightmanager->active_light_root_id = INVALID_HANDLE_ID;
+   lightmanager->freed_light_root_idx = INVALID_HANDLE;
+   lightmanager->active_light_root_idx = INVALID_HANDLE;
 
    const char* defines[] = {
       lightmanager->light_count_define
@@ -135,7 +135,25 @@ Drawable DefaultLightManager_CreateLight(Renderer* renderer)
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return (Drawable){ .id = INVALID_HANDLE_ID };
 
-   return Renderer_CreateDrawable(renderer, LIGHT_DRAWABLE_TYPE);
+   Drawable light_Drawable = Renderer_CreateDrawable(renderer, LIGHT_DRAWABLE_TYPE);
+
+   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_Drawable);
+   if (light_data == NULL)
+      return (Drawable){ .id = INVALID_HANDLE_ID };
+
+   Graphics* graphics = Renderer_Graphics(renderer);
+   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+
+   light_data->origin = VEC3(0);
+   light_data->radius = 5.0f;
+   light_data->color.hex = 0xFFFFFFFF;
+   light_data->brightness = 1.0f;
+   light_data->spot_angle = 200.0f;
+   light_data->spot_softness = 0.0f;
+   light_data->theta = 0.0f;
+   light_data->phi = 0.0f;
+
+   return light_Drawable;
 }
 
 void DefaultLightManager_SetLightOrigin(Renderer* renderer, Drawable light_drawable, vec3 origin)
@@ -308,27 +326,18 @@ void LIGHTMAN_LightEnableFunc(Renderer* renderer, Drawable self)
    Graphics* graphics = Renderer_Graphics(renderer);
    DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
 
-   light_data->origin = VEC3(0);
-   light_data->radius = 5.0f;
-   light_data->color.hex = 0xFFFFFFFF;
-   light_data->brightness = 1.0f;
-   light_data->spot_angle = 200.0f;
-   light_data->spot_softness = 0.0f;
-   light_data->theta = 0.0f;
-   light_data->phi = 0.0f;
-
-   light_data->prev_id = INVALID_HANDLE_ID;
+   light_data->prev_idx = INVALID_HANDLE;
    light_data->prev_light_idx = 0;
 
-   light_data->next_id = lightmanager->active_light_root_id;
+   light_data->next_idx = lightmanager->active_light_root_idx;
    light_data->next_light_idx = 0;
    
-   lightmanager->active_light_root_id = self.id;
+   lightmanager->active_light_root_idx = self.id;
 
    u32 light_count = Util_ArrayLength(lightmanager->packed_lights);
    light_data->light_idx = (u16)light_count;
 
-   if (lightmanager->freed_light_root_id == INVALID_HANDLE_ID)
+   if (lightmanager->freed_light_root_idx == INVALID_HANDLE)
    {
       uS old_light_memory = Util_ArrayMemory(lightmanager->packed_lights);
       SET_ARRAY_LENGTH(lightmanager->packed_lights, light_count + 1);
@@ -337,19 +346,17 @@ void LIGHTMAN_LightEnableFunc(Renderer* renderer, Drawable self)
          Graphics_ReuseBufferExplicit(graphics, lightmanager->packed_lights, LIGHTMAN_LightBufferSize(lightmanager), lightmanager->light_ssbo);
 
    } else {
-      Drawable free_drawable = self;
-      free_drawable.id = lightmanager->freed_light_root_id;
-      lightman_LightDrawable* free_light_data = Renderer_DrawableData(renderer, free_drawable);
+      lightman_LightDrawable* free_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, lightmanager->freed_light_root_idx);
+
       if (free_light_data != NULL)
       {
          light_data->light_idx = free_light_data->light_idx;
 
-         Drawable next_drawable = self;
-         next_drawable.id = free_light_data->next_id;;
-         lightman_LightDrawable* next_light_data = Renderer_DrawableData(renderer, next_drawable);
+         lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, free_light_data->next_idx);
+
          if (next_light_data != NULL)
          {
-            next_light_data->prev_id = INVALID_HANDLE_ID;
+            next_light_data->prev_idx = INVALID_HANDLE;
             next_light_data->prev_light_idx = 0;
 
          }
@@ -360,12 +367,11 @@ void LIGHTMAN_LightEnableFunc(Renderer* renderer, Drawable self)
 
    lightmanager->light_list = (i32)light_data->light_idx;
 
-   Drawable next_drawable = self;
-   next_drawable.id = light_data->next_id;
-   lightman_LightDrawable* next_light_data = Renderer_DrawableData(renderer, next_drawable);
+   lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, light_data->next_idx);
+
    if (next_light_data != NULL)
    {
-      next_light_data->prev_id = self.id;
+      next_light_data->prev_idx = self.id;
       next_light_data->prev_light_idx = (i16)((i32)light_data->light_idx - (i32)next_light_data->light_idx);
 
       light_data->next_light_idx = (i16)((i32)next_light_data->light_idx - (i32)light_data->light_idx);
@@ -374,6 +380,8 @@ void LIGHTMAN_LightEnableFunc(Renderer* renderer, Drawable self)
 
    lightman_PackedLight packed_light = LIGHTMAN_CreatePackedLight(*light_data);
    lightmanager->packed_lights[light_data->light_idx] = packed_light;
+
+   light_data->enabled = true;
 
    LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
 
@@ -388,24 +396,19 @@ void LIGHTMAN_LightDisableFunc(Renderer* renderer, Drawable self)
    Graphics* graphics = Renderer_Graphics(renderer);
    DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
    
-   Drawable next_drawable = self;
-   next_drawable.id = light_data->next_id;
-   lightman_LightDrawable* next_light_data = Renderer_DrawableData(renderer, next_drawable);
-
-   Drawable prev_drawable = self;
-   prev_drawable.id = light_data->prev_id;
-   lightman_LightDrawable* prev_light_data = Renderer_DrawableData(renderer, prev_drawable);
+   lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, light_data->next_idx);
+   lightman_LightDrawable* prev_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, light_data->prev_idx);
 
    if (next_light_data != NULL)
    {
-      next_light_data->prev_id = prev_drawable.id;
+      next_light_data->prev_idx = light_data->prev_idx;
       next_light_data->prev_light_idx = (prev_light_data == NULL) ? 0 : (i16)((i32)prev_light_data->light_idx - (i32)next_light_data->light_idx);
 
    }
 
    if (prev_light_data != NULL)
    {
-      prev_light_data->next_id = next_drawable.id;
+      prev_light_data->next_idx = light_data->next_idx;
       prev_light_data->next_light_idx = (next_light_data == NULL) ? 0 : (i16)((i32)next_light_data->light_idx - (i32)prev_light_data->light_idx);
 
       lightmanager->packed_lights[prev_light_data->light_idx].next_light = prev_light_data->next_light_idx;
@@ -413,27 +416,29 @@ void LIGHTMAN_LightDisableFunc(Renderer* renderer, Drawable self)
       LIGHTMAN_UpdateLight(renderer, prev_light_data->light_idx);
 
    } else {
-      lightmanager->active_light_root_id = next_drawable.id;
+      lightmanager->active_light_root_idx = light_data->next_idx;
       lightmanager->light_list = (next_light_data == NULL) ? -1 : (i32)next_light_data->light_idx;
 
    }
 
-   light_data->prev_id = INVALID_HANDLE_ID;
+   light_data->prev_idx = INVALID_HANDLE;
    light_data->prev_light_idx = 0;
 
-   light_data->next_id = lightmanager->freed_light_root_id;
-   lightmanager->freed_light_root_id = self.id;
+   light_data->next_idx = lightmanager->freed_light_root_idx;
+   lightmanager->freed_light_root_idx = self.id;
 
    Drawable next_free_drawable = self;
-   next_free_drawable.id = light_data->next_id;
+   next_free_drawable.id = light_data->next_idx;
    lightman_LightDrawable* next_free_light_data = Renderer_DrawableData(renderer, next_free_drawable);
 
    if (next_free_light_data != NULL)
    {
-      next_free_light_data->prev_id = self.id;
+      next_free_light_data->prev_idx = self.id;
       next_free_light_data->prev_light_idx = (i16)((i32)light_data->light_idx - (i32)next_free_light_data->light_idx);
 
    }
+
+   light_data->enabled = false;
 
    LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
 
