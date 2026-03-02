@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
    Graphics* graphics = Engine_FetchModule(engine, "graphics");
    Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
 
-   Mesh sphere_mesh = Mesh_CreateSphere(32, 1.0f);
+   Mesh sphere_mesh = Mesh_CreateSphere(12, 1.0f);
    Geometry sphere = Graphics_CreateGeometry(graphics, sphere_mesh, GFX_DRAWMODE_STATIC);
    Mesh_Free(&sphere_mesh);
 
