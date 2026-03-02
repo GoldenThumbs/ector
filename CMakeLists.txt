@@ -27,10 +27,9 @@ target_include_directories(Ector
 )
 target_link_libraries(Ector PRIVATE external)
 
-file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
-
 if(${ECTOR_BUILD_EXAMPLES})
 
+file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
 add_subdirectory("examples")
 
 endif()
