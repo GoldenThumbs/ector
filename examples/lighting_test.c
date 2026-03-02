@@ -13,7 +13,6 @@
 #include <default_lightmanager.h>
 
 #include "mesh.h"
-#include "particle_shader_code.h"
 #include "util/math.h"
 #include "util/vec3.h"
 
