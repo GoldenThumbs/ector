@@ -1,20 +1,19 @@
 #include <util/types.h>
 #include <util/array.h>
 #include <util/extra_types.h>
-#include <util/matrix.h>
+#include <util/math.h>
+#include <util/vec3.h>
 #include <util/quaternion.h>
+#include <util/matrix.h>
 #include <util/keymap.h>
 #include <util/files.h>
+#include <mesh.h>
 #include <image.h>
 #include <engine.h>
 #include <graphics.h>
 #include <renderer.h>
 #include <default_modules.h>
 #include <default_lightmanager.h>
-
-#include "mesh.h"
-#include "util/math.h"
-#include "util/vec3.h"
 
 #include <stdlib.h>
 #include <stdio.h>
