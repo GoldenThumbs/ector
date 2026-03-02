@@ -25,7 +25,6 @@ struct LampInfo_t
 
 } LampInfo;
 
-Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb);
 Model LoadModel(const char* model_name, const char* base_path);
 void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path);
 
@@ -141,7 +140,7 @@ int main(int argc, char* argv[])
          if (level_model_textures[mesh_i][tex_i] == NULL)
             continue;
 
-         Texture model_texture = LoadTexture(graphics, level_model_textures[mesh_i][tex_i], argv[0], (resolution2d){ 0 }, (tex_i == 0));
+         Texture model_texture = Renderer_LoadTexture(renderer, level_model_textures[mesh_i][tex_i], (resolution2d){ 0 }, true, (tex_i == 0));
          Renderer_SetSurfaceMaterialTexture(&mesh_data->material,-1, (i32)tex_i, model_texture);
 
       }
@@ -183,7 +182,7 @@ int main(int argc, char* argv[])
       AddLamp(renderer, VEC3( 3 + x_f,-1, 3 + y_f), 0.125f, Util_IntToColor(0x1616FFFF), 0.5f);
    }
 
-   Texture toybox_normal = LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 }, false);
+   Texture toybox_normal = Renderer_LoadTexture(renderer, "assets/textures/toybox_n.png", (resolution2d){ 0 }, true, false);
 
    Drawable block_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
    GeometryDrawable* block_data = Renderer_DrawableData(renderer, block_object);
@@ -207,10 +206,10 @@ int main(int argc, char* argv[])
    barrel_data->transform.origin.y -= 0.5f;
    barrel_data->transform.scale = Util_FillVec3(0.5f);
    barrel_data->material.surface = basic_surf;
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel.png", argv[0], (resolution2d){ 0 }, true));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_n.png", argv[0], (resolution2d){ 0 }, false));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_r.png", argv[0], (resolution2d){ 0 }, false));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_m.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel.png", (resolution2d){ 0 }, true, true));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel_n.png", (resolution2d){ 0 }, true, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel_r.png", (resolution2d){ 0 }, true, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel_m.png", (resolution2d){ 0 }, true, false));
 
    Model_Free(&barrel_model);
 
@@ -221,9 +220,7 @@ int main(int argc, char* argv[])
    player_data->transform.scale = Util_FillVec3(0.5f);
    player_data->transform.rotation = Util_IdentityQuat();
    player_data->material.surface = basic_surf;
-   // Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 0, LoadTexture(graphics, "assets/textures/conBrick_albedo.png", argv[0], (resolution2d){ 0 }, true));
-   // Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 1, LoadTexture(graphics, "assets/textures/conBrick_normal.png", argv[0], (resolution2d){ 0 }, false));
-   Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 2, LoadTexture(graphics, "assets/textures/smooth.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 2, Renderer_LoadTexture(renderer, "assets/textures/smooth.png", (resolution2d){ 0 }, true, false));
 
    Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    
@@ -329,41 +326,6 @@ int main(int argc, char* argv[])
 
    Engine_Free(engine);
    return 0;
-}
-
-Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb)
-{
-   if (graphics == NULL || texture_name == NULL || base_path == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
-
-   char* texture_path = Util_MakeFilePath(base_path, texture_name);
-   if (texture_path == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
-
-   memblob memory = Util_LoadFileIntoMemory(texture_path, true);
-   Image image = Image_CreateImage(memory, IMG_TYPE_2D, slice_size, is_srgb);
-   Image_GenerateMipmaps(&image);
-   free(memory.data);
-
-   TextureDesc desc = { 0 };
-   desc.size = image.size;
-   desc.depth = image.depth;
-   desc.mipmap_count = image.mipmap_count;
-   desc.texture_type = GFX_TEXTURETYPE_2D;
-   if (image.image_format == IMG_FORMAT_U8_SRGB)
-      desc.texture_format = (image.channel_count == 4) ? GFX_TEXTUREFORMAT_SRGB_ALPHA : GFX_TEXTUREFORMAT_SRGB;
-   else
-      desc.texture_format = ((image.image_format == IMG_FORMAT_F32) ? GFX_TEXTUREFORMAT_R_F32 : GFX_TEXTUREFORMAT_R_U8_NORM) + image.channel_count - 1;
-
-   free(texture_path);
-   if (image.data == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
-
-   Texture texture = Graphics_CreateTexture(graphics, image.data, desc);
-
-   Image_Free(&image);
-
-   return texture;
 }
 
 Model LoadModel(const char* model_name, const char* base_path)

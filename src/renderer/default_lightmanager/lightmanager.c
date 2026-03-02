@@ -3,7 +3,6 @@
 #include "graphics.h"
 #include "renderer.h"
 
-#include "renderer/internal.h"
 #include "default_lightmanager.h"
 #include "renderer/default_lightmanager/internal.h"
 
@@ -62,12 +61,13 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    lightmanager->freed_light_root_idx = INVALID_HANDLE;
    lightmanager->active_light_root_idx = INVALID_HANDLE;
 
-   const char* defines[] = {
-      lightmanager->light_count_define
+   const char* defs[] = {
+      lightmanager->light_count_define,
+      "USE_LIGHTING"
    };
 
-   lightmanager->build_clusters_cs = RNDR_LoadShader(graphics, renderer->app_path, "assets/core/shaders/cs_build_clusters.glsl", NULL, 0, true);
-   lightmanager->fill_clusters_cs = RNDR_LoadShader(graphics, renderer->app_path, "assets/core/shaders/cs_cull_lights.glsl", defines, 1, true);
+   lightmanager->build_clusters_cs = Renderer_LoadShader(renderer, "assets/core/shaders/cs_build_clusters.glsl", NULL, 0, true);
+   lightmanager->fill_clusters_cs = Renderer_LoadShader(renderer, "assets/core/shaders/cs_cull_lights.glsl", defs, 1, true);
 
    lightmanager->cluster_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_ClustersSize(lightmanager), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_STORAGE);
    lightmanager->light_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_LightBufferSize(lightmanager), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_STORAGE);
@@ -81,6 +81,9 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
       .on_disable_func = LIGHTMAN_LightDisableFunc,
       .data_size = sizeof(lightman_LightDrawable)
    });
+
+   Renderer_SetUnlitShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", NULL, 0, false));
+   Renderer_SetBasicShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", defs, 2, false));
 
    return lightmanager;
 }

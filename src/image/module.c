@@ -18,10 +18,14 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
 
    Image image = { 0 };
    i32 image_channels = 0;
+   i32 force_channels = (is_srgb) ? 4 : 0;
+
    if (is_hdr)
-      image.data = (u8*)stbi_loadf_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, 0);
+      image.data = (u8*)stbi_loadf_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
    else
-      image.data = stbi_load_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, 0);
+      image.data = stbi_load_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
+
+   image_channels = M_MAX(image_channels, force_channels);
 
    if (image.data == NULL)
       return (Image){ .data = NULL };

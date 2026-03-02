@@ -1,9 +1,10 @@
-#include "util/extra_types.h"
-#include "util/files.h"
-#include "util/matrix.h"
-#include "util/resource.h"
 #include "util/types.h"
+#include "util/extra_types.h"
 #include "util/array.h"
+#include "util/files.h"
+#include "util/resource.h"
+#include "util/matrix.h"
+#include "image.h"
 #include "graphics.h"
 
 #include "renderer.h"
@@ -34,15 +35,15 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
 
    renderer->freed_surface_root = RNDR_INVALID_LIST_LINK;
    
-   renderer->built_in.texture.white = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0XFFFFFFFF }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.black = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFF000000 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.gray = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.normal = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.white = Renderer_CreateColorTexture(renderer, (color8){ .hex = 0XFFFFFFFF }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.black = Renderer_CreateColorTexture(renderer, (color8){ .hex = 0xFF000000 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.gray = Renderer_CreateColorTexture(renderer, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.normal = Renderer_CreateColorTexture(renderer, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
    
    renderer->built_in.geometry.plane = RNDR_Plane(graphics);
    renderer->built_in.geometry.box = RNDR_Box(graphics);
    
-   renderer->built_in.shader.unlit = RNDR_LoadShader(graphics, app_path, "assets/core/shaders/builtin.glsl", NULL, 0, false);
+   renderer->built_in.shader.unlit.id = INVALID_HANDLE_ID;
    renderer->built_in.shader.basic.id = INVALID_HANDLE_ID;
 
    renderer->ubo.camera_buffer = Graphics_CreateBufferExplicit(
@@ -157,10 +158,10 @@ void Renderer_Render(Renderer* renderer, resolution2d size)
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot)
 {
-   RNDR_BindTextureAtSlot(renderer, bind_slot, RNDR_SURF_TEXTURE_USER_SET, texture);
+   RNDR_BindTextureAtSlot(renderer, bind_slot, INTERNAL_RNDR_SURF_TEXTURE_USER_SET, texture);
 }
 
-void Renderer_SetTextureDefault(Renderer* renderer, u8 texture_default, u32 bind_slot)
+void Renderer_SetTextureToDefault(Renderer* renderer, u8 texture_default, u32 bind_slot)
 {
    RNDR_BindTextureAtSlot(renderer, bind_slot, texture_default, (Texture){ .id = INVALID_HANDLE_ID });
 }
@@ -192,7 +193,7 @@ void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material)
    for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
    {
       if (user_texture_slots[slot_i][0]) 
-         RNDR_BindTextureAtSlot(renderer, slot_i, RNDR_SURF_TEXTURE_USER_SET, (Texture){ .id = user_texture_slots[slot_i][1] });
+         RNDR_BindTextureAtSlot(renderer, slot_i, INTERNAL_RNDR_SURF_TEXTURE_USER_SET, (Texture){ .id = user_texture_slots[slot_i][1] });
       else
          RNDR_BindTextureAtSlot(renderer, slot_i, surface->textures[slot_i], (Texture){ .id = INVALID_HANDLE_ID });
 
@@ -370,6 +371,7 @@ UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D tra
 
    Renderer_UseMaterialTextures(renderer, material);
    Renderer_UpdateModelData(renderer, transform, color);
+
    return RNDR_UpdateMaterialUBOs(renderer, material, pass_id);
 }
 
@@ -388,15 +390,14 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
       render_func = desc->render_func; 
       on_enable_func = desc->on_enable_func; 
       on_disable_func = desc->on_disable_func; 
-      data_size = desc->data_size; 
+      data_size = desc->data_size;
+
    }
 
    uS name_length = strnlen(name, RNDR_NAME_MAX);
 
    if (name_length < 2 || RNDR_GetDrawableTypeIndex(renderer, name) != RNDR_INVALID_TYPE_IDX)
-   {
       return;
-   }
 
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
 
@@ -423,6 +424,7 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
 
    for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
       Graphics_BindTexture(renderer->graphics, renderer->built_in.texture.white, slot_i);
+
 }
 
 u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawable_type_name)
@@ -586,6 +588,22 @@ Buffer Renderer_ModelBuffer(Renderer* renderer)
    return renderer->ubo.model_buffer;
 }
 
+void Renderer_SetUnlitShader(Renderer* renderer, Shader shader)
+{
+   if (renderer == NULL || shader.id == INVALID_HANDLE_ID)
+      return;
+
+   renderer->built_in.shader.unlit = shader;
+}
+
+void Renderer_SetBasicShader(Renderer* renderer, Shader shader)
+{
+   if (renderer == NULL || shader.id == INVALID_HANDLE_ID)
+      return;
+
+   renderer->built_in.shader.basic = shader;
+}
+
 Shader Renderer_UnlitShader(Renderer* renderer)
 {
    if (renderer == NULL)
@@ -616,6 +634,14 @@ Geometry Renderer_BoxGeometry(Renderer* renderer)
       return (handle){ .id = INVALID_HANDLE_ID };
 
    return renderer->built_in.geometry.box;
+}
+
+Texture Renderer_GetDefaultTexture(Renderer* renderer, u8 texture_default)
+{
+   if (renderer == NULL || texture_default >= RNDR_SURF_DEFAULT_TEXTURE_COUNT)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.textures[texture_default];
 }
 
 Texture Renderer_WhiteTexture(Renderer* renderer)
@@ -674,19 +700,10 @@ void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_
    Graphics* graphics = renderer->graphics;
    char* app_path = renderer->app_path;
 
-   ShaderDefines shader_defines = { 0 };
    renderer->lightmanager_info = lightmanager_info;
    
    if (lightmanager_info.lightman_init != NULL)
       lightmanager_info.lightman_init(renderer);
-
-   if (lightmanager_info.lightman_defs != NULL)
-      shader_defines = lightmanager_info.lightman_defs(renderer);
-
-   if (renderer->built_in.shader.basic.id != INVALID_HANDLE_ID)
-      Graphics_FreeShader(graphics, renderer->built_in.shader.basic);
-
-   renderer->built_in.shader.basic = RNDR_LoadShader(graphics, app_path, "assets/core/shaders/builtin.glsl", (const char**)shader_defines.defines, shader_defines.define_count, false);
 
 }
 
@@ -695,22 +712,63 @@ bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id)
    return (renderer != NULL && renderer->lightmanager_info.data != NULL && renderer->lightmanager_info.id == desired_id);
 }
 
-Shader RNDR_LoadShader(Graphics* graphics, const char* app_path, const char* shader_file, const char* defines[], const u32 defines_count, bool is_compute)
+Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture_type)
 {
-   if (graphics == NULL || app_path == NULL || shader_file == NULL)
+   return Graphics_CreateTexture(renderer->graphics, color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
+}
+
+Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_relative, resolution2d slice_size, bool generate_mipmaps, bool is_srgb)
+{
+   if (renderer == NULL || renderer->app_path == NULL || texture_file_relative == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
-   char* file_path = Util_MakeFilePath(app_path, shader_file);
-   Shader shader = Graphics_LoadShaderFromFile(graphics, file_path, defines, defines_count, is_compute);
+   u8 image_type = (slice_size.width <= 0 || slice_size.height <= 0) ? IMG_TYPE_2D : IMG_TYPE_3D;
+
+   char* file_path = Util_MakeFilePath(renderer->app_path, texture_file_relative);
+
+   memblob file_data = Util_LoadFileIntoMemory(file_path, true);
+   Image image = Image_CreateImage(file_data, image_type, slice_size, is_srgb);
+   if (generate_mipmaps)
+      Image_GenerateMipmaps(&image);
+
+   if (file_data.data != NULL)
+      free(file_data.data);
+
+   if (file_path != NULL)
+      free(file_path);
+
+   if (image.data == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   TextureDesc desc = { 0 };
+   desc.size = image.size;
+   desc.depth = image.depth;
+   desc.mipmap_count = image.mipmap_count;
+   desc.texture_type = (image_type == IMG_TYPE_2D) ? GFX_TEXTURETYPE_2D : GFX_TEXTURETYPE_3D;
+   if (image.image_format == IMG_FORMAT_U8_SRGB)
+      desc.texture_format = (image.channel_count == 4) ? GFX_TEXTUREFORMAT_SRGB_ALPHA : GFX_TEXTUREFORMAT_SRGB;
+   else
+      desc.texture_format = ((image.image_format == IMG_FORMAT_F32) ? GFX_TEXTUREFORMAT_R_F32 : GFX_TEXTUREFORMAT_R_U8_NORM) + image.channel_count - 1;
+
+   Texture texture = Graphics_CreateTexture(renderer->graphics, image.data, desc);
+   Image_Free(&image);
+
+   return texture;
+}
+
+Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative, const char* defines[], const u32 defines_count, bool is_compute)
+{
+   if (renderer == NULL || renderer->app_path == NULL || shader_file_relative == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   char* file_path = Util_MakeFilePath(renderer->app_path, shader_file_relative);
+
+   Shader shader = Graphics_LoadShaderFromFile(renderer->graphics, file_path, defines, defines_count, is_compute);
+
    if (file_path != NULL)
       free(file_path);
 
    return shader;
-}
-
-Texture RNDR_CreateColorTexture(Graphics* graphics, color8 color, u8 texture_type)
-{
-   return Graphics_CreateTexture(graphics, color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
 }
 
 Geometry RNDR_Plane(Graphics* graphics)
@@ -854,20 +912,25 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
    if (renderer == NULL || bind_slot >= SURF_MAX_TEXTURES)
       return;
    
-   if (texture_default < 4)
+   if (texture_default == INTERNAL_RNDR_SURF_TEXTURE_USER_SET)
+   {
+      if (texture.id == INVALID_HANDLE_ID)
+         return;
+
+      renderer->texture_slots[bind_slot] = INTERNAL_RNDR_SURF_TEXTURE_USER_SET;
+      Graphics_BindTexture(renderer->graphics, texture, bind_slot);
+
+   }
+   
+   if (texture_default < RNDR_SURF_DEFAULT_TEXTURE_COUNT)
    {
       if (renderer->texture_slots[bind_slot] == texture_default)
          return;
 
       renderer->texture_slots[bind_slot] = texture_default;
       Graphics_BindTexture(renderer->graphics, renderer->built_in.textures[texture_default], bind_slot);
-
-   } else if (texture_default == RNDR_SURF_TEXTURE_USER_SET && texture.id != INVALID_HANDLE_ID)
-   {
-      renderer->texture_slots[bind_slot] = RNDR_SURF_TEXTURE_USER_SET;
-      Graphics_BindTexture(renderer->graphics, texture, bind_slot);
-
    }
+
 }
 
 UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial material, u32 pass_id)

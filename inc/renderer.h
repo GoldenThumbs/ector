@@ -20,7 +20,9 @@ enum {
    RNDR_SURF_TEXTURE_WHITE = 0,
    RNDR_SURF_TEXTURE_GRAY,
    RNDR_SURF_TEXTURE_BLACK,
-   RNDR_SURF_TEXTURE_NORMAL
+   RNDR_SURF_TEXTURE_NORMAL,
+
+   RNDR_SURF_DEFAULT_TEXTURE_COUNT
 
 };
 
@@ -126,6 +128,7 @@ typedef struct ShaderDefines_t
 {
    u32 define_count;
    char* defines[LIGHTMANAGER_MAX_DEFINES];
+   
 } ShaderDefines;
 
 struct LightManagerInfo_t;
@@ -187,7 +190,7 @@ Graphics* Renderer_Graphics(Renderer* renderer);
 void Renderer_Render(Renderer* renderer, resolution2d size);
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
-void Renderer_SetTextureDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);
+void Renderer_SetTextureToDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);
 void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material);
 
 void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color);
@@ -220,10 +223,14 @@ void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_id
 Buffer Renderer_CameraBuffer(Renderer* renderer);
 Buffer Renderer_ModelBuffer(Renderer* renderer);
 
+void Renderer_SetUnlitShader(Renderer* renderer, Shader shader);
+void Renderer_SetBasicShader(Renderer* renderer, Shader shader);
+
 Shader Renderer_UnlitShader(Renderer* renderer);
 Shader Renderer_BasicShader(Renderer* renderer);
 Geometry Renderer_PlaneGeometry(Renderer* renderer);
 Geometry Renderer_BoxGeometry(Renderer* renderer);
+Texture Renderer_GetDefaultTexture(Renderer* renderer, u8 texture_default);
 Texture Renderer_WhiteTexture(Renderer* renderer);
 Texture Renderer_GrayTexture(Renderer* renderer);
 Texture Renderer_BlackTexture(Renderer* renderer);
@@ -233,5 +240,9 @@ void* Renderer_LightManager(Renderer* renderer);
 LightManagerInfo* Renderer_LightManagerInfo(Renderer* renderer);
 void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_info);
 bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id);
+
+Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture_type);
+Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_relative, resolution2d slice_size, bool generate_mipmaps, bool is_srgb);
+Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative, const char* defines[], const u32 defines_count, bool is_compute);
 
 #endif

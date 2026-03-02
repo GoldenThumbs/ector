@@ -17,7 +17,7 @@
 #define RNDR_NAME_MAX 128
 
 enum {
-   RNDR_SURF_TEXTURE_USER_SET = 16
+   INTERNAL_RNDR_SURF_TEXTURE_USER_SET = 16
    
 };
 
@@ -45,12 +45,6 @@ typedef struct rndr_Drawable_t
 {
    BBox bounds;
    
-   struct {
-      u16 enabled: 1;
-      u16 culled: 1;
-
-   };
-   
    u16 drawable_type_idx;
    u16 next_visible;
    u16 prev_visible;
@@ -66,48 +60,18 @@ typedef struct rndr_Drawable_t
       u16 prev_active;
 
    };
+
+   struct {
+      u16 enabled: 1;
+      u16 culled: 1;
+
+   };
    
    handle compare;
    
    u8 data[];
 
 } rndr_Drawable;
-
-typedef struct rndr_PointLightSource_t
-{
-   // -< 16 bytes
-
-   vec3 origin;
-   f32 radius;
-
-   // >- 16 bytes
-
-   // -< 16 bytes
-
-   color8 rgbe_color; // RGBE encoded HDR color value
-
-   u16 cos_half_angle; // cosine of spotlight cone half angle.
-   u16 spot_softness; // spotlight softness factor.
-
-   u16 theta; // angle theta in turns.
-   u16 phi; // angle phi in turns.
-
-   i16 shadow_id; // id of shadow map. 0 is no shadows, negative sign is for cubemap shadows. when shadow_id != 0 the index is abs(shadow_id) - 1
-   u16 next_light; // index of next light. if value == UINT16_MAX then this is the last light in the list
-
-   // >- 16 bytes
-   
-} rndr_PointLightSource;
-
-typedef struct rndr_Cluster_t
-{
-   vec4 center;
-   vec4 extents;
-   u32 frustum_idx[3];
-   u32 light_count;
-   u32 indices[200];
-   
-} rndr_Cluster;
 
 typedef struct rndr_Surface_t
 {
@@ -142,7 +106,7 @@ struct Renderer_t
    
    struct {
       union {
-         Texture textures[4];
+         Texture textures[RNDR_SURF_DEFAULT_TEXTURE_COUNT];
 
          struct {
             Texture white;
@@ -209,9 +173,6 @@ static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_ty
    
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
 }
-
-Shader RNDR_LoadShader(Graphics* graphics, const char* app_path, const char* shader_file, const char* defines[], const u32 defines_count, bool is_compute);
-Texture RNDR_CreateColorTexture(Graphics* graphics, color8 color, u8 texture_type);
 
 Geometry RNDR_Plane(Graphics* graphics);
 Geometry RNDR_Box(Graphics* graphics);
