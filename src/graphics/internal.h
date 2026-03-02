@@ -16,7 +16,7 @@ typedef struct gfx_Shader_t
    };
    
    handle compare;
-   u32 next_freed;
+   u16 next_freed;
 } gfx_Shader;
 
 typedef struct gfx_Buffer_t
@@ -31,7 +31,7 @@ typedef struct gfx_Buffer_t
    };
    
    handle compare;
-   u32 next_freed;
+   u16 next_freed;
 } gfx_Buffer;
 
 typedef struct gfx_Geometry_t
@@ -47,7 +47,7 @@ typedef struct gfx_Geometry_t
    u16 element_count;
    
    handle compare;
-   u32 next_freed;
+   u16 next_freed;
 } gfx_Geometry;
 
 typedef struct gfx_Texture_t
@@ -64,7 +64,7 @@ typedef struct gfx_Texture_t
    u8 format;
    
    handle compare;
-   u32 next_freed;
+   u16 next_freed;
 } gfx_Texture;
 
 typedef struct gfx_Framebuffer_t
@@ -75,7 +75,7 @@ typedef struct gfx_Framebuffer_t
    } id;
 
    handle compare;
-   u32 next_freed;
+   u16 next_freed;
 } gfx_Framebuffer;
 
 typedef union gfx_State_t
@@ -107,17 +107,14 @@ struct Graphics_t
    gfx_Texture* textures;
    gfx_Framebuffer* framebuffers;
 
-   u32 freed_shader_root;
-   u32 freed_buffer_root;
-   u32 freed_geometry_root;
-   u32 freed_texture_root;
-   u32 freed_framebuffer_root;
+   u16 freed_shader_root;
+   u16 freed_buffer_root;
+   u16 freed_geometry_root;
+   u16 freed_texture_root;
+   u16 freed_framebuffer_root;
 
-   struct {
-      color8 clear_color;
-      u16 ref;
-      gfx_State state;
-   };
+   gfx_State state;
+   color8 clear_color;
 };
 
 void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks);
@@ -144,7 +141,7 @@ struct gfx_Filtering_s GFX_TextureFilter(u8 filter);
 void GFX_CreateTexture(gfx_Texture* texture, u8* data);
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
-void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset);
+void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset, u32 instance_count);
 
 u32 GFX_Primitive(u8 primitive_type);
 u32 GFX_DrawMode(u8 draw_mode);

@@ -7,6 +7,7 @@
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
+      argc, argv,
       &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
    );
 

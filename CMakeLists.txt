@@ -8,6 +8,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
+option(ECTOR_BUILD_EXAMPLES "Build the provided engine example applications." true)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(append_source)
 include(add_module)
@@ -25,4 +27,11 @@ target_include_directories(Ector
 )
 target_link_libraries(Ector PRIVATE external)
 
+file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
+
+if(${ECTOR_BUILD_EXAMPLES})
+
 add_subdirectory("examples")
+
+endif()
+

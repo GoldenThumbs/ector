@@ -3,149 +3,235 @@
 
 #include "util/types.h"
 #include "util/extra_types.h"
-// #include "util/math.h"
 #include "graphics.h"
 
 #define RENDERER_MODULE "renderer"
 
-typedef handle Object;
-typedef handle Light;
+#define EMPTY_DRAWABLE_TYPE "EmptyDrawable"
+#define GEOMETRY_DRAWABLE_TYPE "GeometryDrawable"
+
+#define SURF_MAX_PASSES 4
+#define SURF_MAX_BLOCKS_PER_PASS 4
+#define SURF_MAX_TEXTURES 8
+
+#define LIGHTMANAGER_MAX_DEFINES 32
 
 enum {
-   RNDR_LIGHT_DIR = 1,
-   RNDR_LIGHT_POINT,
-   RNDR_LIGHT_SPOT,
-   RNDR_NULL_LIGHT = 0
+   RNDR_SURF_TEXTURE_WHITE = 0,
+   RNDR_SURF_TEXTURE_GRAY,
+   RNDR_SURF_TEXTURE_BLACK,
+   RNDR_SURF_TEXTURE_NORMAL
+
 };
 
-typedef struct ObjectDesc_t
-{
-   Shader shader;
-   Geometry geometry;
-   BBox bounds;
-   UniformBlockList uniforms;
-} ObjectDesc;
+typedef handle Surface;
 
-typedef struct LightDesc_t
+typedef union Drawable_t
 {
-   u32 light_type;
-   vec3 origin;
-   f32 radius;
-   vec3 color;
-   f32 strength;
-   quat rotation;
-   f32 cone_angle;
-   f32 softness_fac;
+   u64 total_bits;
+   u32 id;
+
    struct {
-      f32 bias;
-      f32 scale;
-   } importance;
-} LightDesc;
+      u16 handle;
+      u16 ref;
+      u16 drawable_type_idx;
+      u8 mem_unused_[2];
 
-#define LIGHTS_PER_CLUSTER 127
+   };
+
+} Drawable;
+
+typedef struct CameraData_t
+{
+   mat4x4 mat_view;
+   mat4x4 mat_proj;
+   mat4x4 mat_invview;
+   mat4x4 mat_invproj;
+   f32 u_near_clip;
+   f32 u_far_clip;
+   u32 u_width, u_height;
+   vec4 u_proj_info;
+
+} CameraData;
+
+typedef struct ModelData_t
+{
+   mat4x4 mat_model;
+   mat4x4 mat_invmodel;
+   mat4x4 mat_mvp;
+   vec4 mat_normal_model[3];
+   vec4 u_color;
+
+} ModelData;
+
+typedef struct SurfacePass_t
+{
+   UniformBlock uniform_blocks[SURF_MAX_BLOCKS_PER_PASS];
+   Shader shader;
+   u8 uniform_block_count;
+   u8 cull_mode;
+   u8 depth_mode;
+   u8 blend_mode;
+} SurfacePass;
+
+typedef struct SurfaceDesc_t
+{
+   SurfacePass passes[SURF_MAX_PASSES];
+   u32 pass_count;
+   u8 texture_defaults[SURF_MAX_TEXTURES];
+} SurfaceDesc;
+
+typedef struct SurfaceTexture_t
+{
+   u32 bind_slot;
+   Texture texture;
+
+   union {
+      TextureInterpolation interpolation_settings;
+
+      struct {
+         u16 anisotropy;
+         u8 filter;
+         u8 wrap;
+      };
+
+   };
+
+} SurfaceTexture;
+
+typedef struct SurfaceMaterial_t
+{
+   Surface surface;
+   SurfaceTexture textures[SURF_MAX_TEXTURES];
+   u32 texture_count;
+
+   void* uniform_block_data[SURF_MAX_PASSES][SURF_MAX_BLOCKS_PER_PASS];
+
+} SurfaceMaterial;
+
+struct Renderer_t;
+typedef void (*DrawableFunc)(struct Renderer_t* renderer, Drawable self);
+typedef void (*DrawableRenderFunc)(struct Renderer_t* renderer, Drawable self, u32 pass_id);
+
+typedef struct DrawableTypeDesc_t
+{
+   DrawableRenderFunc render_func;
+   DrawableFunc on_enable_func;
+   DrawableFunc on_disable_func;
+   uS data_size;
+
+} DrawableTypeDesc;
+
+typedef struct ShaderDefines_t
+{
+   u32 define_count;
+   char* defines[LIGHTMANAGER_MAX_DEFINES];
+} ShaderDefines;
+
+struct LightManagerInfo_t;
+typedef error (*LightManagerFunc)(struct Renderer_t* renderer);
+typedef ShaderDefines (*LightManagerDefines)(struct Renderer_t* renderer);
+
+typedef struct LightManagerInfo_t
+{
+   union {
+      u64 id;
+      char id_string[8]; // 8 character identifier string
+
+   };
+
+   LightManagerFunc lightman_init;
+   LightManagerFunc lightman_free;
+   LightManagerFunc lightman_prerender;
+   LightManagerFunc lightman_on_render;
+   LightManagerDefines lightman_defs;
+   void* data;
+
+} LightManagerInfo;
+
+typedef struct GeometryDrawable_t
+{
+   SurfaceMaterial material;
+   Geometry geometry;
+   color8 color;
+   Transform3D transform;
+   
+} GeometryDrawable;
+
 
 typedef struct Renderer_t Renderer;
 
-Renderer* Renderer_Init(Graphics* graphics);
+static inline void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings)
+{
+   if (material == NULL)
+      return;
+
+   u32 tex_idx = (index >= 0) ? (u32)index : material->texture_count;
+   material->texture_count = M_MAX(material->texture_count, tex_idx + 1);
+   material->textures[tex_idx].bind_slot = (bind_slot >= 0) ? (u32)bind_slot : tex_idx;
+   material->textures[tex_idx].texture = texture;
+   material->textures[tex_idx].interpolation_settings = interpolation_settings;
+
+}
+
+static inline void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture)
+{
+   Renderer_SetSurfaceMaterialTextureAdvanced(material, index, bind_slot, texture, (TextureInterpolation){ 0, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   
+}
+
+Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
-void Renderer_SetView(Renderer* renderer, mat4x4 view);
-void Renderer_RenderLit(Renderer* renderer, resolution2d size);
+Graphics* Renderer_Graphics(Renderer* renderer);
+void Renderer_Render(Renderer* renderer, resolution2d size);
 
-Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D transform);
-void Renderer_RemoveObject(Renderer* renderer, Object res_object);
+void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
+void Renderer_SetTextureDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);
+void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material);
 
-Transform3D Renderer_GetObjectTransform(Renderer* renderer, Object res_object);
-void Renderer_SetObjectTransform(Renderer* renderer, Object res_object, Transform3D transform);
+void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color);
 
-Light Renderer_AddLight(Renderer* renderer, LightDesc* desc);
-void Renderer_RemoveLight(Renderer* renderer, Light res_light);
+void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view);
+void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov);
+void Renderer_SetClippingPlanes(Renderer* renderer, f32 near_clip, f32 far_clip);
+void Renderer_UpdateCamera(Renderer* renderer, vec3 origin, vec3 euler, f32 distance);
 
-Shader Renderer_LitShader(Graphics* graphics);
+mat4x4 Renderer_GetViewMatrix(Renderer* renderer);
+mat4x4 Renderer_GetProjectionMatrix(Renderer* renderer);
+mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer);
 
-#define RNDR_CAMERA_GLSL \
-"layout(std140, binding=1) uniform CameraUBO\n" \
-"{\n" \
-"   mat4 mat_view;\n" \
-"   mat4 mat_proj;\n" \
-"   mat4 mat_invview;\n" \
-"   mat4 mat_invproj;\n" \
-"   vec2 u_near_far;\n" \
-"   uvec2 u_screen_size;\n" \
-"   uvec4 u_cluster_count;\n" \
-"};\n"
+Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceDesc* desc);
+void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface);
 
-#define RNDR_MODEL_GLSL \
-"layout(std140, binding=2) uniform ModelUBO\n" \
-"{\n" \
-"   mat4 mat_model;\n" \
-"   mat4 mat_invmodel;\n" \
-"   mat3x4 mat_normal_model;\n" \
-"};\n"
+Surface Renderer_GetSurface(Renderer* renderer, const char* name);
+SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32 pass_id);
+UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id);
 
-#define RNDR_CLUSTER_GLSL \
-"#define LIGHTS_PER_CLUSTER "ECT_STRINGIFY(LIGHTS_PER_CLUSTER)"\n" \
-"struct Cluster\n" \
-"{\n" \
-"   vec4 center;\n" \
-"   vec4 extents;\n" \
-"   uint count;\n" \
-"   uint indices[LIGHTS_PER_CLUSTER];\n" \
-"};\n" \
-"layout(std430, binding=1) restrict buffer ClusterSSBO\n" \
-"{\n" \
-"   Cluster clusters[];\n" \
-"};\n"
+void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const DrawableTypeDesc* desc);
+u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawable_type_name);
 
-#define RNDR_LIGHT_GLSL \
-"struct Light\n" \
-"{\n" \
-"   vec4 origin;\n" \
-"   vec4 rotation;\n" \
-"   uint color;\n" \
-"   uint params;\n" \
-"   vec2 importance;\n" \
-"};\n" \
-"#define LIGHT_DIR 1\n" \
-"#define LIGHT_POINT 2\n" \
-"#define LIGHT_SPOT 3\n" \
-"#define NULL_LIGHT 0\n" \
-"layout(std430, binding=2) restrict buffer LightSSBO\n" \
-"{\n" \
-"   Light lights[];\n" \
-"};\n" \
-"void SetFadeWeight(uint index, float fade_weight)\n" \
-"{\n" \
-"   const uint byte_mask = 255u;\n" \
-"   const uint byte_ofs = 16u;\n" \
-"   const uint param_mask = (byte_mask << byte_ofs);\n" \
-"   uint i_w = uint(fade_weight * 255.0);\n" \
-"   lights[index].params &= ~param_mask;\n" \
-"   lights[index].params |= (i_w << byte_ofs) & param_mask;\n" \
-"}\n" \
-"vec4 DecodeParameters(uint params)\n" \
-"{\n" \
-"   const uint byte_mask = (1u << 8) - 1;\n" \
-"   const float rcp_maxbyte = 1.0 / float(byte_mask);\n" \
-"   return vec4(\n" \
-"      rcp_maxbyte * ((params >>  0) & byte_mask),\n" \
-"      rcp_maxbyte * ((params >>  8) & byte_mask),\n" \
-"      rcp_maxbyte * ((params >> 16) & byte_mask),\n" \
-"      (params >> 24) & byte_mask\n" \
-"   );\n" \
-"}\n" \
-"vec3 DecodeColor(uint rgbe_color)\n" \
-"{\n" \
-"   const uint byte_mask = 255u;\n" \
-"   if (rgbe_color == 0) return vec3(0.0);\n" \
-"   uvec4 v = uvec4(\n" \
-"      (rgbe_color >>  0) & byte_mask,\n" \
-"      (rgbe_color >>  8) & byte_mask,\n" \
-"      (rgbe_color >> 16) & byte_mask,\n" \
-"      (rgbe_color >> 24) & byte_mask\n" \
-"   );\n" \
-"   float f = pow(2.0, float(v.w) - 136.0)\n;" \
-"   return vec3(v.xyz) * f;\n" \
-"}\n"
+Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name);
+void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable);
+
+void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable);
+void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx);
+
+Buffer Renderer_CameraBuffer(Renderer* renderer);
+Buffer Renderer_ModelBuffer(Renderer* renderer);
+
+Shader Renderer_UnlitShader(Renderer* renderer);
+Shader Renderer_BasicShader(Renderer* renderer);
+Geometry Renderer_PlaneGeometry(Renderer* renderer);
+Geometry Renderer_BoxGeometry(Renderer* renderer);
+Texture Renderer_WhiteTexture(Renderer* renderer);
+Texture Renderer_GrayTexture(Renderer* renderer);
+Texture Renderer_BlackTexture(Renderer* renderer);
+Texture Renderer_NormalTexture(Renderer* renderer);
+
+void* Renderer_LightManager(Renderer* renderer);
+LightManagerInfo* Renderer_LightManagerInfo(Renderer* renderer);
+void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_info);
+bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id);
 
 #endif

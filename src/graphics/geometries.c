@@ -9,28 +9,28 @@
 
 Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
    gfx_Geometry geometry = { 0 };
    geometry.draw_mode = draw_mode;
    geometry.face_cull_mode = GFX_FACECULL_BACK;
    geometry.primitive = GFX_MeshPrimitive(mesh.primitive);
    geometry.element_count = ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
-   geometry.compare.ref =  graphics->ref;
 
    GFX_CreateGeometry(&geometry, mesh);
 
-   if (graphics->freed_geometry_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->geometries), &geometry);
+   if (graphics->freed_geometry_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->geometries, geometry);
 
-   u16 index = (u16)graphics->freed_geometry_root;
-   graphics->freed_geometry_root = graphics->geometries[index].next_freed;
-   Geometry geometry_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->geometries[index] = geometry;
-
-   return geometry_handle;
+   return REUSE_RESOURCE(graphics->geometries, geometry, graphics->freed_geometry_root);
 }
 
 void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry)
 {
+   if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
    if (geometry.compare.ref != res_geometry.ref)
       return;
@@ -48,10 +48,14 @@ void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometr
    geometry.element_count = ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
 
    GFX_CreateGeometry(&geometry, mesh);
+   
 }
 
 void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
 {
+   if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
    if (geometry.compare.ref != res_geometry.ref)
       return;
@@ -65,6 +69,7 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
       glDeleteBuffers(1, &geometry.id.v_buf);
    if (geometry.id.i_buf != 0)
       glDeleteBuffers(1, &geometry.id.i_buf);
+
 }
 
 u8 GFX_MeshPrimitive(u8 mesh_primitive)
@@ -177,6 +182,7 @@ uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count)
    {
       u8 a = GFX_MeshAttribute(attributes[i]);
       buffer_size += GFX_AttributeTypeSize(a) * (uS)GFX_AttributeTypeCount(a) * (uS)vertex_count;
+
    }
 
    return buffer_size;
@@ -184,6 +190,9 @@ uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count)
 
 void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
 {
+   if (geometry == NULL)
+      return;
+
    glGenVertexArrays(1, &geometry->id.vao);
    glBindVertexArray(geometry->id.vao);
 
@@ -198,6 +207,7 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
 
    u16 atr_num = 0;
    uS atr_ofs = 0;
+
    for (; atr_num<mesh.attribute_count; atr_num++)
    {
       u8 a = GFX_MeshAttribute(mesh.attributes[atr_num]);
@@ -221,6 +231,7 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
       );
 
       atr_ofs += a_size * (uS)a_count * (uS)mesh.vertex_count;
+
    }
 
    if ((mesh.index_count > 0) && (geometry->primitive == GFX_PRIMITIVE_TRIANGLE))
@@ -232,12 +243,17 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
          sizeof(u16) * (uS)mesh.index_count,
          mesh.index_buffer,
          GFX_DrawMode(geometry->draw_mode)
+
       );
    }
+
 }
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode)
 {
+   if (graphics == NULL)
+      return;
+
    bool face_cull_enable = (face_cull_mode != GFX_FACECULL_NONE);
 
    if ((bool)graphics->state.face_cull_enable != face_cull_enable)
@@ -248,6 +264,7 @@ void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode)
          glEnable(GL_CULL_FACE);
       else
          glDisable(GL_CULL_FACE);
+
    }
 
    if ((graphics->state.face_cull_mode != face_cull_mode) && face_cull_enable)
@@ -256,19 +273,31 @@ void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode)
 
       const u32 gl_cullmode[2] = { GL_BACK, GL_FRONT };
       glCullFace(gl_cullmode[face_cull_mode]);
+
    }
+
 }
 
-void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset)
+void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset, u32 instance_count)
 {
    glBindVertexArray(gl_vertex_array);
 
    u32 gl_primitive = GFX_Primitive(primitive);
 
    if (use_index_buffer)
-      glDrawElements(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset));
-   else
-      glDrawArrays(gl_primitive, offset, element_count);
+   {
+      if (instance_count > 1)
+         glDrawElementsInstanced(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset), instance_count);
+      else
+         glDrawElements(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset));
+
+   } else {
+      if (instance_count > 1)
+         glDrawArraysInstanced(gl_primitive, offset, element_count, instance_count);
+      else
+         glDrawArrays(gl_primitive, offset, element_count);
+   }
 
    glBindVertexArray(0);
+
 }

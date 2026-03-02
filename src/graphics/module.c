@@ -23,12 +23,11 @@ Graphics* Graphics_Init(void)
    graphics->geometries = NEW_ARRAY(gfx_Geometry);
    graphics->textures = NEW_ARRAY(gfx_Texture);
    graphics->framebuffers = NEW_ARRAY(gfx_Framebuffer);
-   graphics->freed_shader_root = GFX_INVALID_INDEX;
-   graphics->freed_buffer_root = GFX_INVALID_INDEX;
-   graphics->freed_geometry_root = GFX_INVALID_INDEX;
-   graphics->freed_texture_root = GFX_INVALID_INDEX;
-   graphics->freed_framebuffer_root = GFX_INVALID_INDEX;
-   graphics->ref = 0;
+   graphics->freed_shader_root = INVALID_HANDLE;
+   graphics->freed_buffer_root = INVALID_HANDLE;
+   graphics->freed_geometry_root = INVALID_HANDLE;
+   graphics->freed_texture_root = INVALID_HANDLE;
+   graphics->freed_framebuffer_root = INVALID_HANDLE;
    graphics->state.state_id = 0;
    graphics->clear_color.hex = 0;
 
@@ -61,7 +60,6 @@ void Graphics_Free(Graphics* graphics)
       Graphics_FreeFramebuffer(graphics, graphics->framebuffers[i].compare);
 
    FREE_ARRAY(graphics->geometries);
-   graphics->ref = 0;
    free(graphics);
 }
 
@@ -200,6 +198,14 @@ void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x
 
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniforms)
 {
+   Graphics_DrawInstanced(graphics, res_shader, res_geometry, 0, uniforms);
+}
+
+void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniforms)
+{
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID || res_geometry.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -215,7 +221,7 @@ void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry,
    glUseProgram(shader.id.program);
 
    GFX_UseUniformBlocks(graphics, uniforms);
-   GFX_DrawVertices(geometry.primitive, geometry.element_count, (geometry.id.i_buf != 0), geometry.id.vao, 0);
+   GFX_DrawVertices(geometry.primitive, geometry.element_count, (geometry.id.i_buf != 0), geometry.id.vao, 0, instance_count);
 
    glUseProgram(0);
 }

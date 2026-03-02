@@ -1,47 +1,85 @@
-// #include "util/array.h"
-#include "util/extra_types.h"
-#include "util/math.h"
-#include "util/vec3.h"
-#include <util/quaternion.h>
-#include <util/matrix.h>
 #include <util/types.h>
+#include <util/array.h>
+#include <util/extra_types.h>
+#include <util/matrix.h>
+#include <util/quaternion.h>
 #include <util/keymap.h>
+#include <util/files.h>
+#include <image.h>
 #include <engine.h>
 #include <graphics.h>
-#include <mesh.h>
 #include <renderer.h>
 #include <default_modules.h>
+#include <default_lightmanager.h>
 
-#include "cube_model.h"
+#include "mesh.h"
+#include "particle_shader_code.h"
+#include "util/math.h"
+#include "util/vec3.h"
 
-// #include <stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-struct SurfaceDef_s
+struct LampInfo_t
 {
-   vec4 color;
-   f32 metallic;
-   f32 roughness;
-   f32 ambient;
-};
+   Geometry* geometries;
+   SurfaceMaterial* materials;
 
-void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y);
+} LampInfo;
+
+Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb);
+Model LoadModel(const char* model_name, const char* base_path);
+void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path);
+
+void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness);
 
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
-      &(EngineDesc){ .app_name = "Game", .window.title = "Lighting Test", .renderer.enabled = true }
+      argc, argv,
+      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
    );
+
+   Engine_SetRawMouseInput(engine, true);
+   Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
 
    Module_Defaults(engine, 0, NULL);
 
-   Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
-   
    Graphics* graphics = Engine_FetchModule(engine, "graphics");
-   Graphics_SetClearColor(graphics, (color8){ 100, 160, 220, 255 });
+   Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
+
+   Mesh sphere_mesh = Mesh_CreateSphere(12, 1.0f);
+   Geometry sphere = Graphics_CreateGeometry(graphics, sphere_mesh, GFX_DRAWMODE_STATIC);
+   Mesh_Free(&sphere_mesh);
 
    Renderer* renderer = Engine_FetchModule(engine, "renderer");
+   Renderer_SetLightManager(renderer, DefaultLightManager_Info(renderer));
 
-   // NOTE: all angles are in half-turns (50 == 90 degrees, 100 == 180, etc...)
+
+   Surface unlit_surf = Renderer_AddSurface(renderer, "Unlit", &(SurfaceDesc){
+      .pass_count = 1,
+      .passes[0] = {
+         .shader = Renderer_UnlitShader(renderer),
+         .uniform_block_count = 0
+      },
+      .texture_defaults[0] = RNDR_SURF_TEXTURE_WHITE
+   });
+
+   Surface basic_surf = Renderer_AddSurface(renderer, "Basic", &(SurfaceDesc){
+      .pass_count = 1,
+      .passes[0] = {
+         .shader = Renderer_BasicShader(renderer),
+         .uniform_block_count = 0
+      },
+      .texture_defaults[0] = RNDR_SURF_TEXTURE_WHITE,
+      .texture_defaults[1] = RNDR_SURF_TEXTURE_NORMAL,
+      .texture_defaults[2] = RNDR_SURF_TEXTURE_GRAY,
+      .texture_defaults[3] = RNDR_SURF_TEXTURE_BLACK
+   });
+
+   Model level_model = LoadModel("assets/models/rocks.ebmf", argv[0]);
+
+   // NOTE: all angles are in half-turns (50 half-turns == 90 degrees, 100 half-turns == 180, etc...)
    struct {
       vec3 origin;
       vec3 euler;
@@ -54,100 +92,148 @@ int main(int argc, char* argv[])
    } player = {
       VEC3(0, 1, 3),
       VEC3(0, 0, 0),
-      15,
-      0.15f,
+      8,
+      0.1f,
       KEY_W,
       KEY_S,
       KEY_A,
       KEY_D
    };
 
-   Renderer_AddLight(renderer, &(LightDesc){
-      .light_type = RNDR_LIGHT_DIR,
-      .rotation = Util_MakeQuatEuler(VEC3(-32, 20, 0)),
-      .color = VEC3(1.0f, 0.9f, 0.6f),
-      .strength = 0.5f
-   });
-
-   Renderer_AddLight(renderer, &(LightDesc){
-      .light_type = RNDR_LIGHT_SPOT,
-      .radius = 10.0f,
-      .origin = VEC3(-2, 1.5f,-2),
-      .cone_angle = 30,
-      .softness_fac = 0.2f,
-      .importance.bias = 0.25f,
-      .importance.scale = 2.0f,
-      .rotation = Util_MakeQuatEuler(VEC3(0, 0, 0)),
-      .color = VEC3(0.9f, 0.9f, 1.0f),
-      .strength = 2.0f
-   });
-
-   // Everything else is random
-   CreateRandomLights(renderer, 16, 16);
-
-   Mesh floor_mesh = Mesh_CreatePlane(8, 8, VEC2(32, 32));
-   Mesh box_mesh = Mesh_CreateBoxAdvanced(16, 16, 16, VEC3(2, 2, 2), true);
-
-   Model arrow_model = Mesh_LoadEctorModel(DATABLOB(Arrow_ebmf));
-
-   Geometry floor_geo = Graphics_CreateGeometry(graphics, floor_mesh, GFX_DRAWMODE_STATIC);
-   Geometry box_geo = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);
-
-   Shader lit_shader = Renderer_LitShader(graphics);
-
-   struct SurfaceDef_s floor_surf = {
-      .color = VEC4(0.5f, 0.5f, 0.5f, 1),
-      .metallic = 0,
-      .roughness = 0.3f,
-      .ambient = 0.6f
+   const char* level_model_textures[4][3] = {
+      {
+         "assets/textures/rock0_albedo.png",
+         "assets/textures/rock0_normal.png",
+         "assets/textures/rock0_roughness.png"
+      },
+      {
+         "assets/textures/rock1_albedo.png",
+         "assets/textures/rock1_normal.png",
+         "assets/textures/rock1_roughness.png"
+      },
+      {
+         "assets/textures/rock2_albedo.png",
+         "assets/textures/rock2_normal.png",
+         "assets/textures/rock2_roughness.png"
+      },
+      {
+         "assets/textures/grass.png",
+         NULL,
+         "assets/textures/grass_r.png"
+      }
    };
 
-   struct SurfaceDef_s box_surf = {
-      .color = VEC4(1.0f, 0.3f, 0.3f, 1),
-      .metallic = 0,
-      .roughness = 0.1f,
-      .ambient = 0.6f
-   };
+   for (u32 mesh_i = 0; mesh_i < level_model.mesh_count; mesh_i++)
+   {
+      Drawable mesh_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+      GeometryDrawable* mesh_data = Renderer_DrawableData(renderer, mesh_object);
+      mesh_data->geometry = Graphics_CreateGeometry(graphics, level_model.meshes[mesh_i], GFX_DRAWMODE_STATIC);
+      mesh_data->color.hex = 0xFF808080;
+      if (level_model.meshes[mesh_i].node_id >= 0)
+         mesh_data->transform = level_model.nodes[level_model.meshes[mesh_i].node_id].transform;
+      else
+         mesh_data->transform = Util_IdentityTransform();
+      
+      mesh_data->transform.origin.y -= 0.5f;
 
-   Object floor_obj = Renderer_AddObject(renderer, &(ObjectDesc){
-         .shader = lit_shader,
-         .geometry = floor_geo,
-         .bounds = { .extents = VEC3(16, 1, 16) },
-         .uniforms = (UniformBlockList){
-            .count = 1,
-            .blocks[0] = {
-               .binding = 3,
-               .ubo = Graphics_CreateBuffer(graphics, (void*)&floor_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
-            }
-         }
-      },
-      (Transform3D){
-         .origin = VEC3(0, 0, 0),
-         .rotation = Util_IdentityQuat(),
-         .scale = VEC3(1, 1, 1)
+      mesh_data->material.surface = basic_surf;
+      
+      for (u32 tex_i = 0; tex_i < 3; tex_i++)
+      {
+         if (level_model_textures[mesh_i][tex_i] == NULL)
+            continue;
+
+         Texture model_texture = LoadTexture(graphics, level_model_textures[mesh_i][tex_i], argv[0], (resolution2d){ 0 }, (tex_i == 0));
+         Renderer_SetSurfaceMaterialTexture(&mesh_data->material,-1, (i32)tex_i, model_texture);
+
       }
-   );
 
-   Object box_obj = Renderer_AddObject(renderer, &(ObjectDesc){
-         .shader = lit_shader,
-         .geometry = box_geo,
-         .bounds = { .extents = VEC3(1, 1, 1) },
-         .uniforms = (UniformBlockList){
-            .count = 1,
-            .blocks[0] = {
-               .binding = 3,
-               .ubo = Graphics_CreateBuffer(graphics, (void*)&box_surf, 1, sizeof(struct SurfaceDef_s), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM)
-            }
-         }
-      },
-      (Transform3D){
-         .origin = VEC3(0, 0.5f, 0),
-         .rotation = Util_IdentityQuat(),
-         .scale = VEC3(0.5f, 0.5f, 0.5f)
-      }
-   );
+   }
 
-   f32 timer = 0.0f;
+   Model_Free(&level_model);
+
+   LampInfo.geometries = NEW_ARRAY(Geometry);
+   CreateModelGeometry(graphics, &LampInfo.geometries, "assets/models/floor_torch.ebmf", argv[0]);
+   LampInfo.materials = NEW_ARRAY_N(SurfaceMaterial, Util_ArrayLength(LampInfo.geometries));
+   LampInfo.materials[0].surface = basic_surf;
+   LampInfo.materials[1].surface = unlit_surf;
+
+   for (i32 y =-1; y <= 1; y++)
+      for (i32 x =-1; x <= 1; x++)
+   {
+      f32 x_f = (f32)x * 10.0f;
+      f32 y_f = (f32)y * 10.0f;
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1,-3 + y_f), 1.0f, Util_IntToColor(0xFF8080FF), 1.0f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1,-3 + y_f), 0.6f, Util_IntToColor(0xFF8080FF), 0.6f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1,-3 + y_f), 0.3f, Util_IntToColor(0xFF8080FF), 0.3f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1,-3 + y_f), 1.2f, Util_IntToColor(0xFF8080FF), 1.2f);
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1,-1 + y_f), 0.3f, Util_IntToColor(0xFFFF00FF), 0.3f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1,-1 + y_f), 1.2f, Util_IntToColor(0xFFFF00FF), 1.2f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1,-1 + y_f), 1.0f, Util_IntToColor(0xFFFF00FF), 1.0f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1,-1 + y_f), 0.6f, Util_IntToColor(0xFFFF00FF), 0.6f);
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1, 1 + y_f), 0.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1, 1 + y_f), 1.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1, 1 + y_f), 2.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1, 1 + y_f), 3.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
+
+      AddLamp(renderer, VEC3(-3 + x_f,-1, 3 + y_f), 1.0f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3(-1 + x_f,-1, 3 + y_f), 0.5f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3( 1 + x_f,-1, 3 + y_f), 0.25f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3( 3 + x_f,-1, 3 + y_f), 0.125f, Util_IntToColor(0x1616FFFF), 0.5f);
+   }
+
+   Texture toybox_normal = LoadTexture(graphics, "assets/textures/toybox_n.png", argv[0], (resolution2d){ 0 }, false);
+
+   Drawable block_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* block_data = Renderer_DrawableData(renderer, block_object);
+   block_data->geometry = Renderer_BoxGeometry(renderer);
+   block_data->color.hex = 0xFF10E0FF;
+   block_data->transform.scale = Util_FillVec3(0.5f);
+   block_data->transform.rotation = Util_IdentityQuat();
+   block_data->transform.origin = VEC3(0.0f);
+   block_data->material.surface = basic_surf;
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 1, toybox_normal);
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
+
+   Model barrel_model = LoadModel("assets/models/barrel.ebmf", argv[0]);
+
+   Drawable barrel_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* barrel_data = Renderer_DrawableData(renderer, barrel_object);
+   barrel_data->geometry = Graphics_CreateGeometry(graphics, barrel_model.meshes[0], GFX_DRAWMODE_STATIC);
+   barrel_data->color.hex = 0xFFFFFFFF;
+   barrel_data->transform = Util_IdentityTransform();
+   barrel_data->transform.origin.z -= 7.0f;
+   barrel_data->transform.origin.y -= 0.5f;
+   barrel_data->transform.scale = Util_FillVec3(0.5f);
+   barrel_data->material.surface = basic_surf;
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel.png", argv[0], (resolution2d){ 0 }, true));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_n.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_r.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, LoadTexture(graphics, "assets/textures/barrel_m.png", argv[0], (resolution2d){ 0 }, false));
+
+   Model_Free(&barrel_model);
+
+   Drawable player_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* player_data = Renderer_DrawableData(renderer, player_object);
+   player_data->geometry = sphere;
+   player_data->color.hex = 0xFFFFFFFF;
+   player_data->transform.scale = Util_FillVec3(0.5f);
+   player_data->transform.rotation = Util_IdentityQuat();
+   player_data->material.surface = basic_surf;
+   // Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 0, LoadTexture(graphics, "assets/textures/conBrick_albedo.png", argv[0], (resolution2d){ 0 }, true));
+   // Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 1, LoadTexture(graphics, "assets/textures/conBrick_normal.png", argv[0], (resolution2d){ 0 }, false));
+   Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 2, LoadTexture(graphics, "assets/textures/smooth.png", argv[0], (resolution2d){ 0 }, false));
+
+   Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
+   
+   f32 global_timer = 0.0f;
+   f64 fps_timer = 0.0f;
+   u32 frames_rendered = 0;
+
+   f32 cam_dist = 2.0f;
 
    while(!Engine_CheckExitConditions(engine))
    {
@@ -156,6 +242,15 @@ int main(int argc, char* argv[])
 
       f64 frame_delta = Engine_GetFrameDelta(engine);
       vec2 mouse_delta = Engine_GetMouseDelta(engine);
+
+      vec2 scroll_delta = Engine_GetMouseScroll(engine);
+      cam_dist = cam_dist - (scroll_delta.y * 0.25f);
+      cam_dist = M_CLAMP(cam_dist, 0.0f, 5.0f);
+
+      block_data->transform.rotation = Util_MulQuat(Util_MakeQuatEuler(VEC3(0, (f32)frame_delta * 10.0f, 0)), block_data->transform.rotation);
+
+      global_timer += (f32)frame_delta;
+      Graphics_UpdateBuffer(graphics, global_ubo, &global_timer, 1, sizeof(f32));
 
       {
          player.euler.y -= mouse_delta.x * player.look_speed;
@@ -204,64 +299,134 @@ int main(int argc, char* argv[])
             player.origin,
             Util_ScaleVec3(move_vec, player.move_speed * (f32)frame_delta)
          );
+
+         player_data->transform.origin = player.origin;
+
       }
 
-      timer += (f32)frame_delta * 40.0f;
-      
       resolution2d size = Engine_GetFrameSize(engine);
+      Graphics_Viewport(graphics, size);
 
-      Renderer_SetView(renderer, Util_ViewMatrix(player.origin, player.euler, 0));
-      Renderer_RenderLit(renderer, size);
+      Graphics_UseBuffer(graphics, global_ubo, 0);
+
+      Renderer_UpdateCamera(renderer, player.origin, player.euler, cam_dist);
+      Renderer_Render(renderer, size);
       
       Engine_Present(engine);
+
+      fps_timer += frame_delta;
+
+      frames_rendered++;
+      if (fps_timer >= 1.0f)
+      {
+         printf("%u fps\n", frames_rendered);
+         frames_rendered = 0;
+         fps_timer -= 1.0f;
+      }
+
    }
 
-   Mesh_Free(&floor_mesh);
-   Mesh_Free(&box_mesh);
-   Model_Free(&arrow_model);
+   FREE_ARRAY(LampInfo.materials);
+   FREE_ARRAY(LampInfo.geometries);
 
    Engine_Free(engine);
    return 0;
 }
 
-u32 XorShift(u32 x)
+Texture LoadTexture(Graphics* graphics, const char* texture_name, const char* base_path, resolution2d slice_size, bool is_srgb)
 {
-   x ^= (x << 13);
-   x ^= (x >> 17);
-   x ^= (x <<  5);
-   return x;
+   if (graphics == NULL || texture_name == NULL || base_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   char* texture_path = Util_MakeFilePath(base_path, texture_name);
+   if (texture_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   memblob memory = Util_LoadFileIntoMemory(texture_path, true);
+   Image image = Image_CreateImage(memory, IMG_TYPE_2D, slice_size, is_srgb);
+   Image_GenerateMipmaps(&image);
+   free(memory.data);
+
+   TextureDesc desc = { 0 };
+   desc.size = image.size;
+   desc.depth = image.depth;
+   desc.mipmap_count = image.mipmap_count;
+   desc.texture_type = GFX_TEXTURETYPE_2D;
+   if (image.image_format == IMG_FORMAT_U8_SRGB)
+      desc.texture_format = (image.channel_count == 4) ? GFX_TEXTUREFORMAT_SRGB_ALPHA : GFX_TEXTUREFORMAT_SRGB;
+   else
+      desc.texture_format = ((image.image_format == IMG_FORMAT_F32) ? GFX_TEXTUREFORMAT_R_F32 : GFX_TEXTUREFORMAT_R_U8_NORM) + image.channel_count - 1;
+
+   free(texture_path);
+   if (image.data == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   Texture texture = Graphics_CreateTexture(graphics, image.data, desc);
+
+   Image_Free(&image);
+
+   return texture;
 }
 
-void CreateRandomLights(Renderer* renderer, u32 count_x, u32 count_y)
+Model LoadModel(const char* model_name, const char* base_path)
 {
-   u32 seed = 12;
-   for (u32 i=0; i<count_y; i++)
+   char* model_path = Util_MakeFilePath(base_path, model_name);
+   memblob model_memory = Util_LoadFileIntoMemory(model_path, true);
+   Model model = Mesh_LoadEctorModel(model_memory);
+   free(model_path);
+   free(model_memory.data);
+
+   return model;
+}
+
+void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path)
+{
+   Model model = LoadModel(model_name, base_path);
+
+   for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
    {
-      f32 y = 2 * ((f32)i - (f32)count_y * 0.5f + 0.5f);
-      for (u32 j=0; j<count_x; j++)
-      {
-         Light light = { 0 };
+      u32 index = Util_ArrayLength(*geometries);
 
-         f32 x = 2 * ((f32)j - (f32)count_x * 0.5f + 0.5f);
-
-         seed = XorShift(seed);
-
-         u32 offset_seed = XorShift(seed + 1);
-
-         const u32 two_bytes = (1u << 16) - 1;
-         x += (f32)((offset_seed >> 0) & 255) / 255.0f;
-         y += (f32)((offset_seed >> 1) & 255) / 255.0f;
-         f32 h = (f32)((offset_seed >> 2) & two_bytes) / (f32)two_bytes * 3.0f + 0.25f;
-
-         LightDesc desc = { 0 };
-         desc.origin = VEC3(x, h, y);
-         desc.radius = (f32)(XorShift(seed + 2) % 128) / 32 + 2;
-         desc.light_type = RNDR_LIGHT_POINT;
-         desc.color.r = (f32)(XorShift(seed + 23) % 512) / 512.0f;
-         desc.color.g = (f32)(XorShift(seed + 22) % 512) / 512.0f;
-         desc.color.b = (f32)(XorShift(seed + 21) % 512) / 512.0f;
-         desc.strength = (f32)(XorShift(seed + 4) % 128) / 150.0f + 0.5f;
-         Renderer_AddLight(renderer, &desc);
-      }
+      Geometry geometry = Graphics_CreateGeometry(graphics, model.meshes[mesh_i], GFX_DRAWMODE_STATIC);
+      Util_InsertArrayIndex((void**)geometries, index);
+      (*geometries)[index] = geometry;
+      
    }
+
+   Model_Free(&model);
+}
+
+void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness)
+{
+   // for (u32 object_i = 0; object_i < Util_ArrayLength(LampInfo.geometries); object_i++)
+   // {
+   //    Drawable lamp_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   //    GeometryDrawable* lamp_data = Renderer_DrawableData(renderer, lamp_object);
+   //    lamp_data->geometry = LampInfo.geometries[object_i];
+   //    lamp_data->color.hex = (object_i != 1) ? 0xFFFFFFFF : color.hex;
+   //    lamp_data->transform = Util_IdentityTransform();
+   //    lamp_data->transform.origin = origin;
+   //    lamp_data->transform.scale = Util_FillVec3(3.0f * scale);
+   //    lamp_data->material = LampInfo.materials[object_i];
+   // }
+
+   Drawable light1 = DefaultLightManager_CreateLight(renderer);
+
+   DefaultLightManager_SetLightOrigin(renderer, light1, Util_AddVec3(origin, VEC3(0, 2.0f * scale, 0)));
+   DefaultLightManager_SetLightRadius(renderer, light1, 2.5f * scale);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light1, 60.0f);
+   DefaultLightManager_SetLightSpotlightSoftness(renderer, light1, 0.4f);
+   DefaultLightManager_SetLightColor(renderer, light1, color);
+   DefaultLightManager_SetLightBrightness(renderer, light1, brightness);
+   DefaultLightManager_SetLightAngles(renderer, light1, 0.0f, 0.0f);
+
+   Drawable light2 = DefaultLightManager_CreateLight(renderer);
+
+   DefaultLightManager_SetLightOrigin(renderer, light2, Util_AddVec3(origin, VEC3(0, 1.8f * scale, 0)));
+   DefaultLightManager_SetLightRadius(renderer, light2, 4.0f * scale);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light2, 200.0f);
+   DefaultLightManager_SetLightColor(renderer, light2, color);
+   DefaultLightManager_SetLightBrightness(renderer, light2, brightness * 0.6f);
+   DefaultLightManager_SetLightAngles(renderer, light2, 100.0f, 0.0f);
+
 }

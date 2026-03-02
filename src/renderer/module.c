@@ -1,287 +1,920 @@
-#include "util/types.h"
 #include "util/extra_types.h"
-#include "util/array.h"
-#include "util/resource.h"
-#include "util/math.h"
-#include "util/vec3.h"
-#include "util/vec4.h"
-#include "util/quaternion.h"
+#include "util/files.h"
 #include "util/matrix.h"
+#include "util/resource.h"
+#include "util/types.h"
+#include "util/array.h"
 #include "graphics.h"
 
 #include "renderer.h"
-#include "renderer/shaders.h"
 #include "renderer/internal.h"
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
-Renderer* Renderer_Init(Graphics* graphics)
+Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
 {
    if (graphics == NULL)
-   {
       return NULL;
-   }
-
+   
    Renderer* renderer = malloc(sizeof(Renderer));
+   if (renderer == NULL)
+      return NULL;
+   
+   renderer->app_path = (char*)app_path;
    renderer->graphics = graphics;
-   renderer->objects = NEW_ARRAY(rndr_Object);
-   renderer->lights = NEW_ARRAY_N(rndr_Light, RNDR_INIT_LIGHT_COUNT);
+   
+   renderer->surfaces = NEW_ARRAY_N(rndr_Surface, 16);
+   renderer->drawable_types = NEW_ARRAY_N(rndr_DrawableType, 8);
 
-   renderer->camera.view = Util_IdentityMat4();
-   renderer->camera.proj = Util_IdentityMat4();
-   renderer->camera.inv_view = Util_IdentityMat4();
-   renderer->camera.inv_proj = Util_IdentityMat4();
-   renderer->camera.fov = 36;
-   renderer->camera.aspect_ratio = 1;
-   renderer->camera.near = 0.1f;
-   renderer->camera.far  = 150.0f;
+   renderer->lightmanager_info = (LightManagerInfo){ 0 };
 
-   u32 cluster_size[3] = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z };
-   f32 cull_cfg[2] = { 0.01f, 5.0f };
+   renderer->freed_surface_root = RNDR_INVALID_LIST_LINK;
+   
+   renderer->built_in.texture.white = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0XFFFFFFFF }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.black = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFF000000 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.gray = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.normal = RNDR_CreateColorTexture(renderer->graphics, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
+   
+   renderer->built_in.geometry.plane = RNDR_Plane(graphics);
+   renderer->built_in.geometry.box = RNDR_Box(graphics);
+   
+   renderer->built_in.shader.unlit = RNDR_LoadShader(graphics, app_path, "assets/core/shaders/builtin.glsl", NULL, 0, false);
+   renderer->built_in.shader.basic.id = INVALID_HANDLE_ID;
 
-   renderer->camera_ubo   = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(struct rndr_CameraData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
-   renderer->model_ubo    = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(struct rndr_ModelData_s), GFX_DRAWMODE_STREAM, GFX_BUFFERTYPE_UNIFORM);
-   renderer->culling_ubo  = Graphics_CreateBuffer(graphics, cull_cfg, 1, sizeof(cull_cfg), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_UNIFORM);
+   renderer->ubo.camera_buffer = Graphics_CreateBufferExplicit(
+      renderer->graphics, NULL, sizeof(CameraData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
+   renderer->ubo.model_buffer = Graphics_CreateBufferExplicit(
+      renderer->graphics, NULL, sizeof(ModelData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
 
-   renderer->cluster_ssbo = Graphics_CreateBuffer(graphics, NULL, RNDR_CLUSTER_COUNT, sizeof(rndr_Cluster), GFX_DRAWMODE_STATIC_COPY, GFX_BUFFERTYPE_STORAGE);
+   renderer->near_clip = 0.05f;
+   renderer->far_clip = 100.0f;
+   renderer->fov = 40.0f;
+   renderer->aspect_ratio = 1.0f;
+   renderer->size = (resolution2d){ 1, 1 };
+   renderer->update_projection = true;
+   renderer->update_view_projection = true;
 
-   renderer->light_ssbo   = Graphics_CreateBuffer(graphics, renderer->lights, (u32)Util_ArrayMemory(renderer->lights), sizeof(rndr_Light), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
+   renderer->view = Util_IdentityMat4();
+   renderer->inv_view = Util_IdentityMat4();
 
-   renderer->cluster_comp = Graphics_CreateComputeShader(graphics, rndr_CLUSTER_SHADER_GLSL);
-   renderer->culling_comp = Graphics_CreateComputeShader(graphics, rndr_CULLING_SHADER_GLSL);
-
-   Graphics_UseBuffer(renderer->graphics, renderer->camera_ubo, 1);
-   Graphics_UseBuffer(renderer->graphics, renderer->model_ubo, 2);
-
-   Graphics_UseBuffer(renderer->graphics, renderer->cluster_ssbo, 1);
-   Graphics_UseBuffer(renderer->graphics, renderer->light_ssbo, 2);
-
+   RNDR_RegisterDefaultDrawables(renderer);
+    
    return renderer;
 }
 
 void Renderer_Free(Renderer* renderer)
 {
-   Graphics_FreeShader(renderer->graphics, renderer->cluster_comp);
-   Graphics_FreeShader(renderer->graphics, renderer->culling_comp);
-   Graphics_FreeBuffer(renderer->graphics, renderer->camera_ubo);
-   Graphics_FreeBuffer(renderer->graphics, renderer->model_ubo);
-   Graphics_FreeBuffer(renderer->graphics, renderer->culling_ubo);
-   Graphics_FreeBuffer(renderer->graphics, renderer->cluster_ssbo);
-   Graphics_FreeBuffer(renderer->graphics, renderer->light_ssbo);
+   if (renderer == NULL)
+      return;
 
-   FREE_ARRAY(renderer->objects);
-   FREE_ARRAY(renderer->lights);
+   u32 surface_count = Util_ArrayLength(renderer->surfaces);
+   for (u32 surf_i = 0; surf_i < surface_count; surf_i++)
+   {
+      if (renderer->surfaces[surf_i].name != NULL)
+         free(renderer->surfaces[surf_i].name);
+   }
 
-   renderer->graphics = NULL;
+   u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
+   for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
+   {
+      if (renderer->drawable_types[type_i].name != NULL)
+         free(renderer->drawable_types[type_i].name);
+
+      FREE_ARRAY(renderer->drawable_types[type_i].drawable_buffer);
+
+   }
+
+   FREE_ARRAY(renderer->surfaces);
+   FREE_ARRAY(renderer->drawable_types);
 
    free(renderer);
+
 }
 
-void Renderer_SetView(Renderer* renderer, mat4x4 view)
+Graphics* Renderer_Graphics(Renderer* renderer)
 {
-   renderer->camera.view = view;
-   renderer->camera.inv_view = Util_InverseViewMatrix(renderer->camera.view);
+   if (renderer == NULL)
+      return NULL;
+
+   return renderer->graphics;
 }
 
-void Renderer_RenderLit(Renderer* renderer, resolution2d size)
+void Renderer_Render(Renderer* renderer, resolution2d size)
 {
-   Graphics_Viewport(renderer->graphics, size);
+   if (renderer == NULL)
+      return;
 
-   renderer->camera.aspect_ratio = (f32)size.height / (f32)size.width;
-   renderer->camera.proj = Util_PerspectiveMatrix(
-      renderer->camera.fov,
-      renderer->camera.aspect_ratio,
-      renderer->camera.near,
-      renderer->camera.far
-   );
-   renderer->camera.inv_proj = Util_InversePerspectiveMatrix(renderer->camera.proj);
+   RNDR_HandleMatrices(renderer, size);
 
-   struct rndr_CameraData_s cam_data = {
-      .view = renderer->camera.view,
-      .proj = renderer->camera.proj,
-      .inv_view = renderer->camera.inv_view,
-      .inv_proj = renderer->camera.inv_proj,
-      .near = renderer->camera.near,
-      .far = renderer->camera.far,
-      .width = (u32)size.width,
-      .height = (u32)size.height,
-      .cluster_size = { RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, 0 }
-   };
+   CameraData camera_data = { 0 };
+   camera_data.mat_view = renderer->view;
+   camera_data.mat_proj = renderer->projection;
+   camera_data.mat_invview = renderer->inv_view;
+   camera_data.mat_invproj = renderer->inv_projection;
+   camera_data.u_width = (u32)size.width;
+   camera_data.u_height = (u32)size.height;
+   camera_data.u_near_clip = renderer->near_clip;
+   camera_data.u_far_clip = renderer->far_clip;
 
-   Graphics_UpdateBuffer(renderer->graphics, renderer->camera_ubo, (void*)&cam_data, 1, sizeof(struct rndr_CameraData_s));
+   Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.camera_buffer, &camera_data, 1, sizeof(CameraData));
+   Graphics_UseBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
 
-   Graphics_Dispatch(renderer->graphics, renderer->cluster_comp, RNDR_CLUSTER_X, RNDR_CLUSTER_Y, RNDR_CLUSTER_Z, (UniformBlockList){ .count = 0 });
-   Graphics_DispatchBarrier();
+   if (renderer->lightmanager_info.lightman_prerender != NULL)
+      renderer->lightmanager_info.lightman_prerender(renderer);
 
-   Graphics_Dispatch(renderer->graphics, renderer->culling_comp, RNDR_CLUSTER_COUNT / 128u, 1, 1,
-      (UniformBlockList){
-         .blocks[0] = { .binding = 3, renderer->culling_ubo },
-         .count = 1
-   });
-   Graphics_DispatchBarrier();
-
-   u32 object_count = Util_ArrayLength(renderer->objects);
-   for (u32 i=0; i<object_count; i++)
+   u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
+   for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
    {
-      rndr_Object object = renderer->objects[i];
+      rndr_DrawableType* drawable_type = &renderer->drawable_types[type_i];
+      if (drawable_type->render == NULL)
+         continue;
 
-      struct rndr_ModelData_s model_data = {
-         .model = object.matrix.model,
-         .inv_model = object.matrix.inv_model,
-         .normal = {
-            [0] = Util_VecF32Vec4(object.matrix.normal.v[0], 0),
-            [1] = Util_VecF32Vec4(object.matrix.normal.v[1], 0),
-            [2] = Util_VecF32Vec4(object.matrix.normal.v[2], 0)
-         }
-      };
-      Graphics_UpdateBuffer(renderer->graphics, renderer->model_ubo, (void*)&model_data, 1, sizeof(struct rndr_ModelData_s));
+      u16 current_idx = drawable_type->active_drawable_root;
+      while (current_idx != RNDR_INVALID_LIST_LINK)
+      {
+         rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, current_idx);
+         if (drawable == NULL)
+            break;
 
-      Graphics_Draw(renderer->graphics, object.shader, object.geometry, object.uniforms);
+         current_idx = drawable->next_active;
+
+         Drawable drawable_handle = { 0 };
+         drawable_handle.id = drawable->compare.id;
+         drawable_handle.drawable_type_idx = type_i;
+
+         if (renderer->lightmanager_info.lightman_on_render != NULL)
+            renderer->lightmanager_info.lightman_on_render(renderer);
+         
+         drawable_type->render(renderer, drawable_handle, 0);
+
+      }
    }
 }
 
-Object Renderer_AddObject(Renderer* renderer, ObjectDesc* desc, Transform3D transform)
+void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot)
 {
-   if (desc == NULL)
-      desc = &(ObjectDesc){ 0 };
-
-   mat3x3 rot = Util_QuatToMat3(transform.rotation);
-   vec3 origin = transform.origin;
-
-   mat3x3 inv_rot = Util_TransposeMat3(rot);
-   vec3 inv_origin = Util_ScaleVec3(Util_MulMat3Vec3(inv_rot, transform.origin),-1);
-
-   mat3x3 scale = MAT3(
-      transform.scale.x, 0, 0,
-      0, transform.scale.y, 0,
-      0, 0, transform.scale.z
-   );
-
-   rot = Util_MulMat3(
-      scale,
-      rot
-   );
-
-   inv_rot = Util_MulMat3(
-      Util_InverseDiagonalMat3(scale),
-      inv_rot
-   );
-
-   rndr_Object object = { 0 };
-   object.compare.ref = renderer->ref;
-   object.shader = desc->shader;
-   object.geometry = desc->geometry;
-   object.uniforms = desc->uniforms;
-   object.transform = transform;
-   object.bounds = desc->bounds;
-   object.aabb = Util_ResizeBBox(desc->bounds, rot);
-
-   object.matrix.model = MAT4(
-      rot.m[0][0], rot.m[0][1], rot.m[0][2], 0,
-      rot.m[1][0], rot.m[1][1], rot.m[1][2], 0,
-      rot.m[2][0], rot.m[2][1], rot.m[2][2], 0,
-      origin.x, origin.y, origin.z, 1
-   );
-
-   object.matrix.inv_model = MAT4(
-      inv_rot.m[0][0], inv_rot.m[0][1], inv_rot.m[0][2], 0,
-      inv_rot.m[1][0], inv_rot.m[1][1], inv_rot.m[1][2], 0,
-      inv_rot.m[2][0], inv_rot.m[2][1], inv_rot.m[2][2], 0,
-      inv_origin.x, inv_origin.y, inv_origin.z, 1
-   );
-
-   object.matrix.normal = Util_TransposeMat3(inv_rot);
-
-   return Util_AddResource(&renderer->ref, REF(renderer->objects), &object);
+   RNDR_BindTextureAtSlot(renderer, bind_slot, RNDR_SURF_TEXTURE_USER_SET, texture);
 }
 
-void Renderer_RemoveObject(Renderer* renderer, Object res_object)
+void Renderer_SetTextureDefault(Renderer* renderer, u8 texture_default, u32 bind_slot)
 {
-   rndr_Object object = renderer->objects[res_object.handle];
-   if (object.compare.ref != res_object.ref)
+   RNDR_BindTextureAtSlot(renderer, bind_slot, texture_default, (Texture){ .id = INVALID_HANDLE_ID });
+}
+
+void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material)
+{
+   if (renderer == NULL || material.surface.id >= INVALID_HANDLE_ID)
       return;
 
-   REMOVE_ARRAY(renderer->objects, (u32)res_object.handle);
-}
-
-Transform3D Renderer_GetObjectTransform(Renderer* renderer, Object res_object)
-{
-   rndr_Object object = renderer->objects[res_object.handle];
-   if (object.compare.ref != res_object.ref)
-      return (Transform3D){ 0 };
-
-   return object.transform;
-}
-
-void Renderer_SetObjectTransform(Renderer* renderer, Object res_object, Transform3D transform)
-{
-   rndr_Object* object = &renderer->objects[res_object.handle];
-   if (object->compare.ref != res_object.ref)
+   rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
+   if (surface == NULL || surface->pass_count < 1)
       return;
 
-   vec3 v1 = object->matrix.inv_model.v[0].xyz;
-   vec3 v2 = object->matrix.inv_model.v[1].xyz;
-   vec3 v3 = object->matrix.inv_model.v[2].xyz;
-
-   object->transform = transform;
-   object->matrix.model = Util_TransformationMatrix(transform);
-   object->matrix.inv_model = Util_InverseMat4(object->matrix.model);
-   object->matrix.normal = MAT3(
-      v1.x, v3.x, v3.x,
-      v1.y, v3.y, v3.y,
-      v1.z, v3.z, v3.z
-   );
-}
-
-Light Renderer_AddLight(Renderer* renderer, LightDesc* desc)
-{
-   if (desc == NULL)
-      desc = &(LightDesc){ 0 };
-
-   rndr_Light light = { 0 };
-   light.origin = desc->origin;
-   light.radius = desc->radius;
-   light.rotation = (M_ABS(Util_MaxElmVec4(desc->rotation)) > M_FLOAT_FUZZ) ? desc->rotation : Util_IdentityQuat();
-   light.color = Util_MakeRGBE(Util_ScaleVec3(desc->color, desc->strength));
-   light.cos_half_angle = TOBYTE(M_COS(desc->cone_angle * 0.5f) * 0.5f + 0.5f);
-   light.softness = TOBYTE(desc->softness_fac);
-   light.fade_weight = 0;
-   light.light_type = (u8)desc->light_type;
-   light.importance_bias = desc->importance.bias;
-   light.importance_scale = desc->importance.scale;
-
-   u32 light_count = Util_ArrayLength(renderer->lights) + 1;
-   bool too_large = ((1 + light_count) >= Util_ArrayMemory(renderer->lights));
-   
-   ADD_BACK_ARRAY(renderer->lights, light);
-   
-   if (too_large)
+   u32 user_texture_slots[SURF_MAX_TEXTURES][2] = { 0 };
+   for (u32 tex_i = 0; tex_i < material.texture_count; tex_i++)
    {
-      Graphics_ReuseBuffer(
-         renderer->graphics,
-         renderer->lights,
-         (u32)Util_ArrayMemory(renderer->lights),
-         sizeof(rndr_Light),
-         renderer->light_ssbo
-      );
-      Graphics_UpdateBuffer(renderer->graphics, renderer->light_ssbo, renderer->lights, Util_ArrayLength(renderer->lights), sizeof(rndr_Light));
+      SurfaceTexture surf_tex = material.textures[tex_i];
+
+      if (surf_tex.texture.id == INVALID_HANDLE_ID)
+         continue;
+
+      user_texture_slots[surf_tex.bind_slot][0] = 1;
+      user_texture_slots[surf_tex.bind_slot][1] = surf_tex.texture.id;
+
+      Graphics_SetTextureInterpolation(renderer->graphics, surf_tex.texture, surf_tex.interpolation_settings);
+      
+   }
+
+   for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
+   {
+      if (user_texture_slots[slot_i][0]) 
+         RNDR_BindTextureAtSlot(renderer, slot_i, RNDR_SURF_TEXTURE_USER_SET, (Texture){ .id = user_texture_slots[slot_i][1] });
+      else
+         RNDR_BindTextureAtSlot(renderer, slot_i, surface->textures[slot_i], (Texture){ .id = INVALID_HANDLE_ID });
+
+   }
+}
+
+void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color)
+{
+   if (renderer == NULL)
+      return;
+
+   ModelData model_data = { 0 };
+   model_data.mat_model = Util_TransformationMatrix(transform);
+   model_data.mat_invmodel = Util_InverseMat4(model_data.mat_model);
+   model_data.mat_mvp = Util_MulMat4(renderer->view_projection, model_data.mat_model);
+   model_data.u_color = Util_Vec4FromColor(color);
+
+   mat4x4 mat_normal_model = Util_TransposeMat4(model_data.mat_invmodel);
+   model_data.mat_normal_model[0].xyz = mat_normal_model.v[0].xyz;
+   model_data.mat_normal_model[1].xyz = mat_normal_model.v[1].xyz;
+   model_data.mat_normal_model[2].xyz = mat_normal_model.v[2].xyz;
+
+   Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.model_buffer, &model_data, 1, sizeof(ModelData));
+   Graphics_UseBuffer(renderer->graphics, renderer->ubo.model_buffer, 2);
+
+}
+
+void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view)
+{
+   if (renderer == NULL)
+      return;
+
+   renderer->view = view;
+   renderer->inv_view = Util_InverseMat4(renderer->view);
+
+   renderer->update_view_projection = true;
+
+}
+
+void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov)
+{
+   if (renderer == NULL)
+      return;
+
+   renderer->fov = vertical_fov;
+   renderer->update_projection = true;
+   
+}
+
+void Renderer_SetClippingPlanes(Renderer* renderer, f32 near_clip, f32 far_clip)
+{
+   if (renderer == NULL)
+      return;
+
+   renderer->near_clip = near_clip;
+   renderer->far_clip = far_clip;
+   renderer->update_projection = true;
+
+}
+
+void Renderer_UpdateCamera(Renderer* renderer, vec3 origin, vec3 euler, f32 distance)
+{
+   if (renderer == NULL)
+      return;
+
+   Renderer_SetViewMatrix(renderer, Util_ViewMatrix(origin, euler, distance));
+
+}
+
+mat4x4 Renderer_GetViewMatrix(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return Util_IdentityMat4();
+
+   return renderer->view;
+}
+
+mat4x4 Renderer_GetProjectionMatrix(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return Util_IdentityMat4();
+
+   return renderer->projection;
+}
+
+mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return Util_IdentityMat4();
+
+   return renderer->view_projection;
+}
+
+Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceDesc* desc)
+{
+   if (renderer == NULL || name == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   uS name_length = strnlen(name, RNDR_NAME_MAX);
+
+   if (name_length < 2 || desc == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   u16 existing_idx = RNDR_GetSurfaceIndex(renderer, name);
+   if (existing_idx != INVALID_HANDLE)
+      return renderer->surfaces[existing_idx].compare;
+
+   rndr_Surface surface = { 0 };
+   surface.pass_count = desc->pass_count;
+
+   for (u32 pass_i = 0; pass_i < desc->pass_count; pass_i++)
+      surface.passes[pass_i] = desc->passes[pass_i];
+
+   for (u32 tex_i = 0; tex_i < SURF_MAX_TEXTURES; tex_i++)
+      surface.textures[tex_i] = desc->texture_defaults[tex_i];
+
+   uS name_mem_bytes = (name_length + 1) * sizeof(char);
+   surface.name = malloc(name_mem_bytes);
+   memcpy(surface.name, name, name_mem_bytes);
+
+   if (renderer->freed_surface_root == INVALID_HANDLE)
+      return ADD_RESOURCE(renderer->surfaces, surface);
+
+   return REUSE_RESOURCE(renderer->surfaces, surface, renderer->freed_surface_root);
+}
+
+void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface)
+{
+   if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
+      return;
+
+   rndr_Surface surface = renderer->surfaces[res_surface.handle];
+   if (surface.compare.ref != res_surface.ref)
+      return;
+
+   surface.next_freed = renderer->freed_surface_root;
+   renderer->freed_surface_root = (u32)res_surface.handle;
+
+   if (surface.name != NULL)
+      free(surface.name);
+   
+   surface.name = NULL;
+
+}
+
+Surface Renderer_GetSurface(Renderer* renderer, const char* name)
+{
+   if (renderer == NULL || name == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   u16 index = RNDR_GetSurfaceIndex(renderer, name);
+   if (index == INVALID_HANDLE)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->surfaces[index].compare;
+}
+
+SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32 pass_id)
+{
+   if (renderer == NULL || res_surface.id != INVALID_HANDLE_ID)
+      return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
+   
+   rndr_Surface* surface = RNDR_GetSurface(renderer, res_surface);
+   if (surface != NULL || surface->pass_count <= pass_id)
+      return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
+
+   return surface->passes[pass_id];
+}
+
+UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id)
+{
+   rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
+   if (surface == NULL || surface->pass_count < 1)
+      return (UniformBlockList){ 0 };
+
+   Renderer_UseMaterialTextures(renderer, material);
+   Renderer_UpdateModelData(renderer, transform, color);
+   return RNDR_UpdateMaterialUBOs(renderer, material, pass_id);
+}
+
+void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const DrawableTypeDesc* desc)
+{
+   if (renderer == NULL || name == NULL)
+      return;
+
+   DrawableRenderFunc render_func = NULL;
+   DrawableFunc on_enable_func = NULL;
+   DrawableFunc on_disable_func = NULL;
+   uS data_size = 0;
+
+   if (desc != NULL)
+   {
+      render_func = desc->render_func; 
+      on_enable_func = desc->on_enable_func; 
+      on_disable_func = desc->on_disable_func; 
+      data_size = desc->data_size; 
+   }
+
+   uS name_length = strnlen(name, RNDR_NAME_MAX);
+
+   if (name_length < 2 || RNDR_GetDrawableTypeIndex(renderer, name) != RNDR_INVALID_TYPE_IDX)
+   {
+      return;
+   }
+
+   u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
+
+   uS name_mem_bytes = (name_length + 1) * sizeof(char);
+   uS mem_bytes = sizeof(rndr_Drawable) + data_size;
+
+   SET_ARRAY_LENGTH(renderer->drawable_types, drawable_type_count + 1);
+
+   renderer->drawable_types[drawable_type_count].render = render_func;
+   renderer->drawable_types[drawable_type_count].on_enable = on_enable_func;
+   renderer->drawable_types[drawable_type_count].on_disable = on_disable_func;
+
+   renderer->drawable_types[drawable_type_count].visible_drawable_root = RNDR_INVALID_LIST_LINK;
+   renderer->drawable_types[drawable_type_count].freed_drawable_root = RNDR_INVALID_LIST_LINK;
+   renderer->drawable_types[drawable_type_count].active_drawable_root = RNDR_INVALID_LIST_LINK;
+   renderer->drawable_types[drawable_type_count].culled_drawable_count = 0;
+
+   renderer->drawable_types[drawable_type_count].type_size = (u32)mem_bytes;
+
+   renderer->drawable_types[drawable_type_count].name = malloc(name_mem_bytes);
+   memcpy(renderer->drawable_types[drawable_type_count].name, name, name_mem_bytes);
+
+   renderer->drawable_types[drawable_type_count].drawable_buffer = Util_CreateArrayOfLength(4, mem_bytes);
+
+   for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
+      Graphics_BindTexture(renderer->graphics, renderer->built_in.texture.white, slot_i);
+}
+
+u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawable_type_name)
+{
+   return RNDR_GetDrawableTypeIndex(renderer, drawable_type_name);
+}
+
+Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name)
+{
+   Drawable drawable_handle = { 0 };
+   drawable_handle.id = INVALID_HANDLE_ID;
+   drawable_handle.drawable_type_idx = RNDR_INVALID_TYPE_IDX;
+
+   if (renderer == NULL || drawable_type_name == NULL)
+      return drawable_handle;
+
+   u16 drawable_type_idx = RNDR_GetDrawableTypeIndex(renderer, drawable_type_name);
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, drawable_type_idx);
+   if (drawable_type == NULL)
+      return drawable_handle;
+
+   u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
+   u16 drawable_idx = (u16)drawable_count;
+
+   if (drawable_type->freed_drawable_root == RNDR_INVALID_LIST_LINK)
+   {
+      SET_ARRAY_LENGTH(drawable_type->drawable_buffer, drawable_count + 1);
+
+   } else {
+      drawable_idx = drawable_type->freed_drawable_root;
+
+      rndr_Drawable* free_drawable = RNDR_DrawableAtIndex(drawable_type, drawable_idx);
+      drawable_type->freed_drawable_root = free_drawable->next_freed;
+
+      if (free_drawable->next_freed != RNDR_INVALID_LIST_LINK)
+      {
+         rndr_Drawable* next_free_drawable = RNDR_DrawableAtIndex(drawable_type, free_drawable->next_freed);
+         next_free_drawable->prev_freed = RNDR_INVALID_LIST_LINK;
+
+      }
+
+      free_drawable->compare.ref++;
+
+   }
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, drawable_idx);
+   u16 ref = drawable->compare.ref;
+
+   memset(drawable, 0, (uS)drawable_type->type_size);
+   drawable->compare.handle = drawable_idx;
+   drawable->compare.ref = ref;
+   drawable->drawable_type_idx = drawable_type_idx;
+   drawable->enabled = true;
+   drawable->prev_active = RNDR_INVALID_LIST_LINK;
+
+   drawable->next_active = drawable_type->active_drawable_root;
+   drawable_type->active_drawable_root = drawable_idx;
+
+   if (drawable->next_active != RNDR_INVALID_LIST_LINK)
+   {
+      rndr_Drawable* next_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_active);
+      next_drawable->prev_active = drawable_idx;
+
+   }
+
+   drawable_handle.id = drawable->compare.id;
+   drawable_handle.drawable_type_idx = drawable_type_idx;
+
+   if (drawable_type->on_enable != NULL)
+      drawable_type->on_enable(renderer, drawable_handle);
+
+   return drawable_handle;
+}
+
+void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
+{
+   if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
+      return;
+
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, res_drawable.drawable_type_idx);
+   if (drawable_type == NULL)
+      return;
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, res_drawable.handle);
+   if (drawable == NULL || drawable->enabled == false)
+      return;
+
+   if (drawable_type->on_disable != NULL)
+      drawable_type->on_disable(renderer, res_drawable);
+
+   drawable->enabled = false;
+
+   if (drawable->next_active != RNDR_INVALID_LIST_LINK)
+   {
+      rndr_Drawable* next_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_active);
+      next_drawable->prev_active = drawable->prev_active;
+
+   }
+
+   if (drawable->prev_active != RNDR_INVALID_LIST_LINK)
+   {
+      rndr_Drawable* last_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->prev_active);
+      last_drawable->next_active = drawable->next_active;
+      
    } else
-      Graphics_UpdateBuffer(renderer->graphics, renderer->light_ssbo, renderer->lights, Util_ArrayLength(renderer->lights), sizeof(rndr_Light));
+      drawable_type->active_drawable_root = drawable->next_active;
+   
+   drawable->prev_freed = RNDR_INVALID_LIST_LINK;
+   drawable->next_freed = drawable_type->freed_drawable_root;
 
-   return (Light){ .id = light_count - 1 }; // ignoring ref number stuff for lights
+   if (drawable->next_freed != RNDR_INVALID_LIST_LINK)
+   {
+      rndr_Drawable* next_free_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_freed);
+      next_free_drawable->prev_freed = res_drawable.handle;
+
+   }
 }
 
-void Renderer_RemoveLight(Renderer* renderer, Light res_light)
+void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable)
 {
-   // NOTE: this function shifts the elements in the array around
-   // TODO: look into maintaining a list of free lights instead
-   REMOVE_ARRAY(renderer->lights, res_light.id);
+   if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
+      return NULL;
 
-   u32 light_count = Util_ArrayLength(renderer->lights);
-   Graphics_UpdateBuffer(renderer->graphics, renderer->light_ssbo, renderer->lights, light_count, sizeof(rndr_Light));
+   rndr_Drawable* drawable = RNDR_GetDrawable(renderer, res_drawable);
+   if (drawable == NULL)
+      return NULL;
+
+   return (void*)drawable->data;
 }
 
-Shader Renderer_LitShader(Graphics* graphics)
+void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx)
 {
-   return Graphics_CreateShader(graphics, rndr_LIT_VRTSHADER_GLSL, rndr_LIT_FRGSHADER_GLSL);
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, drawable_type_idx);
+   if (drawable_type == NULL)
+      return NULL;
+
+   u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
+   if (drawable_count <= (u32)drawable_idx)
+      return NULL;
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, drawable_idx);
+   if (drawable == NULL)
+      return NULL;
+
+   return (void*)drawable->data;
+}
+
+Buffer Renderer_CameraBuffer(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->ubo.camera_buffer;
+}
+
+Buffer Renderer_ModelBuffer(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->ubo.model_buffer;
+}
+
+Shader Renderer_UnlitShader(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.shader.unlit;
+}
+
+Shader Renderer_BasicShader(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.shader.basic;
+}
+
+Geometry Renderer_PlaneGeometry(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.geometry.plane;
+}
+
+Geometry Renderer_BoxGeometry(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.geometry.box;
+}
+
+Texture Renderer_WhiteTexture(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.texture.white;
+}
+
+Texture Renderer_GrayTexture(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.texture.gray;
+}
+
+Texture Renderer_BlackTexture(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.texture.black;
+}
+
+Texture Renderer_NormalTexture(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   return renderer->built_in.texture.normal;
+}
+
+void* Renderer_LightManager(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return NULL;
+
+   return renderer->lightmanager_info.data;
+}
+
+LightManagerInfo* Renderer_LightManagerInfo(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return NULL;
+
+   return &renderer->lightmanager_info;
+}
+
+void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_info)
+{
+   if (renderer == NULL)
+      return;
+
+   Graphics* graphics = renderer->graphics;
+   char* app_path = renderer->app_path;
+
+   ShaderDefines shader_defines = { 0 };
+   renderer->lightmanager_info = lightmanager_info;
+   
+   if (lightmanager_info.lightman_init != NULL)
+      lightmanager_info.lightman_init(renderer);
+
+   if (lightmanager_info.lightman_defs != NULL)
+      shader_defines = lightmanager_info.lightman_defs(renderer);
+
+   if (renderer->built_in.shader.basic.id != INVALID_HANDLE_ID)
+      Graphics_FreeShader(graphics, renderer->built_in.shader.basic);
+
+   renderer->built_in.shader.basic = RNDR_LoadShader(graphics, app_path, "assets/core/shaders/builtin.glsl", (const char**)shader_defines.defines, shader_defines.define_count, false);
+
+}
+
+bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id)
+{
+   return (renderer != NULL && renderer->lightmanager_info.data != NULL && renderer->lightmanager_info.id == desired_id);
+}
+
+Shader RNDR_LoadShader(Graphics* graphics, const char* app_path, const char* shader_file, const char* defines[], const u32 defines_count, bool is_compute)
+{
+   if (graphics == NULL || app_path == NULL || shader_file == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   char* file_path = Util_MakeFilePath(app_path, shader_file);
+   Shader shader = Graphics_LoadShaderFromFile(graphics, file_path, defines, defines_count, is_compute);
+   if (file_path != NULL)
+      free(file_path);
+
+   return shader;
+}
+
+Texture RNDR_CreateColorTexture(Graphics* graphics, color8 color, u8 texture_type)
+{
+   return Graphics_CreateTexture(graphics, color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
+}
+
+Geometry RNDR_Plane(Graphics* graphics)
+{
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   Mesh plane_mesh = Mesh_CreatePlane(1, 1, VEC2(2, 2));
+   Geometry plane = Graphics_CreateGeometry(graphics, plane_mesh, GFX_DRAWMODE_STATIC);
+   Mesh_Free(&plane_mesh);
+   return plane;
+}
+
+Geometry RNDR_Box(Graphics* graphics)
+{
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   Mesh box_mesh = Mesh_CreateBoxAdvanced(1, 1, 1, VEC3(2, 2, 2), false);
+   Geometry box = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);
+   Mesh_Free(&box_mesh);
+   return box;
+}
+
+void RNDR_HandleMatrices(Renderer* renderer, resolution2d size)
+{
+   if (renderer == NULL)
+      return;
+
+   if (renderer->size.width != size.width || renderer->size.height != size.height)
+   {
+      renderer->size = size;
+      renderer->aspect_ratio = (f32)size.height / (f32)size.width;
+
+      renderer->update_projection = true;
+
+   }
+
+   if (renderer->update_projection)
+   {
+      renderer->projection = Util_PerspectiveMatrix(renderer->fov, renderer->aspect_ratio, renderer->near_clip, renderer->far_clip);
+      renderer->inv_projection = Util_InverseMat4(renderer->projection);
+      renderer->update_view_projection = true;
+      renderer->update_projection = false;
+
+   }
+
+   if (renderer->update_view_projection)
+   {
+      renderer->view_projection = Util_MulMat4(renderer->projection, renderer->view);
+      renderer->update_view_projection = false;
+
+   }
+
+}
+
+u16 RNDR_GetSurfaceIndex(Renderer* renderer, const char* surface_name)
+{
+   if (renderer == NULL || surface_name == NULL)
+      return INVALID_HANDLE;
+
+   u32 surface_count = Util_ArrayLength(renderer->surfaces);
+   for (u32 surf_i = 0; surf_i < surface_count; surf_i++)
+   {
+      if (strncmp(surface_name, renderer->surfaces[surf_i].name, RNDR_NAME_MAX) == 0)
+         return (u16)surf_i;
+   }
+
+   return INVALID_HANDLE;
+}
+
+u16 RNDR_GetDrawableTypeIndex(Renderer* renderer, const char* drawable_type_name)
+{
+   if (renderer == NULL || drawable_type_name == NULL)
+      return RNDR_INVALID_TYPE_IDX;
+
+   u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
+   for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
+   {
+      if (strncmp(drawable_type_name, renderer->drawable_types[type_i].name, RNDR_NAME_MAX) == 0)
+         return (u16)type_i;
+   }
+
+   return RNDR_INVALID_TYPE_IDX;
+}
+
+rndr_Surface* RNDR_GetSurface(Renderer* renderer, Surface res_surface)
+{
+   if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
+      return NULL;
+
+   rndr_Surface* surface = &renderer->surfaces[res_surface.handle];
+   if (surface->compare.id != res_surface.id)
+      return NULL;
+
+   return surface;
+}
+
+rndr_DrawableType* RNDR_GetDrawableType(Renderer* renderer, u16 drawable_type_idx)
+{
+   if (renderer == NULL || drawable_type_idx == RNDR_INVALID_TYPE_IDX)
+      return NULL;
+
+   if (Util_ArrayLength(renderer->drawable_types) <= drawable_type_idx)
+      return NULL;
+
+   return &renderer->drawable_types[drawable_type_idx];
+}
+
+rndr_Drawable* RNDR_GetDrawable(Renderer* renderer, Drawable res_drawable)
+{
+   if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
+      return NULL;
+
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, res_drawable.drawable_type_idx);
+   if (drawable_type == NULL)
+      return NULL;
+
+   u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
+   if (drawable_count <= (u32)res_drawable.handle)
+      return NULL;
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, res_drawable.handle);
+   if (drawable->compare.id != res_drawable.id)
+      return NULL;
+
+   return drawable;
+}
+
+void RNDR_RegisterDefaultDrawables(Renderer* renderer)
+{
+   Renderer_RegisterDrawableType(renderer, EMPTY_DRAWABLE_TYPE, NULL);
+   Renderer_RegisterDrawableType(renderer, GEOMETRY_DRAWABLE_TYPE, &(DrawableTypeDesc){
+      .data_size = sizeof(GeometryDrawable),
+      .render_func = RNDR_GeometryRenderFunc
+   });
+}
+
+void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_default, Texture texture)
+{
+   if (renderer == NULL || bind_slot >= SURF_MAX_TEXTURES)
+      return;
+   
+   if (texture_default < 4)
+   {
+      if (renderer->texture_slots[bind_slot] == texture_default)
+         return;
+
+      renderer->texture_slots[bind_slot] = texture_default;
+      Graphics_BindTexture(renderer->graphics, renderer->built_in.textures[texture_default], bind_slot);
+
+   } else if (texture_default == RNDR_SURF_TEXTURE_USER_SET && texture.id != INVALID_HANDLE_ID)
+   {
+      renderer->texture_slots[bind_slot] = RNDR_SURF_TEXTURE_USER_SET;
+      Graphics_BindTexture(renderer->graphics, texture, bind_slot);
+
+   }
+}
+
+UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial material, u32 pass_id)
+{
+   if (renderer == NULL || material.surface.id >= INVALID_HANDLE_ID)
+      return (UniformBlockList){ 0 };
+
+   rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
+   if (surface == NULL || surface->pass_count < 1)
+      return (UniformBlockList){ 0 };
+
+   SurfacePass pass = surface->passes[pass_id];
+   UniformBlockList uniform_blocks = { .count = pass.uniform_block_count };
+   
+   for (u32 block_i = 0; block_i < uniform_blocks.count; block_i++)
+   {
+      UniformBlock block = pass.uniform_blocks[block_i];
+      void* block_data = material.uniform_block_data[pass_id][block_i];
+      Graphics_UpdateBuffer(renderer->graphics, block.ubo, block_data, 1, block.size);
+   }
+
+   return uniform_blocks;
+}
+
+void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
+{
+   rndr_Drawable* drawable = RNDR_GetDrawable(renderer, self);
+   if (drawable == NULL || pass_id > 0)
+      return;
+
+   GeometryDrawable* drawable_data = (GeometryDrawable*)drawable->data;
+
+   rndr_Surface* surface = RNDR_GetSurface(renderer, drawable_data->material.surface);
+   if (surface == NULL || surface->pass_count < 1)
+      return;
+
+   Graphics_Draw(
+      renderer->graphics,
+      surface->passes[pass_id].shader,
+      drawable_data->geometry,
+      Renderer_UseSurfaceMaterial(
+         renderer,
+         drawable_data->transform,
+         drawable_data->material,
+         drawable_data->color,
+         pass_id
+      )
+   );
+
 }

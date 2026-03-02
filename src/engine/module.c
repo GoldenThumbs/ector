@@ -14,7 +14,7 @@
 
 static eng_EngineGlobal* ENGINE_G;
 
-Engine* Engine_Init(EngineDesc* desc)
+Engine* Engine_Init(i32 argc, char* argv[], EngineDesc* desc)
 {
    char* app_name = (desc->app_name == NULL) ? "Ector App" : desc->app_name;
    char* window_title = app_name;
@@ -44,12 +44,14 @@ Engine* Engine_Init(EngineDesc* desc)
    {
       glfwTerminate();
       abort();
+
    }
 
    glfwMakeContextCurrent(window);
 
    Engine* engine = malloc(sizeof(Engine));
    engine->app_name = app_name;
+   engine->app_path = (argc >= 1) ? argv[0] : "";
    engine->exit_requested = false;
 
    engine->modules = NEW_ARRAY_N(Module, 2);
@@ -149,6 +151,14 @@ void Engine_RegisterModule(Engine* engine, Module module)
    error err = module.mod_init(m, engine);
    if (err.general != ERR_OK)
       abort();
+}
+
+const char* Engine_GetAppPath(Engine* engine)
+{
+   if (engine == NULL)
+      return NULL;
+
+   return engine->app_path;
 }
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height)

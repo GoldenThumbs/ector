@@ -188,6 +188,7 @@ typedef struct Uniform_t
 
 typedef struct UniformBlock_t
 {
+   uS size;
    u32 binding;
    Buffer ubo;
 } UniformBlock;
@@ -223,6 +224,7 @@ void Graphics_Free(Graphics* graphics);
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader);
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader);
+Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, const char* defines[], const u32 define_count, bool is_compute);
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader);
 u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name);
 void Graphics_SetUniform(Graphics* graphics, Uniform uniform);
@@ -232,9 +234,11 @@ void Graphics_DispatchBarrier(void);
 Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
 Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS total_size, u8 draw_mode, u8 buffer_type);
 void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer);
+void Graphics_ReuseBufferExplicit(Graphics* graphics, void* data, uS total_size, Buffer res_buffer);
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer);
 void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size);
 void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size);
+void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* data, uS offset_bytes, uS total_size);
 void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);
@@ -266,5 +270,6 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode);
 void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask);
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
+void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniform_blocks);
 
 #endif

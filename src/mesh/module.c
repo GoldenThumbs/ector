@@ -5,25 +5,38 @@
 #include "mesh.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 void Model_Free(Model* model)
 {
+   if (model->nodes != NULL)
+   {
+      for (u32 node_i = 0; node_i < model->node_count; node_i++)
+         free(model->nodes[node_i].name);
+      free(model->meshes);
+      model->meshes = NULL;
+
+   }
+
    if (model->meshes != NULL)
    {
       for (u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++)
          Mesh_Free(&model->meshes[mesh_i]);
       free(model->meshes);
       model->meshes = NULL;
+
    }
 
    if (model->materials != NULL)
    {
       free(model->materials);
       model->materials = NULL;
+
    }
 
    model->mesh_count = 0;
    model->material_count = 0;
+
 }
 
 void Mesh_Free(Mesh* mesh)
@@ -32,16 +45,19 @@ void Mesh_Free(Mesh* mesh)
    {
       free(mesh->vertex_buffer);
       mesh->vertex_buffer = NULL;
+      
    }
 
    if (mesh->index_buffer != NULL)
    {
       free(mesh->index_buffer);
       mesh->index_buffer = NULL;
+
    }
 
    mesh->vertex_count = 0;
    mesh->index_count = 0;
+
 }
 
 Mesh Mesh_LoadEctorMesh(memblob memory)
@@ -59,12 +75,42 @@ Model Mesh_LoadEctorModel(memblob memory)
 
    MSH_ModelHeader model_header = READ_HEAD(read_head, MSH_ModelHeader);
 
-   if ((model_header.identifier.magic != MODEL_MAGIC_ID) || (model_header.mesh_count == 0))
+   if (model_header.identifier.magic != MODEL_MAGIC_ID || model_header.mesh_count == 0 || model_header.version != EBMF_VERSION)
       return (Model){ 0 };
 
-   Model model = { .mesh_count = model_header.mesh_count, .material_count = model_header.material_count };
+   Model model = {
+      .version = model_header.version,
+      .root_bone_id = model_header.root_bone_id,
+      .node_count = model_header.node_count,
+      .mesh_count = model_header.mesh_count,
+      .material_count = model_header.material_count
+   };
+
    model.meshes = calloc((uS)model.mesh_count, sizeof(Mesh));
+   model.nodes = (model.node_count > 0) ? calloc((uS)model.node_count, sizeof(Node)) : NULL;
    model.materials = (model.material_count > 0) ? calloc((uS)model.material_count, sizeof(Material)) : NULL;
+
+   for (u32 node_i = 0; node_i < model.node_count; node_i++)
+   {
+      uS name_length = strnlen(read_head, EBMF_NODE_NAME_MAX);
+
+      model.nodes[node_i].name = malloc(name_length + 1);
+      memcpy(model.nodes[node_i].name, read_head, name_length + 1);
+
+      size_left -= name_length + 1;
+      read_head = ((u8*)read_head) + name_length + 1;
+
+      model.nodes[node_i].transform = READ_HEAD(read_head, Transform3D);
+      model.nodes[node_i].child_count = READ_HEAD(read_head, u32);
+      model.nodes[node_i].parent_id = READ_HEAD(read_head, i16);
+      model.nodes[node_i].prev_sibling_id = READ_HEAD(read_head, i16);
+      model.nodes[node_i].next_sibling_id = READ_HEAD(read_head, i16);
+      model.nodes[node_i].root_child_id = READ_HEAD(read_head, i16);
+
+      size_left -= sizeof(Transform3D) + 12;
+
+   }
+
    for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
    {
       uS mesh_size = 0;
@@ -72,6 +118,7 @@ Model Mesh_LoadEctorModel(memblob memory)
 
       size_left -= mesh_size;
       read_head = ((u8*)read_head) + mesh_size;
+
    }
 
    return model;
@@ -92,7 +139,12 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
    uS index_size = mesh_header.index_count * sizeof(u16);
    uS vertex_size = 0;
 
-   Mesh mesh = { .material_id = mesh_header.material_id, .attribute_count = mesh_header.attribute_count };
+   Mesh mesh = {
+      .node_id = mesh_header.node_id,
+      .material_id = mesh_header.material_id,
+      .attribute_count = mesh_header.attribute_count
+   };
+
    for (u8 attribute_i = 0; attribute_i < mesh.attribute_count; attribute_i++)
    {
       u8 attribute = READ_HEAD(read_head, u8);
@@ -117,8 +169,11 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
 
          default:
             break;
+
       }
+
       mesh.attributes[attribute_i] = attribute;
+
    }
 
    vertex_size *= (uS)mesh_header.vertex_count;

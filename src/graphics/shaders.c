@@ -1,3 +1,4 @@
+#include "util/files.h"
 #include "util/types.h"
 #include "util/resource.h"
 
@@ -7,12 +8,15 @@
 #include <glad/gl.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+   
    gfx_Shader shader = { 0 };
    shader.is_compute = false;
-   shader.compare.ref = graphics->ref;
 
    u32 shd_vrt = glCreateShader(GL_VERTEX_SHADER);
    glShaderSource(shd_vrt, 1, &vertex_shader, NULL);
@@ -34,6 +38,8 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
       fprintf(stderr, "%s\n", shd_log);
+
+      return (handle){ .id = INVALID_HANDLE_ID };
    }
 
    glDeleteShader(shd_vrt);
@@ -41,22 +47,19 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
    
    shader.id.program = shd_id;
 
-   if (graphics->freed_shader_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+   if (graphics->freed_shader_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->shaders, shader);
 
-   u16 index = (u16)graphics->freed_shader_root;
-   graphics->freed_shader_root = graphics->shaders[index].next_freed;
-   Shader shader_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->shaders[index] = shader;
-
-   return shader_handle;
+   return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
 }
 
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+   
    gfx_Shader shader = { 0 };
    shader.is_compute = true;
-   shader.compare.ref = graphics->ref;
 
    u32 shd_cmp = glCreateShader(GL_COMPUTE_SHADER);
    glShaderSource(shd_cmp, 1, &compute_shader, NULL);
@@ -73,24 +76,87 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
       fprintf(stderr, "%s\n", shd_log);
+
+      return (handle){ .id = INVALID_HANDLE_ID };
    }
 
    glDeleteShader(shd_cmp);
 
    shader.id.program = shd_id;
 
-   if (graphics->freed_shader_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->shaders), &shader);
+   if (graphics->freed_shader_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->shaders, shader);
 
-   u16 index = (u16)graphics->freed_shader_root;
-   graphics->freed_shader_root = graphics->shaders[index].next_freed;
-   Shader shader_handle = { .handle = index, .ref = graphics->ref++ };
+   return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
+}
 
-   return shader_handle;
+Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, const char* defines[], const u32 define_count, bool is_compute)
+{
+   if (graphics == NULL || file_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   memblob shader_data = Util_LoadFileIntoMemory(file_path, false);
+   if (shader_data.data == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   Shader res_shader = (handle){ .id = INVALID_HANDLE_ID };
+
+   if (is_compute)
+   {
+      memblob compute_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, NULL);
+
+      res_shader = Graphics_CreateComputeShader(graphics, compute_shader_code.data);
+
+      if (res_shader.id == INVALID_HANDLE_ID)
+      {
+         fprintf(stderr,
+            "SHADER FAILED TO COMPILE! Printing Code...\n\n"
+            "\e[0;33m-< COMPUTE\e[0m:\n"
+            "%s"
+            "\e[0;33m>- COMPUTE\e[0m:\n",
+            (char*)compute_shader_code.data
+         );
+         
+      }
+
+      free(compute_shader_code.data);
+
+   } else {
+      memblob vert_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, "#define VERT");
+      memblob frag_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, "#define FRAG");
+
+      res_shader = Graphics_CreateShader(graphics, vert_shader_code.data, frag_shader_code.data);
+
+      if (res_shader.id == INVALID_HANDLE_ID)
+      {
+         fprintf(stderr,
+            "SHADER FAILED TO COMPILE! Printing Code...\n\n"
+            "\e[0;33m-< VERTEX\e[0m:\n"
+            "%s"
+            "\e[0;33m>- VERTEX\e[0m:\n"
+            "\e[0;33m-< FRAGMENT\e[0m:\n"
+            "%s"
+            "\e[0;33m>- FRAGMENT\e[0m:\n",
+            (char*)vert_shader_code.data,
+            (char*)frag_shader_code.data
+         );
+
+      }
+
+      free(vert_shader_code.data);
+      free(frag_shader_code.data);
+
+   }
+
+   free(shader_data.data);
+
+   return res_shader;
 }
 
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 {
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+      return;
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -103,6 +169,9 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 
 u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name)
 {
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+      return UINT32_MAX;
+
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return UINT32_MAX;
@@ -112,11 +181,17 @@ u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const cha
 
 void Graphics_SetUniform(Graphics* graphics, Uniform uniform)
 {
+   if (graphics == NULL)
+      return;
+
    GFX_SetUniform(uniform);
 }
 
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks)
 {
+   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
       return;
@@ -139,6 +214,9 @@ void Graphics_DispatchBarrier(void)
 
 void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks)
 {
+   if (graphics == NULL)
+      return;
+
    for (u32 i=0; i<uniform_blocks.count; i++)
       Graphics_UseBuffer(graphics, uniform_blocks.blocks[i].ubo, uniform_blocks.blocks[i].binding);
 }

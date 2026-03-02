@@ -8,6 +8,10 @@
 #define ECT_STRINGIFY(x) ECT_STRINGIFY_2(x)
 #define ECT_STRINGIFY_2(x) #x
 
+#define INVALID_HANDLE UINT16_MAX
+#define INVALID_HANDLE_REF UINT16_MAX
+#define INVALID_HANDLE_ID UINT32_MAX
+
 #define DATABLOB(data) (memblob) { (void*)(data), sizeof((data)) }
 
 #define VEC2(...) (vec2)   { { __VA_ARGS__ } }
@@ -143,6 +147,16 @@ typedef union mat4x4_t
    f32 m[4][4];
    f32 arr[16];
 } mat4x4;
+
+static inline color8 Util_IntToColor(u32 hex)
+{
+   color8 color = { 0 };
+   color.r = hex >> 24u;
+   color.g = (hex >> 16u) & 255u;
+   color.b = (hex >> 8u) & 255u;
+   color.a = hex & 255u;
+   return color;
+}
 
 static inline vec3 Util_VecF32Vec3(vec2 xy, f32 z)
 {

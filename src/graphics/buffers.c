@@ -10,43 +10,17 @@
 
 Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type)
 {
-   gfx_Buffer buffer = { 0 };
-   buffer.type = buffer_type;
-   buffer.draw_mode = draw_mode;
-   buffer.compare.ref = graphics->ref;
-
-   u32 gl_target = GFX_BufferType(buffer.type);
-
-   glGenBuffers(1, &buffer.id.buf);
-   glBindBuffer(gl_target, buffer.id.buf);
-
-   glBufferData(
-      gl_target,
-      (uS)length * type_size,
-      data,
-      GFX_DrawMode(buffer.draw_mode)
-   );
-   if (data == NULL)
-      glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
-
-   //glBindBuffer(gl_target, 0);
-   if (graphics->freed_buffer_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->buffers), &buffer);
-
-   u16 index = (u16)graphics->freed_buffer_root;
-   graphics->freed_buffer_root = graphics->buffers[index].next_freed;
-   Buffer buffer_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->buffers[index] = buffer;
-
-   return buffer_handle;
+   return Graphics_CreateBufferExplicit(graphics, data, (uS)length * type_size, draw_mode, buffer_type);
 }
 
 Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8 draw_mode, u8 buffer_type)
 {
+   if (graphics == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
    gfx_Buffer buffer = { 0 };
    buffer.type = buffer_type;
    buffer.draw_mode = draw_mode;
-   buffer.compare.ref = graphics->ref;
 
    u32 gl_target = GFX_BufferType(buffer.type);
 
@@ -62,40 +36,45 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
    if (data == NULL)
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
-   if (graphics->freed_buffer_root == GFX_INVALID_INDEX)
-      return Util_AddResource(&graphics->ref, REF(graphics->buffers), &buffer);
+   if (graphics->freed_buffer_root == INVALID_HANDLE)
+      return ADD_RESOURCE(graphics->buffers, buffer);
 
-   u16 index = (u16)graphics->freed_buffer_root;
-   graphics->freed_buffer_root = graphics->buffers[index].next_freed;
-   Buffer buffer_handle = { .handle = index, .ref = graphics->ref++ };
-   graphics->buffers[index] = buffer;
-
-   return buffer_handle;
+   return REUSE_RESOURCE(graphics->buffers, buffer, graphics->freed_buffer_root);
 }
 
 void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer)
 {
+   Graphics_ReuseBufferExplicit(graphics, data, (uS)length * type_size, res_buffer);
+
+}
+
+void Graphics_ReuseBufferExplicit(Graphics* graphics, void* data, uS total_size, Buffer res_buffer)
+{
+   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
 
-   // glDeleteBuffers(1, &buffer.id.buf);
-
    u32 gl_target = GFX_BufferType(buffer.type);
 
-   // glGenBuffers(1, &buffer.id.buf);
    glBindBuffer(gl_target, buffer.id.buf);
 
    glBufferData(
       gl_target,
-      (uS)length * type_size,
+      total_size,
       data,
       GFX_DrawMode(buffer.draw_mode)
    );
+   
 }
 
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
 {
+   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
@@ -104,23 +83,26 @@ void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
    graphics->freed_buffer_root = (u32)res_buffer.handle;
 
    glDeleteBuffers(1, &buffer.id.buf);
+
 }
 
 void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size)
 {
-   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
-   if (buffer.compare.ref != res_buffer.ref)
-      return;
+   Graphics_UpdateBufferExplicit(graphics, res_buffer, data, 0, (uS)length * type_size);
 
-   u32 gl_target = GFX_BufferType(buffer.type);
-   
-   glBindBuffer(gl_target, buffer.id.buf);
-   glBufferSubData(gl_target, 0, (uS)length * type_size, data);
-   glBindBuffer(gl_target, 0);
 }
 
 void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size)
 {
+   Graphics_UpdateBufferExplicit(graphics, res_buffer, data, (uS)offset * type_size, (uS)length * type_size);
+   
+}
+
+void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* data, uS offset_bytes, uS total_size)
+{
+   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
@@ -128,12 +110,16 @@ void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* dat
    u32 gl_target = GFX_BufferType(buffer.type);
    
    glBindBuffer(gl_target, buffer.id.buf);
-   glBufferSubData(gl_target, (uS)offset * type_size, (uS)length * type_size, data);
+   glBufferSubData(gl_target, offset_bytes, total_size, data);
    glBindBuffer(gl_target, 0);
+   
 }
 
 void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
 {
+   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
       return;
@@ -142,6 +128,7 @@ void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
 
    glBindBuffer(gl_target, buffer.id.buf);
    glBindBufferBase(gl_target, slot, buffer.id.buf);
+
 }
 
 u32 GFX_BufferType(u8 buffer_type)
