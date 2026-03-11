@@ -771,6 +771,25 @@ Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative,
    return shader;
 }
 
+void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings)
+{
+   if (material == NULL)
+      return;
+
+   u32 tex_idx = (index >= 0) ? (u32)index : material->texture_count;
+   material->texture_count = M_MAX(material->texture_count, tex_idx + 1);
+   material->textures[tex_idx].bind_slot = (bind_slot >= 0) ? (u32)bind_slot : tex_idx;
+   material->textures[tex_idx].texture = texture;
+   material->textures[tex_idx].interpolation_settings = interpolation_settings;
+
+}
+
+void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture)
+{
+   Renderer_SetSurfaceMaterialTextureAdvanced(material, index, bind_slot, texture, (TextureInterpolation){ 0, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
+   
+}
+
 Geometry RNDR_Plane(Graphics* graphics)
 {
    if (graphics == NULL)

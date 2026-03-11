@@ -164,25 +164,6 @@ typedef struct GeometryDrawable_t
 
 typedef struct Renderer_t Renderer;
 
-static inline void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings)
-{
-   if (material == NULL)
-      return;
-
-   u32 tex_idx = (index >= 0) ? (u32)index : material->texture_count;
-   material->texture_count = M_MAX(material->texture_count, tex_idx + 1);
-   material->textures[tex_idx].bind_slot = (bind_slot >= 0) ? (u32)bind_slot : tex_idx;
-   material->textures[tex_idx].texture = texture;
-   material->textures[tex_idx].interpolation_settings = interpolation_settings;
-
-}
-
-static inline void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture)
-{
-   Renderer_SetSurfaceMaterialTextureAdvanced(material, index, bind_slot, texture, (TextureInterpolation){ 0, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-   
-}
-
 Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
@@ -244,5 +225,8 @@ bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id);
 Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture_type);
 Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_relative, resolution2d slice_size, bool generate_mipmaps, bool is_srgb);
 Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative, const char* defines[], const u32 defines_count, bool is_compute);
+
+void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings);
+void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture);
 
 #endif
