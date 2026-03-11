@@ -15,16 +15,16 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
    if (memory.data == NULL || memory.size == 0)
       return (Image){ .data = NULL };
 
-   bool is_hdr = (bool)stbi_is_hdr_from_memory(memory.data, memory.size);
+   bool is_hdr = (bool)stbi_is_hdr_from_memory(memory.data, (i32)memory.size);
 
    Image image = { 0 };
    i32 image_channels = 0;
    i32 force_channels = 4;
 
    if (is_hdr)
-      image.data = (u8*)stbi_loadf_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
+      image.data = (u8*)stbi_loadf_from_memory(memory.data, (i32)memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
    else
-      image.data = stbi_load_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
+      image.data = stbi_load_from_memory(memory.data, (i32)memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
 
    image_channels = M_MAX(image_channels, force_channels);
 
@@ -211,7 +211,7 @@ void Image_GenerateMipmaps(Image* image)
             }
 
             const vec4 quad_weights = VEC4(0.25f, 0.25f, 0.25f, 0.25f);
-            f32 value = quad_values.x;
+            f32 value = Util_DotVec4(quad_values, quad_weights);
             u8 value_sdr = F32_TO_BYTE(M_CLAMP(value, 0.0f, 1.0f));
 
             void* value_ptr = NULL;
