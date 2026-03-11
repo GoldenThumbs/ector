@@ -15,10 +15,10 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
       return (handle){ .id = INVALID_HANDLE_ID };
 
    gfx_Texture texture = { 0 };
-   texture.width = M_MAX(0, desc.size.width);
-   texture.height = M_MAX(0, desc.size.height);
-   texture.depth = M_MAX(0, desc.depth);
-   texture.mipmap_count = M_MAX(1u, desc.mipmap_count);
+   texture.width = M_MAX(1, desc.size.width);
+   texture.height = M_MAX(1, desc.size.height);
+   texture.depth = M_MAX(1, desc.depth);
+   texture.mipmap_count = M_MAX(1, desc.mipmap_count);
    texture.type = desc.texture_type;
    texture.format = desc.texture_format;
 
@@ -43,14 +43,15 @@ void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Textu
 
    glDeleteTextures(1, &texture.id.tex);
 
-   texture.width = M_MAX(0, desc.size.width);
-   texture.height = M_MAX(0, desc.size.height);
-   texture.depth = M_MAX(0, desc.depth);
-   texture.mipmap_count = M_MAX(1u, desc.mipmap_count);
+   texture.width = M_MAX(1, desc.size.width);
+   texture.height = M_MAX(1, desc.size.height);
+   texture.depth = M_MAX(1, desc.depth);
+   texture.mipmap_count = M_MAX(1, desc.mipmap_count);
    texture.type = desc.texture_type;
    texture.format = desc.texture_format;
 
    GFX_CreateTexture(&texture, data);
+
 }
 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
@@ -66,6 +67,7 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
    graphics->freed_texture_root = (u32)res_texture.handle;
 
    glDeleteTextures(1, &texture.id.tex);
+
 }
 
 void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot)
@@ -81,6 +83,7 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
 
    glActiveTexture(GL_TEXTURE0 + bind_slot);
    glBindTexture(gl_target, texture.id.tex);
+
 }
 
 void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type)
@@ -91,6 +94,7 @@ void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type)
    u32 gl_target = GFX_TextureType(texture_type);
 
    glBindTexture(gl_target, 0);
+
 }
 
 void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings)
@@ -118,6 +122,7 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
    glTexParameterf(gl_target, GL_TEXTURE_MAX_ANISOTROPY, aniso);
 
    glBindTexture(gl_target, 0);
+
 }
 
 void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
@@ -135,6 +140,7 @@ void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
    glGenerateMipmap(gl_target);
    glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, -1);
    glBindTexture(gl_target, 0);
+
 }
 
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer)
@@ -155,6 +161,7 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bo
       glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.width, size.height);
 
       glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.id.rbo);
+
    }
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -196,6 +203,7 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depth
       glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.width, size.height);
 
       glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, framebuffer.id.rbo);
+
    }
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -210,6 +218,7 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depth
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
 }
 
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
@@ -227,6 +236,7 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
    glDeleteFramebuffers(1, &framebuffer.id.fbo);
    if (framebuffer.id.rbo != 0)
       glDeleteRenderbuffers(1, &framebuffer.id.rbo);
+
 }
 
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
@@ -237,12 +247,14 @@ void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
+
 }
 
 void Graphics_UnbindFramebuffers(Graphics *graphics)
 {
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
 }
 
 void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[])
@@ -276,6 +288,7 @@ void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_fr
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
 }
 
 uS GFX_PixelSize(u8 format)
@@ -631,9 +644,9 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data)
       uS pixel_size = GFX_PixelSize(texture->format);
 
       uS offset = 0;
-      i32 mip_width = width;
-      i32 mip_height = height;
-      i32 mip_depth = depth;
+      i32 mip_width = M_MAX(width, 1);
+      i32 mip_height = M_MAX(height, 1);
+      i32 mip_depth = M_MAX(depth, 1);
 
       for (u32 mip_i = 0; mip_i < texture->mipmap_count; mip_i++)
       {

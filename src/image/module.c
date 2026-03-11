@@ -1,6 +1,7 @@
-#include "util/extra_types.h"
 #include "util/types.h"
+#include "util/extra_types.h"
 #include "util/math.h"
+#include "util/vec4.h"
 
 #include "image.h"
 
@@ -18,7 +19,7 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
 
    Image image = { 0 };
    i32 image_channels = 0;
-   i32 force_channels = (is_srgb) ? 4 : 0;
+   i32 force_channels = 4;
 
    if (is_hdr)
       image.data = (u8*)stbi_loadf_from_memory(memory.data, memory.size, &image.size.width, &image.size.height, &image_channels, force_channels);
@@ -30,8 +31,8 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
    if (image.data == NULL)
       return (Image){ .data = NULL };
 
-   image.image_format = (is_hdr) ? IMG_FORMAT_F32 : (IMG_FORMAT_U8 + (u8)is_srgb);
-   image.channel_count = (u8)image_channels;
+   image.image_format = is_hdr ? IMG_FORMAT_F32 : (is_srgb ? IMG_FORMAT_U8_SRGB : IMG_FORMAT_U8);
+   image.channel_count = (u8)force_channels;
    image.mipmap_count = 1;
    image.depth = 1;
 
@@ -120,26 +121,27 @@ void Image_GenerateMipmaps(Image* image)
 
    bool is_hdr = (image->image_format == IMG_FORMAT_F32);
 
-   uS bytes_per_channel = (is_hdr) ? sizeof(f32) : sizeof(u8);
+   uS bytes_per_channel = is_hdr ? sizeof(f32) : sizeof(u8);
    uS bytes_per_pixel = bytes_per_channel * (uS)image->channel_count;
-   uS total_bytes = bytes_per_pixel * (uS)(image->size.width * image->size.height);
+   uS total_bytes = bytes_per_pixel * ((uS)image->size.width * (uS)image->size.height);
 
    u8* data = malloc(total_bytes);
    if (data == NULL)
       return;
 
    data = memcpy(data, image->data, total_bytes);
-   uS prev_offset = 0;
 
    u8 mipmap_count = 1;
-   resolution2d size = image->size;
-   while (size.width > 1 || size.height > 1)
-   {
-      resolution2d prev_size = size;
-      size.width = M_MAX(size.width / 2, 1);
-      size.height = M_MAX(size.height / 2, 1);
+   resolution2d mip_size = image->size;
 
-      uS mip_bytes = bytes_per_pixel * (uS)(size.width * size.height);
+   uS prev_mip_offset = 0;
+   while (mip_size.width > 1 || mip_size.height > 1)
+   {
+      resolution2d prev_mip_size = mip_size;
+      mip_size.width = M_MAX(mip_size.width / 2, 1);
+      mip_size.height = M_MAX(mip_size.height / 2, 1);
+
+      uS mip_bytes = bytes_per_pixel * ((uS)mip_size.width * (uS)mip_size.height);
 
       u8* tmp_data = realloc(data, total_bytes + mip_bytes);
       if (tmp_data == NULL)
@@ -150,54 +152,79 @@ void Image_GenerateMipmaps(Image* image)
 
       data = tmp_data;
 
-      u8* prev_data = data + prev_offset;
+      u8* prev_mip_data = data + prev_mip_offset;
       u8* mip_data = data + total_bytes;
 
-      prev_offset = total_bytes;
+      prev_mip_offset = total_bytes;
 
       total_bytes += mip_bytes;
       mipmap_count++;
 
-      for (i32 y_i = 0; y_i < size.height; y_i++)
-         for (i32 x_i = 0; x_i < size.width; x_i++)
+      for (i32 y_i = 0; y_i < mip_size.height; y_i++)
+         for (i32 x_i = 0; x_i < mip_size.width; x_i++)
       {
-         i32 prev_y = M_MIN(y_i * 2, prev_size.height - 1);
-         i32 prev_x = M_MIN(x_i * 2, prev_size.width - 1);
-
-         i32 mip_idx = y_i * size.width + x_i;
+         i32 mip_idx = y_i * mip_size.width + x_i;
 
          u8* mip_pixel = mip_data + (uS)mip_idx * bytes_per_pixel;
 
+         i32 prev_mip_x0 = M_MIN(x_i * 2, prev_mip_size.width - 1);
+         i32 prev_mip_y0 = M_MIN(y_i * 2, prev_mip_size.height - 1);
+         i32 prev_mip_x1 = (prev_mip_x0 + 1) % prev_mip_size.width;
+         i32 prev_mip_y1 = (prev_mip_y0 + 1) % prev_mip_size.height;
+
+         i32 prev_mip_idx_00 = prev_mip_y0 * prev_mip_size.width + prev_mip_x0;
+         i32 prev_mip_idx_10 = prev_mip_y0 * prev_mip_size.width + prev_mip_x1;
+         i32 prev_mip_idx_01 = prev_mip_y1 * prev_mip_size.width + prev_mip_x0;
+         i32 prev_mip_idx_11 = prev_mip_y1 * prev_mip_size.width + prev_mip_x1;
+
+         u8* prev_mip_pixel_00 = prev_mip_data + (uS)prev_mip_idx_00 * bytes_per_pixel;
+         u8* prev_mip_pixel_10 = prev_mip_data + (uS)prev_mip_idx_10 * bytes_per_pixel;
+         u8* prev_mip_pixel_01 = prev_mip_data + (uS)prev_mip_idx_01 * bytes_per_pixel;
+         u8* prev_mip_pixel_11 = prev_mip_data + (uS)prev_mip_idx_11 * bytes_per_pixel;
+
          for (i32 channel_i = 0; channel_i < image->channel_count; channel_i++)
          {
-            u8* mip_channel = mip_pixel + (uS)channel_i * bytes_per_channel;
+            uS channel_offset = (uS)channel_i * bytes_per_channel;
 
-            f32 value = 0.0f;
-            for (i32 offset_y = 0; offset_y < 2; offset_y++)
-               for (i32 offset_x = 0; offset_x < 2; offset_x++)
+            u8* mip_channel = mip_pixel + channel_offset;
+
+            u8* prev_mip_channel_00 = prev_mip_pixel_00 + channel_offset;
+            u8* prev_mip_channel_10 = prev_mip_pixel_10 + channel_offset;
+            u8* prev_mip_channel_01 = prev_mip_pixel_01 + channel_offset;
+            u8* prev_mip_channel_11 = prev_mip_pixel_11 + channel_offset;
+
+            vec4 quad_values = { 0 };
+
+            if (is_hdr)
             {
-               i32 ofs_x = M_MIN(prev_x + offset_x, prev_size.width - 1);
-               i32 ofs_y = M_MIN(prev_y + offset_y, prev_size.height - 1);
-               i32 ofs_prev_idx = ofs_y * prev_size.width + ofs_x;
+               quad_values.x = *((f32*)prev_mip_channel_00);
+               quad_values.y = *((f32*)prev_mip_channel_10);
+               quad_values.z = *((f32*)prev_mip_channel_01);
+               quad_values.w = *((f32*)prev_mip_channel_11);
 
-               u8* prev_ofs_pixel = prev_data + (uS)ofs_prev_idx * bytes_per_pixel;
-               u8* prev_ofs_channel = prev_ofs_pixel + (uS)channel_i * bytes_per_channel;
-
-               if (is_hdr)
-                  value += *((f32*)prev_ofs_channel);
-               else
-                  value += BYTE_TO_F32(*prev_ofs_channel);
+            } else {
+               quad_values.x = BYTE_TO_F32(*prev_mip_channel_00);
+               quad_values.y = BYTE_TO_F32(*prev_mip_channel_10);
+               quad_values.z = BYTE_TO_F32(*prev_mip_channel_01);
+               quad_values.w = BYTE_TO_F32(*prev_mip_channel_11);
 
             }
 
-            value *= 0.25f;
+            const vec4 quad_weights = VEC4(0.25f, 0.25f, 0.25f, 0.25f);
+            f32 value = quad_values.x;
+            u8 value_sdr = F32_TO_BYTE(M_CLAMP(value, 0.0f, 1.0f));
+
+            void* value_ptr = NULL;
 
             if (is_hdr)
-               memcpy(mip_channel, &value, bytes_per_channel);
+               (*((f32*)mip_channel)) = value;
             else
-               (*mip_channel) = F32_TO_BYTE(M_MIN(value, 1.0));
+               (*mip_channel) = value_sdr;
+
+            // memcpy(mip_channel, &value_ptr, bytes_per_channel);
 
          }
+
       }
 
    }

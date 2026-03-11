@@ -16,6 +16,7 @@ typedef handle Framebuffer;
 
 enum {
    ERR_GFX_CONTEXT_FAILED = 1
+
 };
 
 enum {
@@ -28,23 +29,27 @@ enum {
    GFX_DRAWMODE_DYNAMIC_COPY,
    GFX_DRAWMODE_STREAM_READ,
    GFX_DRAWMODE_STREAM_COPY
+
 };
 
 enum {
    GFX_BUFFERTYPE_UNIFORM = 0,
    GFX_BUFFERTYPE_STORAGE
+
 };
 
 enum {
    GFX_FACECULL_BACK = 0,
    GFX_FACECULL_FRONT,
    GFX_FACECULL_NONE
+
 };
 
 enum {
    GFX_PRIMITIVE_POINT = 0,
    GFX_PRIMITIVE_LINE,
    GFX_PRIMITIVE_TRIANGLE
+
 };
 
 enum {
@@ -55,7 +60,8 @@ enum {
    GFX_ATTRIBUTE_F32_3X,
    GFX_ATTRIBUTE_F32_4X,
 
-   GFX_ATTRIBUTE_U8_4X_NORM,
+   GFX_ATTRIBUTE_U8_4X_NORM
+
 };
 
 enum {
@@ -70,6 +76,7 @@ enum {
    GFX_UNIFORMTYPE_U32_3X,
    GFX_UNIFORMTYPE_U32_4X,
    GFX_UNIFORMTYPE_TEX_SLOT
+
 };
 
 enum {
@@ -79,6 +86,7 @@ enum {
 
    GFX_TEXTURETYPE_2D_ARRAY,
    GFX_TEXTURETYPE_CUBEMAP_ARRAY
+
 };
 
 enum {
@@ -132,6 +140,7 @@ enum {
    // High Dynamic Range Block Compression Formats
    GFX_TEXTUREFORMAT_RGB_SIGNED_BC6,
    GFX_TEXTUREFORMAT_RGB_UNSIGNED_BC6
+
 };
 
 enum {
@@ -142,12 +151,14 @@ enum {
    GFX_TEXTUREFILTER_BILINEAR_NEAREST_MIPMAPS,
    GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS,
    GFX_TEXTUREFILTER_NEAREST_MAX_BILINEAR_MIN
+
 };
 
 enum {
    GFX_TEXTUREWRAP_REPEAT = 0,
    GFX_TEXTUREWRAP_REPEAT_MIRRORED,
    GFX_TEXTUREWRAP_CLAMP
+
 };
 
 enum {
@@ -156,6 +167,7 @@ enum {
    GFX_BLENDMODE_SUB,
    GFX_BLENDMODE_MUL,
    GFX_BLENDMODE_NONE
+
 };
 
 enum {
@@ -167,12 +179,14 @@ enum {
    GFX_DEPTHMODE_NOT_EQUAL_TO,
    GFX_DEPTHMODE_ALWAYS_OVER,
    GFX_DEPTHMODE_NONE
+
 };
 
 typedef struct Uniform_t
 {
    u32 uniform_type;
    u32 location;
+
    union {
       f32 as_float[16];
       vec2 as_vec2;
@@ -183,7 +197,9 @@ typedef struct Uniform_t
 
       u32 as_uint[4];
       i32 texslot;
+
    };
+
 } Uniform;
 
 typedef struct UniformBlock_t
@@ -191,6 +207,7 @@ typedef struct UniformBlock_t
    uS size;
    u32 binding;
    Buffer ubo;
+
 } UniformBlock;
 
 #define GFX_MAX_UNIFORM_BLOCKS 8
@@ -199,6 +216,7 @@ typedef struct UniformBlockList_t
 {
    UniformBlock blocks[GFX_MAX_UNIFORM_BLOCKS];
    u32 count;
+
 } UniformBlockList;
 
 typedef struct TextureDesc_t
@@ -208,6 +226,7 @@ typedef struct TextureDesc_t
    u16 mipmap_count;
    u8 texture_type;
    u8 texture_format;
+
 } TextureDesc;
 
 typedef struct TextureInterpolation_t
@@ -215,6 +234,7 @@ typedef struct TextureInterpolation_t
    u16 texture_anisotropy;
    u8 texture_filter;
    u8 texture_wrap;
+
 } TextureInterpolation;
 
 typedef struct Graphics_t Graphics;
