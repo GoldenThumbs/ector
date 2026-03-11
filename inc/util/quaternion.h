@@ -98,7 +98,7 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
       vec3 pitch_axis = Util_NormalizeVec3(Util_CrossVec3(yaw_axis, tan_dir));
       if (Util_DotVec3(pitch_axis, pitch_axis) > M_FLOAT_FUZZ)
       {
-         pitch_axis = Util_ScaleVec3(pitch_axis, M_SIGN(Util_DotVec3(pointing_dir, yaw_axis)));
+         pitch_axis = Util_ScaleVec3(pitch_axis, (f32)M_SIGN(Util_DotVec3(pointing_dir, yaw_axis)));
 
          f32 cos_angle = Util_DotVec3(pointing_dir, tan_dir);
          f32 angle = M_ACOS(cos_angle);

@@ -47,7 +47,7 @@ char* Util_MakeFilePath(const char* base_path, const char* file_name)
    if (base_path == NULL || file_name == NULL)
       return NULL;
 
-   i32 directory_length = strnlen(base_path, PATH_CHARACTER_LIMIT);
+   i32 directory_length = (i32)strnlen(base_path, PATH_CHARACTER_LIMIT);
    while (directory_length > 0)
    {
       char directory_char = base_path[--directory_length];

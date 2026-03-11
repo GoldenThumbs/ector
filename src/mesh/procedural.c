@@ -102,10 +102,9 @@ Mesh Mesh_CreateSphere(u32 faces, f32 size)
    for (u32 vert_i = 0; vert_i < mesh.vertex_count; vert_i++)
    {
       vec3 v_normal = Util_NormalizeVec3(position[vert_i]);
-      vec3 v_bitangent = Util_NormalizeVec3(Util_CrossVec3(v_normal, tangent[vert_i].xyz));
       position[vert_i] = Util_ScaleVec3(v_normal, size);
       normal[vert_i] = v_normal;
-      // tangent[vert_i].xyz = Util_NormalizeVec3(Util_CrossVec3(v_bitangent, v_normal));
+
    }
 
    Mesh_GenTangents(mesh_interface);
