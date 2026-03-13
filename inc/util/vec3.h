@@ -69,6 +69,14 @@ static inline vec3 Util_MulVec3(vec3 a, vec3 b)
    return res;
 }
 
+static inline vec3 Util_DivVec3(vec3 a, vec3 b)
+{
+   vec3 res = { 0 };
+
+   Util_DivVec_N(a.arr, b.arr, res.arr, M_VEC3_LEN);
+   return res;
+}
+
 static inline vec3 Util_ScaleVec3(vec3 vector, f32 scalar)
 {
    vec3 res = { 0 };

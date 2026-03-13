@@ -69,6 +69,14 @@ static inline vec2 Util_MulVec2(vec2 a, vec2 b)
    return res;
 }
 
+static inline vec2 Util_DivVec2(vec2 a, vec2 b)
+{
+   vec2 res = { 0 };
+
+   Util_DivVec_N(a.arr, b.arr, res.arr, M_VEC2_LEN);
+   return res;
+}
+
 static inline vec2 Util_ScaleVec2(vec2 vector, f32 scalar)
 {
    vec2 res = { 0 };

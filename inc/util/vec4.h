@@ -69,6 +69,14 @@ static inline vec4 Util_MulVec4(vec4 a, vec4 b)
    return res;
 }
 
+static inline vec4 Util_DivVec4(vec4 a, vec4 b)
+{
+   vec4 res = { 0 };
+
+   Util_DivVec_N(a.arr, b.arr, res.arr, M_VEC4_LEN);
+   return res;
+}
+
 static inline vec4 Util_ScaleVec4(vec4 vector, f32 scalar)
 {
    vec4 res = { 0 };
