@@ -175,29 +175,55 @@ void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material)
    if (surface == NULL || surface->pass_count < 1)
       return;
 
-   u32 user_texture_slots[SURF_MAX_TEXTURES][2] = { 0 };
+   struct {
+      bool is_set;
+      Texture texture;
+      TextureInterpolation interpolation_settings;
+   } user_texture_slots[SURF_MAX_TEXTURES] = { 0 };
+
    for (u32 tex_i = 0; tex_i < material.texture_count; tex_i++)
    {
       SurfaceTexture surf_tex = material.textures[tex_i];
 
-      if (surf_tex.texture.id == INVALID_HANDLE_ID)
+      bool is_slot_reserved = (renderer->texture_slots[surf_tex.bind_slot] == INTERNAL_RNDR_SURF_TEXTURE_RESERVED);
+      if (surf_tex.texture.id == INVALID_HANDLE_ID || is_slot_reserved)
          continue;
 
-      user_texture_slots[surf_tex.bind_slot][0] = 1;
-      user_texture_slots[surf_tex.bind_slot][1] = surf_tex.texture.id;
-
-      Graphics_SetTextureInterpolation(renderer->graphics, surf_tex.texture, surf_tex.interpolation_settings);
+      user_texture_slots[surf_tex.bind_slot].is_set = true;
+      user_texture_slots[surf_tex.bind_slot].texture = surf_tex.texture;
+      user_texture_slots[surf_tex.bind_slot].interpolation_settings = surf_tex.interpolation_settings;
       
    }
 
    for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
    {
-      if (user_texture_slots[slot_i][0]) 
-         RNDR_BindTextureAtSlot(renderer, slot_i, INTERNAL_RNDR_SURF_TEXTURE_USER_SET, (Texture){ .id = user_texture_slots[slot_i][1] });
-      else
+      if (user_texture_slots[slot_i].is_set)
+      {
+         RNDR_BindTextureAtSlot(renderer, slot_i, INTERNAL_RNDR_SURF_TEXTURE_USER_SET, user_texture_slots[slot_i].texture);
+         Graphics_SetTextureInterpolation(renderer->graphics, user_texture_slots[slot_i].texture, user_texture_slots[slot_i].interpolation_settings);
+
+      } else
          RNDR_BindTextureAtSlot(renderer, slot_i, surface->textures[slot_i], (Texture){ .id = INVALID_HANDLE_ID });
 
    }
+}
+
+void Renderer_ReserveTexture(Renderer* renderer, u32 bind_slot)
+{
+   if (renderer == NULL || bind_slot >= SURF_MAX_TEXTURES)
+      return;
+
+   renderer->texture_slots[bind_slot] = INTERNAL_RNDR_SURF_TEXTURE_RESERVED;
+
+}
+
+void Renderer_UnreserveTexture(Renderer* renderer, u32 bind_slot)
+{
+   if (renderer == NULL || bind_slot >= SURF_MAX_TEXTURES)
+      return;
+
+   renderer->texture_slots[bind_slot] = INTERNAL_RNDR_SURF_TEXTURE_USER_SET;
+
 }
 
 void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color)
@@ -930,6 +956,13 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
 {
    if (renderer == NULL || bind_slot >= SURF_MAX_TEXTURES)
       return;
+
+   if (renderer->texture_slots[bind_slot] == INTERNAL_RNDR_SURF_TEXTURE_RESERVED)
+   {
+      printf("Texture slot %u is reserved, bind failed.\n", bind_slot);
+      return;
+
+   }
    
    if (texture_default == INTERNAL_RNDR_SURF_TEXTURE_USER_SET)
    {

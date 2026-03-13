@@ -121,8 +121,6 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
    glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
    glTexParameterf(gl_target, GL_TEXTURE_MAX_ANISOTROPY, aniso);
 
-   glBindTexture(gl_target, 0);
-
 }
 
 void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)

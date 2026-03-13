@@ -173,6 +173,8 @@ void Renderer_Render(Renderer* renderer, resolution2d size);
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
 void Renderer_SetTextureToDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);
 void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material);
+void Renderer_ReserveTexture(Renderer* renderer, u32 bind_slot);
+void Renderer_UnreserveTexture(Renderer* renderer, u32 bind_slot);
 
 void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color);
 

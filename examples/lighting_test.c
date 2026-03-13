@@ -52,7 +52,6 @@ int main(int argc, char* argv[])
    Renderer* renderer = Engine_FetchModule(engine, "renderer");
    Renderer_SetLightManager(renderer, DefaultLightManager_Info(renderer));
 
-
    Surface unlit_surf = Renderer_AddSurface(renderer, "Unlit", &(SurfaceDesc){
       .pass_count = 1,
       .passes[0] = {
@@ -230,10 +229,27 @@ int main(int argc, char* argv[])
 
    f32 cam_dist = 2.0f;
 
+   bool slot_is_reserved = false;
+
    while(!Engine_CheckExitConditions(engine))
    {
       if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
          Engine_RequestExit(engine);
+
+      if (Engine_CheckKey(engine, KEY_3, KEY_JUST_PRESSED))
+      {
+         slot_is_reserved = !slot_is_reserved;
+
+         if (slot_is_reserved)
+         {
+            Renderer_ReserveTexture(renderer, 0);
+            Graphics_BindTexture(graphics, Renderer_BlackTexture(renderer), 0);
+
+         }
+         else
+            Renderer_UnreserveTexture(renderer, 0);
+
+      }
 
       f64 frame_delta = Engine_GetFrameDelta(engine);
       vec2 mouse_delta = Engine_GetMouseDelta(engine);
