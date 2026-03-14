@@ -4,6 +4,7 @@
 #include "util/files.h"
 #include "util/resource.h"
 #include "util/matrix.h"
+#include "mesh.h"
 #include "image.h"
 #include "graphics.h"
 
@@ -743,14 +744,14 @@ Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture
    return Graphics_CreateTexture(renderer->graphics, color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
 }
 
-Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_relative, resolution2d slice_size, bool generate_mipmaps, bool is_srgb)
+Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, resolution2d slice_size, bool generate_mipmaps, bool is_srgb)
 {
-   if (renderer == NULL || renderer->app_path == NULL || texture_file_relative == NULL)
+   if (renderer == NULL || renderer->app_path == NULL || texture_file_path == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
    u8 image_type = (slice_size.width <= 0 || slice_size.height <= 0) ? IMG_TYPE_2D : IMG_TYPE_3D;
 
-   char* file_path = Util_MakeFilePath(renderer->app_path, texture_file_relative);
+   char* file_path = Util_MakeFilePath(renderer->app_path, texture_file_path);
 
    memblob file_data = Util_LoadFileIntoMemory(file_path, true);
    Image image = Image_CreateImage(file_data, image_type, slice_size, is_srgb);
@@ -782,12 +783,12 @@ Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_relati
    return texture;
 }
 
-Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative, const char* defines[], const u32 defines_count, bool is_compute)
+Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute)
 {
-   if (renderer == NULL || renderer->app_path == NULL || shader_file_relative == NULL)
+   if (renderer == NULL || renderer->app_path == NULL || shader_file_path == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
-   char* file_path = Util_MakeFilePath(renderer->app_path, shader_file_relative);
+   char* file_path = Util_MakeFilePath(renderer->app_path, shader_file_path);
 
    Shader shader = Graphics_LoadShaderFromFile(renderer->graphics, file_path, defines, defines_count, is_compute);
 
@@ -795,6 +796,25 @@ Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative,
       free(file_path);
 
    return shader;
+}
+
+Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path)
+{
+   if (renderer == NULL || renderer->app_path == NULL || model_file_path == NULL)
+      return (Model){ 0 };
+
+   char* file_path = Util_MakeFilePath(renderer->app_path, model_file_path);
+   memblob file_data = Util_LoadFileIntoMemory(file_path, true);
+
+   Model model = Mesh_LoadEctorModel(file_data);
+
+   if (file_data.data != NULL)
+      free(file_data.data);
+
+   if (file_path != NULL)
+      free(file_path);
+
+   return model;
 }
 
 void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings)

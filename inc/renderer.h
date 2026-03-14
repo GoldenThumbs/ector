@@ -3,6 +3,7 @@
 
 #include "util/types.h"
 #include "util/extra_types.h"
+#include "mesh.h"
 #include "graphics.h"
 
 #define RENDERER_MODULE "renderer"
@@ -225,8 +226,9 @@ void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_
 bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id);
 
 Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture_type);
-Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_relative, resolution2d slice_size, bool generate_mipmaps, bool is_srgb);
-Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_relative, const char* defines[], const u32 defines_count, bool is_compute);
+Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, resolution2d slice_size, bool generate_mipmaps, bool is_srgb);
+Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute);
+Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path);
 
 void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings);
 void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture);
