@@ -958,11 +958,7 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
       return;
 
    if (renderer->texture_slots[bind_slot] == INTERNAL_RNDR_SURF_TEXTURE_RESERVED)
-   {
-      printf("Texture slot %u is reserved, bind failed.\n", bind_slot);
       return;
-
-   }
    
    if (texture_default == INTERNAL_RNDR_SURF_TEXTURE_USER_SET)
    {
