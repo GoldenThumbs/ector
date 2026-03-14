@@ -31,8 +31,9 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
    if (image.data == NULL)
       return (Image){ .data = NULL };
 
+   image.image_type = image_type;
    image.image_format = is_hdr ? IMG_FORMAT_F32 : (is_srgb ? IMG_FORMAT_U8_SRGB : IMG_FORMAT_U8);
-   image.channel_count = (u8)force_channels;
+   image.channel_count = (u8)image_channels;
    image.mipmap_count = 1;
    image.depth = 1;
 
