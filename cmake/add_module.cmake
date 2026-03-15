@@ -1,5 +1,5 @@
-macro(add_module)
+macro(add_module main_src)
    append_source(module_src "${ARGN}" "${CMAKE_CURRENT_SOURCE_DIR}")
-   list(APPEND ector_src "${module_src}")
-   set(ector_src "${ector_src}" PARENT_SCOPE)
+   list(APPEND ${main_src} "${module_src}")
+   set(${main_src} "${${main_src}}" PARENT_SCOPE)
 endmacro()

@@ -1,4 +1,5 @@
 add_module(
+   ector_src
    "module.c"
    "shaders.c"
    "geometries.c"
