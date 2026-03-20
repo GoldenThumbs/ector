@@ -1018,6 +1018,9 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
       UniformBlock block = pass.uniform_blocks[block_i];
       void* block_data = material.uniform_block_data[pass_id][block_i];
       Graphics_UpdateBuffer(renderer->graphics, block.ubo, block_data, 1, block.size);
+
+      uniform_blocks.blocks[block_i] = block;
+
    }
 
    return uniform_blocks;
