@@ -12,11 +12,12 @@ typedef struct gfx_Shader_t
    } id;
 
    struct {
-      u32 is_compute: 1;
+      u16 is_compute: 1;
    };
    
-   handle compare;
    u16 next_freed;
+   handle compare;
+
 } gfx_Shader;
 
 typedef struct gfx_Buffer_t
@@ -32,6 +33,7 @@ typedef struct gfx_Buffer_t
    
    handle compare;
    u16 next_freed;
+
 } gfx_Buffer;
 
 typedef struct gfx_Geometry_t
@@ -39,15 +41,20 @@ typedef struct gfx_Geometry_t
    struct {
       u32 vao;
       u32 v_buf, i_buf;
+
    } id;
+
+   u32 element_count;
 
    u8 draw_mode: 4;
    u8 face_cull_mode: 4;
-   u8 primitive;
-   u16 element_count;
+   u8 primitive: 7;
+   u8 index_type: 1;
    
-   handle compare;
+   
    u16 next_freed;
+   handle compare;
+
 } gfx_Geometry;
 
 typedef struct gfx_Texture_t
@@ -65,6 +72,7 @@ typedef struct gfx_Texture_t
    
    handle compare;
    u16 next_freed;
+
 } gfx_Texture;
 
 typedef struct gfx_Framebuffer_t
@@ -76,11 +84,13 @@ typedef struct gfx_Framebuffer_t
 
    handle compare;
    u16 next_freed;
+
 } gfx_Framebuffer;
 
 typedef union gfx_State_t
 {
    u16 state_id;
+
    struct {
       u16 blend_enable: 1;
       u16 face_cull_enable: 1;
@@ -90,13 +100,16 @@ typedef union gfx_State_t
       u16 face_cull_mode: 1;
       u16 blend_mode: 3;
       u16 depth_mode: 3;
+
    };
+
 } gfx_State;
 
 struct gfx_Filtering_s
 {
    u32 min_filter;
    u32 mag_filter;
+
 };
 
 struct Graphics_t
@@ -115,6 +128,7 @@ struct Graphics_t
 
    gfx_State state;
    color8 clear_color;
+
 };
 
 void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks);
@@ -126,7 +140,7 @@ u32 GFX_AttributeType(u8 attribute);
 i32 GFX_AttributeTypeCount(u8 attribute);
 bool GFX_AttributeTypeNormalized(u8 attribute);
 uS GFX_AttributeTypeSize(u8 attribute);
-uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count);
+uS GFX_VertexBufferSize(u32 vertex_count, u8* attributes, u16 attribute_count);
 
 void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh);
 
@@ -141,7 +155,7 @@ struct gfx_Filtering_s GFX_TextureFilter(u8 filter);
 void GFX_CreateTexture(gfx_Texture* texture, u8* data);
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
-void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset, u32 instance_count);
+void GFX_DrawVertices(u8 primitive, u32 element_count, bool use_index_buffer, u8 index_type, u32 gl_vertex_array, i32 offset, u32 instance_count);
 
 u32 GFX_Primitive(u8 primitive_type);
 u32 GFX_DrawMode(u8 draw_mode);

@@ -16,6 +16,7 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
    geometry.draw_mode = draw_mode;
    geometry.face_cull_mode = GFX_FACECULL_BACK;
    geometry.primitive = GFX_MeshPrimitive(mesh.primitive);
+   geometry.index_type = mesh.index_type;
    geometry.element_count = ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
 
    GFX_CreateGeometry(&geometry, mesh);
@@ -175,10 +176,10 @@ uS GFX_AttributeTypeSize(u8 attribute)
    }
 }
 
-uS GFX_VertexBufferSize(u16 vertex_count, u8* attributes, u16 attribute_count)
+uS GFX_VertexBufferSize(u32 vertex_count, u8* attributes, u16 attribute_count)
 {
    uS buffer_size = 0;
-   for (u16 i=0; i<attribute_count; i++)
+   for (u16 i = 0; i < attribute_count; i++)
    {
       u8 a = GFX_MeshAttribute(attributes[i]);
       buffer_size += GFX_AttributeTypeSize(a) * (uS)GFX_AttributeTypeCount(a) * (uS)vertex_count;
@@ -205,12 +206,11 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
       GFX_DrawMode(geometry->draw_mode)
    );
 
-   u16 atr_num = 0;
    uS atr_ofs = 0;
 
-   for (; atr_num<mesh.attribute_count; atr_num++)
+   for (u8 atr_i = 0; atr_i < mesh.attribute_count; atr_i++)
    {
-      u8 a = GFX_MeshAttribute(mesh.attributes[atr_num]);
+      u8 a = GFX_MeshAttribute(mesh.attributes[atr_i]);
 
       if (a == GFX_ATTRIBUTE_NULL)
          break;
@@ -220,9 +220,9 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
       bool a_normalized = GFX_AttributeTypeNormalized(a);
       uS a_size = GFX_AttributeTypeSize(a);
 
-      glEnableVertexAttribArray(atr_num);
+      glEnableVertexAttribArray(atr_i);
       glVertexAttribPointer(
-         atr_num,
+         atr_i,
          a_count,
          a_type,
          a_normalized,
@@ -236,11 +236,13 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
 
    if ((mesh.index_count > 0) && (geometry->primitive == GFX_PRIMITIVE_TRIANGLE))
    {
+      uS index_size = (mesh.index_type == MESH_INDEXTYPE_16BIT) ? 16 : 32;
+
       glGenBuffers(1,  &geometry->id.i_buf);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->id.i_buf);
       glBufferData(
          GL_ELEMENT_ARRAY_BUFFER,
-         sizeof(u16) * (uS)mesh.index_count,
+         index_size * (uS)mesh.index_count,
          mesh.index_buffer,
          GFX_DrawMode(geometry->draw_mode)
 
@@ -278,7 +280,7 @@ void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode)
 
 }
 
-void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u32 gl_vertex_array, i32 offset, u32 instance_count)
+void GFX_DrawVertices(u8 primitive, u32 element_count, bool use_index_buffer, u8 index_type, u32 gl_vertex_array, i32 offset, u32 instance_count)
 {
    glBindVertexArray(gl_vertex_array);
 
@@ -286,10 +288,12 @@ void GFX_DrawVertices(u8 primitive, u16 element_count, bool use_index_buffer, u3
 
    if (use_index_buffer)
    {
+      i32 gl_index_type = (index_type == GFX_INDEXTYPE_16BIT) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+
       if (instance_count > 1)
-         glDrawElementsInstanced(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset), instance_count);
+         glDrawElementsInstanced(gl_primitive, element_count, gl_index_type, (void*)((u64)offset), instance_count);
       else
-         glDrawElements(gl_primitive, element_count, GL_UNSIGNED_SHORT, (void*)((u64)offset));
+         glDrawElements(gl_primitive, element_count, gl_index_type, (void*)((u64)offset));
 
    } else {
       if (instance_count > 1)

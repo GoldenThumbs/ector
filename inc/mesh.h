@@ -11,12 +11,20 @@ enum {
    MESH_ATTRIBUTE_2_CHANNEL,
    MESH_ATTRIBUTE_3_CHANNEL,
    MESH_ATTRIBUTE_4_CHANNEL,
-   MESH_ATTRIBUTE_COLOR,
+   MESH_ATTRIBUTE_COLOR
+
 };
 
 enum {
    MESH_PRIMITIVE_TRIANGLE = 0,
    MESH_PRIMITIVE_INVALID // no clue if i should even be tracking this and why i do at the moment
+
+};
+
+enum {
+   MESH_INDEXTYPE_16BIT = 0,
+   MESH_INDEXTYPE_32BIT
+
 };
 
 typedef struct Node_t
@@ -28,18 +36,25 @@ typedef struct Node_t
    i16 prev_sibling_id;
    i16 next_sibling_id;
    i16 root_child_id;
+
 } Node;
 
 typedef struct Mesh_t
 {
    u8* vertex_buffer;
-   u16* index_buffer;
+
+   union {
+      u16* index_buffer;
+      u32* index_buffer_32bit;
+
+   };
    
    u32 vertex_count;
    u32 index_count;
    i32 node_id;
    u16 material_id;
-   u8 primitive;
+   u8 primitive: 7;
+   u8 index_type: 1;
    u8 attribute_count;
    u8 attributes[MESH_MAX_ATTRIBUTES];
 
@@ -90,7 +105,7 @@ typedef struct Model_t
 
 } Model;
 
-static inline Mesh Mesh_EmptyMesh(const u8 primitive)
+static inline Mesh Mesh_EmptyMeshWithIndexType(const u8 primitive, const u8 index_type)
 {
    return (Mesh){
       .vertex_buffer = NULL,
@@ -100,9 +115,15 @@ static inline Mesh Mesh_EmptyMesh(const u8 primitive)
       .node_id = -1,
       .material_id = 0,
       .primitive = primitive,
+      .index_type = index_type,
       .attribute_count = 0,
       .attributes = { 0 }
    };
+}
+
+static inline Mesh Mesh_EmptyMesh(const u8 primitive)
+{
+   return Mesh_EmptyMeshWithIndexType(primitive, MESH_INDEXTYPE_16BIT);
 }
 
 static inline MeshInterface Mesh_NewInterface(Mesh* mesh)

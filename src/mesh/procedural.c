@@ -13,7 +13,7 @@
 
 Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
 {
-   Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
+   Mesh mesh = Mesh_EmptyMeshWithIndexType(MESH_PRIMITIVE_TRIANGLE, MESH_INDEXTYPE_32BIT);
    mesh.attribute_count = 4;
    mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
@@ -35,7 +35,7 @@ Mesh Mesh_CreateBox(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size)
 
 Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bool smooth_seams)
 {
-   Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
+   Mesh mesh = Mesh_EmptyMeshWithIndexType(MESH_PRIMITIVE_TRIANGLE, MESH_INDEXTYPE_32BIT);
    mesh.attribute_count = 4;
    mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
@@ -69,7 +69,7 @@ Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bo
 
 Mesh Mesh_CreateSphere(u32 faces, f32 size)
 {
-   Mesh mesh = Mesh_EmptyMesh(MESH_PRIMITIVE_TRIANGLE);
+   Mesh mesh = Mesh_EmptyMeshWithIndexType(MESH_PRIMITIVE_TRIANGLE, MESH_INDEXTYPE_32BIT);
    mesh.attribute_count = 4;
    mesh.attributes[0] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
@@ -224,7 +224,7 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface)
 {
-   if (mesh_interface.mesh == NULL)
+   if (mesh_interface.mesh == NULL || mesh_interface.mesh->index_type != MESH_INDEXTYPE_32BIT)
       return mesh_interface;
 
    u32 vertex_count = (u32)((faces_x + 1) * (faces_y + 1));
@@ -259,10 +259,10 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
    plane_tangent.xyz = Util_NormalizeVec3(plane_tangent.xyz);
    plane_tangent.w = -1.0f;
 
-   u16 vert_idx = 0;
-   for (u16 i=0; i < (faces_y + 1); i++)
+   u32 vert_idx = 0;
+   for (u32 i = 0; i < (faces_y + 1); i++)
    {
-      for (u16 j=0; j < (faces_x + 1); j++)
+      for (u32 j = 0; j < (faces_x + 1); j++)
       {
          f32 x = (f32)j / (f32)faces_x;
          f32 y = (f32)i / (f32)faces_y;
@@ -277,17 +277,18 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
       }
    }
    
-   u16* index_buffer = realloc(mesh_interface.mesh->index_buffer, (uS)(last_idx + index_count) * sizeof(u16));
+   uS index_size = (mesh_interface.mesh->index_type == MESH_INDEXTYPE_16BIT) ? 16 : 32;
+   u32* index_buffer = realloc(mesh_interface.mesh->index_buffer, (uS)(last_idx + index_count) * index_size);
    
    if (index_buffer != NULL)
    {
-      u16 quad_idx = last_idx;
-      for (u16 i=0; i < faces_y; i++)
+      u32 quad_idx = last_idx;
+      for (u32 i=0; i < faces_y; i++)
       {
-         for (u16 j=0; j < faces_x; j++)
+         for (u32 j=0; j < faces_x; j++)
          {
-            u16 base_y0 = last_vrt + i * (u16)(faces_x + 1) + j;
-            u16 base_y1 = last_vrt + (i + 1) * (u16)(faces_x + 1) + j;
+            u32 base_y0 = last_vrt + i * (faces_x + 1) + j;
+            u32 base_y1 = last_vrt + (i + 1) * (faces_x + 1) + j;
             
             index_buffer[quad_idx++] = base_y0;
             index_buffer[quad_idx++] = base_y1 + 1;
@@ -298,7 +299,7 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
          }
       }
 
-      mesh_interface.mesh->index_buffer = index_buffer;
+      mesh_interface.mesh->index_buffer_32bit = index_buffer;
       mesh_interface.mesh->index_count += index_count;
    }
 
@@ -327,9 +328,9 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
    
    for (u32 i = 0; i < index_count; i += 3)
    {
-      u16 idx_a = mesh_interface.mesh->index_buffer[i + 0];
-      u16 idx_b = mesh_interface.mesh->index_buffer[i + 1];
-      u16 idx_c = mesh_interface.mesh->index_buffer[i + 2];
+      u32 idx_a = mesh_interface.mesh->index_buffer[i + 0];
+      u32 idx_b = mesh_interface.mesh->index_buffer[i + 1];
+      u32 idx_c = mesh_interface.mesh->index_buffer[i + 2];
 
       vec3 vrt_a = position[idx_a];
       vec3 vrt_b = position[idx_b];
@@ -364,7 +365,7 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
 
    }
 
-   for (u16 i=0; i<vertex_count; i++)
+   for (u32 i = 0; i < vertex_count; i++)
       normal[i] = Util_NormalizeVec3(normal[i]);
 
    return mesh_interface;
@@ -385,9 +386,9 @@ MeshInterface Mesh_AverageNormalsOverSeams(MeshInterface mesh_interface)
    {
       memcpy(tmp_normal, normal, mesh_interface.atr.normal_size);
 
-      for (u16 i = 0; i < vertex_count; i++)
+      for (u32 i = 0; i < vertex_count; i++)
       {
-         for (u16 j = 0; j < vertex_count; j++)
+         for (u32 j = 0; j < vertex_count; j++)
          {
             vec3 diff = Util_SubVec3(position[i], position[j]);
             if (Util_DotVec3(diff, diff) > 1e-7 || j == i)
@@ -491,9 +492,9 @@ MeshInterface Mesh_GenTangents(MeshInterface mesh_interface)
 
       for (u32 i = 0; i < index_count; i += 3)
       {
-         u16 idx_a = mesh_interface.mesh->index_buffer[i + 0];
-         u16 idx_b = mesh_interface.mesh->index_buffer[i + 1];
-         u16 idx_c = mesh_interface.mesh->index_buffer[i + 2];
+         u32 idx_a = mesh_interface.mesh->index_buffer[i + 0];
+         u32 idx_b = mesh_interface.mesh->index_buffer[i + 1];
+         u32 idx_c = mesh_interface.mesh->index_buffer[i + 2];
 
          vec3 vrt_a = position[idx_a];
          vec3 vrt_b = position[idx_b];
