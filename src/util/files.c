@@ -3,6 +3,7 @@
 #include "util/files.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -110,4 +111,68 @@ memblob Util_PrependShaderDefines(memblob shader_data, const char* defines[], co
       free(total_defines);
 
    return (memblob){ full_shader_code, shader_size };
+}
+
+void Util_Log(FILE* stream, const char* module_name, error err, const char* message, ...)
+{
+   FILE* stream_out = stream;
+   if (stream_out == NULL)
+   {
+      switch (err.general)
+      {
+         default:
+         case ERR_OK:
+         {
+            stream_out = stdout;
+
+         } break;
+
+         case ERR_WARN:
+         case ERR_ERROR:
+         case ERR_FATAL:
+         {
+            stream_out = stderr;
+            
+         } break;
+
+      }
+
+   }
+
+   switch (err.general)
+   {
+      default:
+      case ERR_OK:
+      {
+         fprintf(stream_out, "INFO [%s]: ", module_name);
+
+      } break;
+
+      case ERR_WARN:
+      {
+         fprintf(stream_out, "WARNING [%s]: ", module_name);
+         
+      } break;
+
+      case ERR_ERROR:
+      {
+         fprintf(stream_out, "ERROR [%s]: ", module_name);
+         
+      } break;
+
+      case ERR_FATAL:
+      {
+         fprintf(stream_out, "FATAL ERROR [%s]: ", module_name);
+         
+      } break;
+
+   }
+
+   va_list args;
+   va_start(args, message);
+   vfprintf(stream_out, message, args);
+   va_end(args);
+
+   fprintf(stream_out, "\n[error info: %u, error flags: %014b]\n\n", err.extra, err.flags);
+
 }

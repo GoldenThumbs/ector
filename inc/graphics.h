@@ -6,7 +6,7 @@
 
 #define GFX_INVALID_INDEX UINT32_MAX
 
-#define GRAPHICS_MODULE "graphics"
+#define GRAPHICS_MODULE "Graphics"
 
 typedef handle Shader;
 typedef handle Buffer;
@@ -15,7 +15,8 @@ typedef handle Texture;
 typedef handle Framebuffer;
 
 enum {
-   ERR_GFX_CONTEXT_FAILED = 1
+   ERR_GFX_CONTEXT_FAILED = 1,
+   ERR_GFX_SHADER_COMPILATION_FAILED
 
 };
 

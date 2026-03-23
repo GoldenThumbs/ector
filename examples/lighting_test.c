@@ -42,14 +42,14 @@ int main(int argc, char* argv[])
 
    Module_Defaults(engine, 0, NULL);
 
-   Graphics* graphics = Engine_FetchModule(engine, "graphics");
+   Graphics* graphics = Engine_FetchModule(engine, GRAPHICS_MODULE);
    Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
 
    Mesh sphere_mesh = Mesh_CreateSphere(12, 1.0f);
    Geometry sphere = Graphics_CreateGeometry(graphics, sphere_mesh, GFX_DRAWMODE_STATIC);
    Mesh_Free(&sphere_mesh);
 
-   Renderer* renderer = Engine_FetchModule(engine, "renderer");
+   Renderer* renderer = Engine_FetchModule(engine, RENDERER_MODULE);
    Renderer_SetLightManager(renderer, DefaultLightManager_Info(renderer));
 
    Surface unlit_surf = Renderer_AddSurface(renderer, "Unlit", &(SurfaceDesc){

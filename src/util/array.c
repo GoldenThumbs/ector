@@ -1,11 +1,13 @@
 #include "util/array.h"
 #include "util/types.h"
+#include "util/files.h"
 
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+
+#define ARRAY_MODULE "Array"
 
 #define ARR_DATA(array) (&(array)->data)
 #define ARR_PTR_VALID(array_ptr) (((array_ptr) != NULL) && (*(array_ptr) != NULL))
@@ -100,7 +102,9 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
    {
       array->err.general = ERR_ERROR;
       array->err.extra = ERR_ARRAY_REALLOC_FAILED;
-      fprintf(stderr, "ERROR [ARRAY]: Realloc Failed!\n");
+
+      Util_Log(NULL, ARRAY_MODULE, array->err, "Realloc Failed!");
+
       return;
    }
 
@@ -113,6 +117,7 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
    u8* ptr_end = (u8*)(*array_ptr) + offset;
    memset(ptr_end, 0, diff);
+   
 }
 
 void Util_InsertArrayIndex(void** array_ptr, u32 index)
@@ -132,11 +137,13 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
 
       if (array->err.general == ERR_ERROR)
          return;
+
    }
 
    if (index >= length)
    {
       array->length = length + 1u;
+
       return;
    }
 
@@ -146,6 +153,7 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
    memmove(ptr_a, ptr_b, num_bytes);
 
    array->length = length + 1u;
+
 }
 
 void Util_RemoveArrayIndex(void** array_ptr, u32 index)
@@ -164,7 +172,8 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
       array->err.flags |= ERR_ARRAY_INDEX_OVER;
       index = length - 1u;
 
-      fprintf(stderr, "WARNING [ARRAY]: Cannot Remove Index Larger Than Array Length - 1!\nAssuming Last Element.\n");
+      Util_Log(NULL, ARRAY_MODULE, array->err, "Cannot Remove Index Larger Than Array Length - 1!\nAssuming Last Element.");
+
    }
 
    if (index < (length - 1u))
@@ -177,6 +186,7 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 
       uS num_bytes = size * (uS)(length - index + 1u);
       memmove(ptr_a, ptr_b, num_bytes);
+
    }
 
    array->length = length - 1u;

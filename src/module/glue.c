@@ -79,7 +79,7 @@ error MOD_GraphicsFree(Module* self, Engine* engine)
 
 error MOD_RendererInit(Module* self, Engine* engine)
 {
-   Graphics* graphics = (Graphics*)Engine_FetchModule(engine, "graphics");
+   Graphics* graphics = (Graphics*)Engine_FetchModule(engine, GRAPHICS_MODULE);
 
    if (graphics == NULL)
    {

@@ -6,7 +6,7 @@
 #include "mesh.h"
 #include "graphics.h"
 
-#define RENDERER_MODULE "renderer"
+#define RENDERER_MODULE "Renderer"
 
 #define EMPTY_DRAWABLE_TYPE "EmptyDrawable"
 #define GEOMETRY_DRAWABLE_TYPE "GeometryDrawable"

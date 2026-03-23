@@ -27,6 +27,7 @@
 
 enum {
    ERR_ARRAY_REALLOC_FAILED = 1
+
 };
 
 #define ERR_ARRAY_INDEX_OVER (1u>>0u)

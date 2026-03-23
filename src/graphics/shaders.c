@@ -1,13 +1,13 @@
 #include "util/files.h"
 #include "util/types.h"
 #include "util/resource.h"
+#include "util/files.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
 
 #include <glad/gl.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader)
@@ -37,7 +37,12 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
    {
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
-      fprintf(stderr, "%s\n", shd_log);
+
+      error err = { 0 };
+      err.general = ERR_ERROR;
+      err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
+
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Shader Failed To Compile!\n%s", shd_log);
 
       return (handle){ .id = INVALID_HANDLE_ID };
    }
@@ -75,7 +80,12 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
    {
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
-      fprintf(stderr, "%s\n", shd_log);
+      
+      error err = { 0 };
+      err.general = ERR_ERROR;
+      err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
+
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Compute Shader Failed To Compile!\n%s", shd_log);
 
       return (handle){ .id = INVALID_HANDLE_ID };
    }
@@ -101,6 +111,8 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
 
    Shader res_shader = (handle){ .id = INVALID_HANDLE_ID };
 
+   error err = { 0 };
+
    if (is_compute)
    {
       memblob compute_shader_code = Util_PrependShaderDefines(shader_data, defines, define_count, NULL);
@@ -109,13 +121,9 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
 
       if (res_shader.id == INVALID_HANDLE_ID)
       {
-         fprintf(stderr,
-            "SHADER FAILED TO COMPILE! Printing Code...\n\n"
-            "\e[0;33m-< COMPUTE\e[0m:\n"
-            "%s"
-            "\e[0;33m>- COMPUTE\e[0m:\n",
-            (char*)compute_shader_code.data
-         );
+         
+         err.general = ERR_WARN;
+         err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
          
       }
 
@@ -129,17 +137,8 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
 
       if (res_shader.id == INVALID_HANDLE_ID)
       {
-         fprintf(stderr,
-            "SHADER FAILED TO COMPILE! Printing Code...\n\n"
-            "\e[0;33m-< VERTEX\e[0m:\n"
-            "%s"
-            "\e[0;33m>- VERTEX\e[0m:\n"
-            "\e[0;33m-< FRAGMENT\e[0m:\n"
-            "%s"
-            "\e[0;33m>- FRAGMENT\e[0m:\n",
-            (char*)vert_shader_code.data,
-            (char*)frag_shader_code.data
-         );
+         err.general = ERR_WARN;
+         err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
 
       }
 
@@ -147,6 +146,9 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
       free(frag_shader_code.data);
 
    }
+
+   if (res_shader.id == INVALID_HANDLE_ID)
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Shader File [%s] Failed To Compile!", file_path);
 
    free(shader_data.data);
 
