@@ -152,6 +152,7 @@ struct Renderer_t
       u16 use_ortho_camera: 1;
       u16 update_projection: 1;
       u16 update_view_projection: 1;
+      u16 user_supplied_projection: 1;
 
    };
 

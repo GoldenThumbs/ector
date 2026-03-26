@@ -260,6 +260,19 @@ void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view)
 
 }
 
+void Renderer_SetProjectionMatrix(Renderer* renderer, mat4x4 proj)
+{
+   if (renderer == NULL)
+      return;
+
+   renderer->projection = proj;
+   renderer->inv_projection = Util_InverseMat4(renderer->projection);
+
+   renderer->user_supplied_projection = true;
+   renderer->update_view_projection = true;
+
+}
+
 void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov)
 {
    if (renderer == NULL)
@@ -872,14 +885,15 @@ void RNDR_HandleMatrices(Renderer* renderer, resolution2d size)
 
    }
 
-   if (renderer->update_projection)
+   if (renderer->update_projection && !renderer->user_supplied_projection)
    {
       renderer->projection = Util_PerspectiveMatrix(renderer->fov, renderer->aspect_ratio, renderer->near_clip, renderer->far_clip);
       renderer->inv_projection = Util_InverseMat4(renderer->projection);
       renderer->update_view_projection = true;
       renderer->update_projection = false;
 
-   }
+   } else
+      renderer->user_supplied_projection = false; // user must supply their custom projection matrix every frame
 
    if (renderer->update_view_projection)
    {

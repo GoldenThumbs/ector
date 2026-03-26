@@ -75,6 +75,7 @@ typedef struct SurfacePass_t
    u8 cull_mode;
    u8 depth_mode;
    u8 blend_mode;
+
 } SurfacePass;
 
 typedef struct SurfaceDesc_t
@@ -82,6 +83,7 @@ typedef struct SurfaceDesc_t
    SurfacePass passes[SURF_MAX_PASSES];
    u32 pass_count;
    u8 texture_defaults[SURF_MAX_TEXTURES];
+   
 } SurfaceDesc;
 
 typedef struct SurfaceTexture_t
@@ -180,6 +182,7 @@ void Renderer_UnreserveTexture(Renderer* renderer, u32 bind_slot);
 void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color);
 
 void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view);
+void Renderer_SetProjectionMatrix(Renderer* renderer, mat4x4 proj);
 void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov);
 void Renderer_SetClippingPlanes(Renderer* renderer, f32 near_clip, f32 far_clip);
 void Renderer_UpdateCamera(Renderer* renderer, vec3 origin, vec3 euler, f32 distance);
