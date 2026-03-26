@@ -73,10 +73,24 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
 
 }
 
+void Graphics_SetGeometryFaceCullMode(Graphics* graphics, Geometry res_geometry, u8 face_cull_mode)
+{
+   if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
+      return;
+
+   gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
+   if (geometry.compare.ref != res_geometry.ref)
+      return;
+
+   geometry.face_cull_mode = face_cull_mode;
+
+}
+
 u8 GFX_MeshPrimitive(u8 mesh_primitive)
 {
    if (mesh_primitive == MESH_PRIMITIVE_TRIANGLE)
       return GFX_PRIMITIVE_TRIANGLE;
+
    return GFX_PRIMITIVE_TRIANGLE; // not actually supported lmao
 }
 
@@ -102,6 +116,7 @@ u8 GFX_MeshAttribute(u8 mesh_attribute)
       default:
          return GFX_ATTRIBUTE_NULL;
    }
+
 }
 
 u32 GFX_AttributeType(u8 attribute)
@@ -120,6 +135,7 @@ u32 GFX_AttributeType(u8 attribute)
       default:
          return 0;
    }
+
 }
 
 i32 GFX_AttributeTypeCount(u8 attribute)
@@ -155,7 +171,9 @@ bool GFX_AttributeTypeNormalized(u8 attribute)
          default:
             return false;
       }
+
    }
+
 }
 
 uS GFX_AttributeTypeSize(u8 attribute)
@@ -174,6 +192,7 @@ uS GFX_AttributeTypeSize(u8 attribute)
       default:
          return 0;
    }
+
 }
 
 uS GFX_VertexBufferSize(u32 vertex_count, u8* attributes, u16 attribute_count)
@@ -191,7 +210,7 @@ uS GFX_VertexBufferSize(u32 vertex_count, u8* attributes, u16 attribute_count)
 
 void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
 {
-   if (geometry == NULL)
+   if (geometry == NULL || mesh.vertex_buffer == NULL)
       return;
 
    glGenVertexArrays(1, &geometry->id.vao);
@@ -234,9 +253,9 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
 
    }
 
-   if ((mesh.index_count > 0) && (geometry->primitive == GFX_PRIMITIVE_TRIANGLE))
+   if ((mesh.index_count > 0) && (geometry->primitive == GFX_PRIMITIVE_TRIANGLE) && (mesh.index_buffer != NULL))
    {
-      uS index_size = (mesh.index_type == MESH_INDEXTYPE_16BIT) ? 16 : 32;
+      uS index_size = (mesh.index_type == MESH_INDEXTYPE_16BIT) ? sizeof(u16) : sizeof(u32);
 
       glGenBuffers(1,  &geometry->id.i_buf);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->id.i_buf);
@@ -247,6 +266,7 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
          GFX_DrawMode(geometry->draw_mode)
 
       );
+      
    }
 
 }
