@@ -170,7 +170,7 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
    if (index >= length)
    {
       array->err.general = ERR_WARN;
-      array->err.flags |= ERR_ARRAY_INDEX_OVER;
+      array->err.flags |= WARN_ARRAY_INDEX_OVER;
       index = length - 1u;
 
       Util_Log(NULL, ARRAY_MODULE, array->err, "Cannot Remove Index Larger Than Array Length - 1!\nAssuming Last Element.");
@@ -191,6 +191,41 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
    }
 
    array->length = length - 1u;
+
+}
+
+void Util_JoinArrays(void** array_ptr_a, void* ptr_b)
+{
+   if (!ARR_PTR_VALID(array_ptr_a) || ptr_b == NULL)
+      return;
+
+   Array* array_a = ARRAY_HEADER(*array_ptr_a);
+   Array* array_b = ARRAY_HEADER(ptr_b);
+
+   if (array_a->size != array_b->size)
+   {
+      array_a->err.general = ERR_WARN;
+      array_a->err.flags |= WARN_ARRAY_JOIN_SIZE_MISMATCH;
+
+      Util_Log(NULL, ARRAY_MODULE, array_a->err, "Cannot Join Different Sized Arrays!\nThis Join Is Ignored.");
+
+      return;
+   }
+
+   u32 length_a = array_a->length;
+   u32 desired_length = length_a + array_b->length;
+   Util_SetArrayLength(array_ptr_a, desired_length);
+
+   array_a = ARRAY_HEADER(*array_ptr_a);
+
+   if (array_a->err.general == ERR_ERROR)
+      return;
+
+   u8* ptr_a = (u8*)(*array_ptr_a) + length_a;
+
+   uS num_bytes = array_a->size * array_b->length;
+   memcpy(ptr_a, ptr_b, num_bytes);
+   
 }
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index)

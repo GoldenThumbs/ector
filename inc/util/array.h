@@ -18,6 +18,7 @@
 #define NEW_ARRAY(T) NEW_ARRAY_N(T, 2u)
 #define SET_ARRAY_LENGTH(ptr, N) Util_SetArrayLength(REF(ptr), N)
 #define FREE_ARRAY(ptr) (((ptr) != NULL) ? free(ARRAY_HEADER(ptr)) : ((void)0))
+#define JOIN_ARRAYS(ptr_a, ptr_b) Util_JoinArrays(REF(ptr_a), (ptr_b))
 #define INSERT_ARRAY(ptr, i, item) (Util_InsertArrayIndex(REF(ptr), i), ptr[Util_UsableArrayIndex((ptr), i)] = (item))
 #define REMOVE_ARRAY(ptr, i) (Util_RemoveArrayIndex(REF(ptr), i), ptr[Util_ArrayLength(ptr)])
 #define ADD_BACK_ARRAY(ptr, item) INSERT_ARRAY(ptr, Util_ArrayLength(ptr), (item))
@@ -30,7 +31,8 @@ enum {
 
 };
 
-#define ERR_ARRAY_INDEX_OVER (1u>>0u)
+#define WARN_ARRAY_INDEX_OVER (1u >> 0u)
+#define WARN_ARRAY_JOIN_SIZE_MISMATCH (1u << 1u)
 
 typedef struct Array_t
 {
@@ -55,6 +57,7 @@ void* Util_CreateArrayOfLength(u32 length, uS type_size);
 void Util_ReallocArray(void** array_ptr, u32 desired_length);
 void Util_InsertArrayIndex(void** array_ptr, u32 index);
 void Util_RemoveArrayIndex(void** array_ptr, u32 index);
+void Util_JoinArrays(void** array_ptr_a, void* ptr_b);
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index);
 
