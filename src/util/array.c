@@ -92,7 +92,8 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
    Array* array = ARRAY_HEADER(*array_ptr);
 
    uS size = array->size;
-   uS memory = Util_ArrayNeededMemory((uS)desired_length);
+   // length + 1 ensures space at the end of the array when popping values off the array
+   uS memory = Util_ArrayNeededMemory((uS)(desired_length + 1));
    uS num_bytes = Util_ArrayNeededBytes(memory, size);
    uS old_memory = array->memory;
 

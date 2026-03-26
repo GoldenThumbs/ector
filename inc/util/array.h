@@ -73,9 +73,9 @@ static inline u32 Util_ArrayLength(void* ptr)
    return ARRAY_HEADER(ptr)->length;
 }
 
-static inline error Util_ArrayError(void* array)
+static inline error Util_ArrayError(void* ptr)
 {
-   return ARRAY_HEADER(array)->err;
+   return ARRAY_HEADER(ptr)->err;
 }
 
 #endif
