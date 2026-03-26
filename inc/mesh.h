@@ -155,6 +155,7 @@ void Mesh_Free(Mesh* mesh);
 MeshInterface Mesh_ReallocVertices(u32 vertex_count, bool use_normal, bool use_texcoord0, bool use_texcoord1, bool use_tangent, MeshInterface mesh_interface);
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface);
+MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, vec4 texture_coords, MeshInterface mesh_interface);
 MeshInterface Mesh_GenNormals(MeshInterface mesh_interface);
 MeshInterface Mesh_AverageNormalsOverSeams(MeshInterface mesh_interface);
 MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface, vec3 triplanar_scale);

@@ -224,6 +224,11 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface)
 {
+   return Mesh_AddQuadAdvanced(faces_x, faces_y, transform, VEC4(0, 0, 1, 1), mesh_interface);
+}
+
+MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, vec4 texture_coords, MeshInterface mesh_interface)
+{
    if (mesh_interface.mesh == NULL || mesh_interface.mesh->index_type != MESH_INDEXTYPE_32BIT)
       return mesh_interface;
 
@@ -234,6 +239,8 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
    u32 last_idx = mesh_interface.mesh->index_count;
 
    u32 total_verts = vertex_count + mesh_interface.mesh->vertex_count;
+
+   bool has_texcoord1 = (mesh_interface.atr.texcoord_size[1] != 0);
 
    MeshInterface new_mesh_interface = Mesh_ReallocVertices(total_verts, true, true, false, true, mesh_interface);
    u8* vertex_buffer = new_mesh_interface.mesh->vertex_buffer;
@@ -266,10 +273,14 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
       {
          f32 x = (f32)j / (f32)faces_x;
          f32 y = (f32)i / (f32)faces_y;
+
+         vec2 uv_fac = VEC2(x, 1.0f - y);
+         vec2 inv_uv_fac = VEC2(1.0f - x, y);
+
          vec4 point = VEC4(x - 0.5f, 0, y - 0.5f, 1);
          position[vert_idx] = Util_MulMat4Vec4(transform, point).xyz;
          normal[vert_idx] = plane_normal;
-         texcoord0[vert_idx] = VEC2(x, 1.0f - y);
+         texcoord0[vert_idx] = Util_AddVec2(Util_MulVec2(texture_coords.xy, inv_uv_fac), Util_MulVec2(texture_coords.zw, uv_fac));
          tangent[vert_idx] = plane_tangent;
 
          vert_idx++;
@@ -277,7 +288,7 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
       }
    }
    
-   uS index_size = (mesh_interface.mesh->index_type == MESH_INDEXTYPE_16BIT) ? 16 : 32;
+   uS index_size = (mesh_interface.mesh->index_type == MESH_INDEXTYPE_16BIT) ? sizeof(u16) : sizeof(u32);
    u32* index_buffer = realloc(mesh_interface.mesh->index_buffer, (uS)(last_idx + index_count) * index_size);
    
    if (index_buffer != NULL)
@@ -296,11 +307,14 @@ MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInter
             index_buffer[quad_idx++] = base_y1;
             index_buffer[quad_idx++] = base_y1 + 1;
             index_buffer[quad_idx++] = base_y0;
+
          }
+
       }
 
       mesh_interface.mesh->index_buffer_32bit = index_buffer;
       mesh_interface.mesh->index_count += index_count;
+
    }
 
    return mesh_interface;
