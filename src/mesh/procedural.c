@@ -342,9 +342,9 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
    
    for (u32 i = 0; i < index_count; i += 3)
    {
-      u32 idx_a = mesh_interface.mesh->index_buffer[i + 0];
-      u32 idx_b = mesh_interface.mesh->index_buffer[i + 1];
-      u32 idx_c = mesh_interface.mesh->index_buffer[i + 2];
+      u32 idx_a = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 0);
+      u32 idx_b = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 1);
+      u32 idx_c = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 2);
 
       vec3 vrt_a = position[idx_a];
       vec3 vrt_b = position[idx_b];
@@ -506,9 +506,9 @@ MeshInterface Mesh_GenTangents(MeshInterface mesh_interface)
 
       for (u32 i = 0; i < index_count; i += 3)
       {
-         u32 idx_a = mesh_interface.mesh->index_buffer[i + 0];
-         u32 idx_b = mesh_interface.mesh->index_buffer[i + 1];
-         u32 idx_c = mesh_interface.mesh->index_buffer[i + 2];
+         u32 idx_a = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 0);
+         u32 idx_b = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 1);
+         u32 idx_c = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 2);
 
          vec3 vrt_a = position[idx_a];
          vec3 vrt_b = position[idx_b];

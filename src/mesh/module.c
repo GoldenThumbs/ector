@@ -60,6 +60,35 @@ void Mesh_Free(Mesh* mesh)
 
 }
 
+void Mesh_SetIndexInBuffer(Mesh* mesh, u32 at_index, u32 index_value)
+{
+   if (mesh->index_buffer == NULL)
+      return;
+
+   if (mesh->index_type == MESH_INDEXTYPE_16BIT)
+   {
+      u16* index_buffer = mesh->index_buffer;
+      index_buffer[at_index] = (u16)index_value;
+
+   } else {
+      u32* index_buffer = mesh->index_buffer;
+      index_buffer[at_index] = index_value;
+
+   }
+   
+}
+
+u32 Mesh_GetIndexFromBuffer(Mesh mesh, u32 at_index)
+{
+   if (mesh.index_buffer == NULL)
+      return UINT32_MAX;
+
+   if (mesh.index_type == MESH_INDEXTYPE_16BIT)
+      return (u32)(((u16*)mesh.index_buffer)[at_index]);
+
+   return ((u32*)mesh.index_buffer)[at_index];
+}
+
 Mesh Mesh_LoadEctorMesh(memblob memory)
 {
    return MSH_ParseEctorMesh(memory, NULL);

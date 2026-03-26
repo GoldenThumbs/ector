@@ -42,12 +42,7 @@ typedef struct Node_t
 typedef struct Mesh_t
 {
    u8* vertex_buffer;
-
-   union {
-      u16* index_buffer;
-      u32* index_buffer_32bit;
-
-   };
+   void* index_buffer;
    
    u32 vertex_count;
    u32 index_count;
@@ -151,6 +146,9 @@ static inline bool Mesh_InterfaceIsValid(MeshInterface mesh_interface, bool need
 
 void Model_Free(Model* model);
 void Mesh_Free(Mesh* mesh);
+
+void Mesh_SetIndexInBuffer(Mesh* mesh, u32 at_index, u32 index_value);
+u32 Mesh_GetIndexFromBuffer(Mesh mesh, u32 at_index);
 
 MeshInterface Mesh_ReallocVertices(u32 vertex_count, bool use_normal, bool use_texcoord0, bool use_texcoord1, bool use_tangent, MeshInterface mesh_interface);
 
