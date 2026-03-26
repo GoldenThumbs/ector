@@ -105,7 +105,7 @@ Graphics* Renderer_Graphics(Renderer* renderer)
    return renderer->graphics;
 }
 
-void Renderer_Render(Renderer* renderer, resolution2d size)
+void Renderer_RenderPass(Renderer* renderer, resolution2d size, u32 pass_id)
 {
    if (renderer == NULL)
       return;
@@ -151,7 +151,7 @@ void Renderer_Render(Renderer* renderer, resolution2d size)
          if (renderer->lightmanager_info.lightman_on_render != NULL)
             renderer->lightmanager_info.lightman_on_render(renderer);
          
-         drawable_type->render(renderer, drawable_handle, 0);
+         drawable_type->render(renderer, drawable_handle, pass_id);
 
       }
    }
@@ -406,7 +406,7 @@ SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32
 UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id)
 {
    rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
-   if (surface == NULL || surface->pass_count < 1)
+   if (surface == NULL || surface->pass_count  < pass_id + 1)
       return (UniformBlockList){ 0 };
 
    Renderer_UseMaterialTextures(renderer, material);
@@ -1021,7 +1021,7 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
       return (UniformBlockList){ 0 };
 
    rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
-   if (surface == NULL || surface->pass_count < 1)
+   if (surface == NULL || surface->pass_count < pass_id + 1)
       return (UniformBlockList){ 0 };
 
    SurfacePass pass = surface->passes[pass_id];
@@ -1049,8 +1049,13 @@ void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
    GeometryDrawable* drawable_data = (GeometryDrawable*)drawable->data;
 
    rndr_Surface* surface = RNDR_GetSurface(renderer, drawable_data->material.surface);
-   if (surface == NULL || surface->pass_count < 1)
+   if (surface == NULL || surface->pass_count < pass_id + 1)
       return;
+
+   SurfacePass pass = surface->passes[pass_id];
+   Graphics_SetBlending(renderer->graphics, pass.blend_mode);
+   Graphics_SetGeometryFaceCullMode(renderer->graphics, drawable_data->geometry, pass.cull_mode);
+   Graphics_SetDepthTest(renderer->graphics, pass.depth_mode);
 
    Graphics_Draw(
       renderer->graphics,
