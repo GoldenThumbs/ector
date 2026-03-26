@@ -147,8 +147,10 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
       if (use_normal)
       {
-         vec3* old_normal = (vec3*)(old_vertex_buffer + mesh_interface.atr.normal_ofs);
+         vec3* old_normal = NULL;
          uS old_normal_size = mesh_interface.atr.normal_size;
+         if (old_normal_size != 0)
+            old_normal = (vec3*)(old_vertex_buffer + mesh_interface.atr.normal_ofs);
 
          new_mesh_interface.atr.normal_ofs = new_mesh_interface.total_bytes;
          new_mesh_interface.atr.normal_size = normal_bytes;
@@ -159,12 +161,18 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
          new_mesh_interface.total_bytes += normal_bytes;
 
+      } else {
+         new_mesh_interface.atr.normal_ofs = 0;
+         new_mesh_interface.atr.normal_size = 0;
+         
       }
 
       if (use_texcoord0)
       {
-         vec2* old_texcoord0 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
+         vec2* old_texcoord0 = NULL;
          uS old_texcoord0_size = mesh_interface.atr.texcoord_size[0];
+         if (old_texcoord0_size != 0)
+            old_texcoord0 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
 
          new_mesh_interface.atr.texcoord_ofs[0] = new_mesh_interface.total_bytes;
          new_mesh_interface.atr.texcoord_size[0] = texcoord_bytes;
@@ -175,12 +183,18 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
          new_mesh_interface.total_bytes += texcoord_bytes;
 
+      } else {
+         new_mesh_interface.atr.texcoord_ofs[0] = 0;
+         new_mesh_interface.atr.texcoord_size[0] = 0;
+         
       }
 
       if (use_texcoord1)
       {
          vec2* old_texcoord1 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[1]);
          uS old_texcoord1_size = mesh_interface.atr.texcoord_size[1];
+         if (old_texcoord1_size != 0)
+            old_texcoord1 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[1]);
 
          new_mesh_interface.atr.texcoord_ofs[1] = new_mesh_interface.total_bytes;
          new_mesh_interface.atr.texcoord_size[1] = texcoord_bytes;
@@ -191,12 +205,18 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
          new_mesh_interface.total_bytes += texcoord_bytes;
 
+      } else {
+         new_mesh_interface.atr.texcoord_ofs[1] = 0;
+         new_mesh_interface.atr.texcoord_size[1] = 0;
+         
       }
 
       if (use_tangent)
       {
          vec4* old_tangent = (vec4*)(old_vertex_buffer + mesh_interface.atr.tangent_ofs);
          uS old_tangent_size = mesh_interface.atr.tangent_size;
+         if (old_tangent_size != 0)
+            old_tangent = (vec4*)(old_vertex_buffer + mesh_interface.atr.tangent_ofs);
 
          new_mesh_interface.atr.tangent_ofs = new_mesh_interface.total_bytes;
          new_mesh_interface.atr.tangent_size = tangent_bytes;
@@ -206,6 +226,10 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
             memcpy(tangent, old_tangent, old_tangent_size);
 
          new_mesh_interface.total_bytes += tangent_bytes;
+
+      } else {
+         new_mesh_interface.atr.tangent_ofs = 0;
+         new_mesh_interface.atr.tangent_size = 0;
 
       }
 
@@ -312,7 +336,7 @@ MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, v
 
       }
 
-      mesh_interface.mesh->index_buffer_32bit = index_buffer;
+      mesh_interface.mesh->index_buffer = index_buffer;
       mesh_interface.mesh->index_count += index_count;
 
    }
