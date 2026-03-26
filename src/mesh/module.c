@@ -73,7 +73,8 @@ Model Mesh_LoadEctorModel(memblob memory)
    void* read_head = memory.data;
    uS size_left = memory.size - sizeof(MSH_ModelHeader);
 
-   MSH_ModelHeader model_header = READ_HEAD(read_head, MSH_ModelHeader);
+   MSH_ModelHeader model_header = { 0 };
+   READ_HEAD(read_head, model_header, MSH_ModelHeader);
 
    if (model_header.identifier.magic != MODEL_MAGIC_ID || model_header.mesh_count == 0 || model_header.version != EBMF_VERSION)
       return (Model){ 0 };
@@ -100,12 +101,12 @@ Model Mesh_LoadEctorModel(memblob memory)
       size_left -= name_length + 1;
       read_head = ((u8*)read_head) + name_length + 1;
 
-      model.nodes[node_i].transform = READ_HEAD(read_head, Transform3D);
-      model.nodes[node_i].child_count = READ_HEAD(read_head, u32);
-      model.nodes[node_i].parent_id = READ_HEAD(read_head, i16);
-      model.nodes[node_i].prev_sibling_id = READ_HEAD(read_head, i16);
-      model.nodes[node_i].next_sibling_id = READ_HEAD(read_head, i16);
-      model.nodes[node_i].root_child_id = READ_HEAD(read_head, i16);
+      READ_HEAD(read_head, model.nodes[node_i].transform, Transform3D);
+      READ_HEAD(read_head, model.nodes[node_i].child_count, u32);
+      READ_HEAD(read_head, model.nodes[node_i].parent_id, i16);
+      READ_HEAD(read_head, model.nodes[node_i].prev_sibling_id, i16);
+      READ_HEAD(read_head, model.nodes[node_i].next_sibling_id, i16);
+      READ_HEAD(read_head, model.nodes[node_i].root_child_id, i16);
 
       size_left -= sizeof(Transform3D) + 12;
 
@@ -131,7 +132,8 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
 
    void* read_head = memory.data;
 
-   MSH_MeshHeader mesh_header = READ_HEAD(read_head, MSH_MeshHeader);
+   MSH_MeshHeader mesh_header = { 0 };
+   READ_HEAD(read_head, mesh_header, MSH_MeshHeader);
 
    if ((mesh_header.vertex_count == 0) || (mesh_header.attribute_count == 0))
       return (Mesh){ 0 };
@@ -147,7 +149,9 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
 
    for (u8 attribute_i = 0; attribute_i < mesh.attribute_count; attribute_i++)
    {
-      u8 attribute = READ_HEAD(read_head, u8);
+      u8 attribute = 0;
+      READ_HEAD(read_head, attribute, u8);
+      
       switch (attribute)
       {
          case MESH_ATTRIBUTE_1_CHANNEL:
@@ -188,8 +192,8 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
    mesh.index_buffer = malloc(index_size);
    mesh.vertex_buffer = malloc(vertex_size);
 
-   memcpy(mesh.index_buffer, Util_ReadThenMove(&read_head, index_size), index_size);
-   memcpy(mesh.vertex_buffer, Util_ReadThenMove(&read_head, vertex_size), vertex_size);
+   Util_ReadThenMove(&read_head, mesh.index_buffer, index_size);
+   Util_ReadThenMove(&read_head, mesh.vertex_buffer, vertex_size);
 
    *mesh_size = sizeof(MSH_MeshHeader) + (uS)mesh_header.attribute_count + index_size + vertex_size;
 

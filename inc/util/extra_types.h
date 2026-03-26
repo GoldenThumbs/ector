@@ -8,8 +8,9 @@
 #include "util/vec4.h"
 
 #include <math.h>
+#include <string.h>
 
-#define READ_HEAD(PTR, TYPE) *((TYPE*)Util_ReadThenMove(&(PTR), sizeof(TYPE)))
+#define READ_HEAD(PTR, VAR, TYPE) Util_ReadThenMove(&(PTR), &(VAR), sizeof(TYPE))
 #define BYTE_RCP (1.0f / 255.0f)
 #define F32_TO_BYTE(F) (u8)M_MIN(M_ABS((F)) * 255.0f, 255.0f)
 #define BYTE_TO_F32(B) (f32)((B) * BYTE_RCP)
@@ -182,11 +183,13 @@ static inline mat4x4 Util_TransformationMatrix(Transform3D transform)
    return Util_MulMat4(t, Util_MulMat4(r, s));
 }
 
-static inline u8* Util_ReadThenMove(void** read_head, uS read_size)
+static inline void Util_ReadThenMove(void** read_head, void* value_out, uS read_size)
 {
    u8* cached = (u8*)(*read_head);
+   memcpy(value_out, cached, read_size);
+   
    *read_head = (void*)(cached + read_size);
-   return cached;
+
 }
 
 #endif
