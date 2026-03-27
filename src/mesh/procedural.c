@@ -479,7 +479,7 @@ MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface, vec3 triplanar_sca
 
          if (M_ABS(normal[i].y) >= M_ABS(normal[i].x) && M_ABS(normal[i].y) > M_ABS(normal[i].z))
          {
-            uv.x = M_SIGN(normal[i].y) * position[i].x * M_RCP(triplanar_scale.x, 0.0001f);
+            uv.x = -M_SIGN(normal[i].y) * position[i].x * M_RCP(triplanar_scale.x, 0.0001f);
             uv.y = -position[i].z * M_RCP(triplanar_scale.z, 0.0001f);
 
          } else if (M_ABS(normal[i].z) >= M_ABS(normal[i].x))
@@ -488,7 +488,7 @@ MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface, vec3 triplanar_sca
             uv.y = -position[i].y * M_RCP(triplanar_scale.y, 0.0001f);
 
          } else {
-            uv.x = M_SIGN(normal[i].x) * position[i].z * M_RCP(triplanar_scale.z, 0.0001f);
+            uv.x = -M_SIGN(normal[i].x) * position[i].z * M_RCP(triplanar_scale.z, 0.0001f);
             uv.y = -position[i].y * M_RCP(triplanar_scale.y, 0.0001f);
 
          }
