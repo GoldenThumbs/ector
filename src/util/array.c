@@ -55,9 +55,18 @@ void Util_SetArrayLength(void** array_ptr, u32 desired_length)
 
 uS Util_ArrayNeededMemory(uS length)
 {
-   if (!length)
+   if (length == 0)
       length = 2u;
-   return Pow2_uS(Log2_uS(length) + 1u);
+
+   uS memory = length - 1;
+   memory |= memory >> 1;
+   memory |= memory >> 2;
+   memory |= memory >> 4;
+   memory |= memory >> 8;
+   memory |= memory >> 16;
+   memory |= memory >> 32;
+
+   return memory + 1; // Pow2_uS(Log2_uS(length));
 }
 
 uS Util_ArrayNeededBytes(uS memory, uS type_size)
@@ -67,7 +76,7 @@ uS Util_ArrayNeededBytes(uS memory, uS type_size)
 
 void* Util_CreateArrayOfLength(u32 length, uS type_size)
 {
-   uS memory = Util_ArrayNeededMemory((uS)length);
+   uS memory = Util_ArrayNeededMemory((uS)length + 1u);
    uS num_bytes = Util_ArrayNeededBytes(memory, type_size);
 
    Array* array = malloc(num_bytes);
@@ -185,7 +194,7 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 
       memcpy(ptr_c, ptr_a, size);
 
-      uS num_bytes = size * (uS)(length - index + 1u);
+      uS num_bytes = size * (uS)(length - index);
       memmove(ptr_a, ptr_b, num_bytes);
 
    }
