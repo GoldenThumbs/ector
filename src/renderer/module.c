@@ -1006,8 +1006,8 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
    
    if (texture_default < RNDR_SURF_DEFAULT_TEXTURE_COUNT)
    {
-      if (renderer->texture_slots[bind_slot] == texture_default)
-         return;
+      // if (renderer->texture_slots[bind_slot] == texture_default)
+      //    return;
 
       renderer->texture_slots[bind_slot] = texture_default;
       Graphics_BindTexture(renderer->graphics, renderer->built_in.textures[texture_default], bind_slot);
@@ -1043,8 +1043,6 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
 void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
 {
    rndr_Drawable* drawable = RNDR_GetDrawable(renderer, self);
-   if (drawable == NULL || pass_id > 0)
-      return;
 
    GeometryDrawable* drawable_data = (GeometryDrawable*)drawable->data;
 
