@@ -146,6 +146,8 @@ struct Renderer_t
    mat4x4 inv_projection;
    mat4x4 view_projection;
 
+   f32 frame_delta;
+
    u16 freed_surface_root;
 
    struct {

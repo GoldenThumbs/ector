@@ -105,10 +105,12 @@ Graphics* Renderer_Graphics(Renderer* renderer)
    return renderer->graphics;
 }
 
-void Renderer_RenderPass(Renderer* renderer, resolution2d size, u32 pass_id)
+void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame_delta, u32 pass_id)
 {
    if (renderer == NULL)
       return;
+
+   renderer->frame_delta = (f32)engine_frame_delta;
 
    RNDR_HandleMatrices(renderer, size);
 
@@ -325,6 +327,14 @@ mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer)
       return Util_IdentityMat4();
 
    return renderer->view_projection;
+}
+
+f32 Renderer_GetFrameDelta(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return 1.0f;
+
+   return renderer->frame_delta;
 }
 
 Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceDesc* desc)

@@ -171,7 +171,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
 Graphics* Renderer_Graphics(Renderer* renderer);
-void Renderer_RenderPass(Renderer* renderer, resolution2d size, u32 pass_id);
+void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame_delta, u32 pass_id);
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
 void Renderer_SetTextureToDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);

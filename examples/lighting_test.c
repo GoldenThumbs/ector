@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
       Graphics_UseBuffer(graphics, global_ubo, 0);
 
       Renderer_UpdateCamera(renderer, player.origin, player.euler, cam_dist);
-      Renderer_RenderPass(renderer, size, 0);
+      Renderer_RenderPass(renderer, size, frame_delta, 0);
       
       Engine_Present(engine);
 
