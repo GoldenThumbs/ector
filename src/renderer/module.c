@@ -403,11 +403,11 @@ Surface Renderer_GetSurface(Renderer* renderer, const char* name)
 
 SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32 pass_id)
 {
-   if (renderer == NULL || res_surface.id != INVALID_HANDLE_ID)
+   if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
       return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
    
    rndr_Surface* surface = RNDR_GetSurface(renderer, res_surface);
-   if (surface != NULL || surface->pass_count <= pass_id)
+   if (surface == NULL || surface->pass_count <= pass_id)
       return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
 
    return surface->passes[pass_id];
@@ -1055,6 +1055,9 @@ void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
    rndr_Drawable* drawable = RNDR_GetDrawable(renderer, self);
 
    GeometryDrawable* drawable_data = (GeometryDrawable*)drawable->data;
+
+   if (drawable_data == NULL)
+      return;
 
    rndr_Surface* surface = RNDR_GetSurface(renderer, drawable_data->material.surface);
    if (surface == NULL || surface->pass_count < pass_id + 1)
