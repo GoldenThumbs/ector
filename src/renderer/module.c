@@ -125,7 +125,7 @@ void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame
    camera_data.u_far_clip = renderer->far_clip;
 
    Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.camera_buffer, &camera_data, 1, sizeof(CameraData));
-   Graphics_UseBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
+   Graphics_BindBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
 
    if (renderer->lightmanager_info.lightman_prerender != NULL)
       renderer->lightmanager_info.lightman_prerender(renderer);
@@ -246,7 +246,7 @@ void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 
    model_data.mat_normal_model[2].xyz = mat_normal_model.v[2].xyz;
 
    Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.model_buffer, &model_data, 1, sizeof(ModelData));
-   Graphics_UseBuffer(renderer->graphics, renderer->ubo.model_buffer, 2);
+   Graphics_BindBuffer(renderer->graphics, renderer->ubo.model_buffer, 2);
 
 }
 

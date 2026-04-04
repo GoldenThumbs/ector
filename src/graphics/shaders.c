@@ -169,26 +169,6 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
    glDeleteProgram(shader.id.program);
 }
 
-u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name)
-{
-   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
-      return UINT32_MAX;
-
-   gfx_Shader shader = graphics->shaders[res_shader.handle];
-   if (shader.compare.ref != res_shader.ref)
-      return UINT32_MAX;
-
-   return glGetUniformLocation(shader.id.program, name);
-}
-
-void Graphics_SetUniform(Graphics* graphics, Uniform uniform)
-{
-   if (graphics == NULL)
-      return;
-
-   GFX_SetUniform(uniform);
-}
-
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks)
 {
    if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
@@ -202,23 +182,29 @@ void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 si
 
    glUseProgram(shader.id.program);
    
-   GFX_UseUniformBlocks(graphics, uniform_blocks);
+   GFX_BindUniformBlocks(graphics, uniform_blocks);
 
    glDispatchCompute(size_x, size_y, size_z);
 
    glUseProgram(0);
+
 }
 
-void Graphics_DispatchBarrier(void)
+void Graphics_DispatchBarrier(Graphics* graphics)
 {
-   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+   if (graphics == NULL)
+      return;
+
+   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
 }
 
-void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks)
+void GFX_BindUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks)
 {
    if (graphics == NULL)
       return;
 
    for (u32 i=0; i<uniform_blocks.count; i++)
-      Graphics_UseBuffer(graphics, uniform_blocks.blocks[i].ubo, uniform_blocks.blocks[i].binding);
+      Graphics_BindBuffer(graphics, uniform_blocks.blocks[i].ubo, uniform_blocks.blocks[i].binding);
+
 }

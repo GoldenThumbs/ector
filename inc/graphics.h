@@ -3,6 +3,7 @@
 
 #include "util/types.h"
 #include "mesh.h"
+#include "image.h"
 
 #define GFX_INVALID_INDEX UINT32_MAX
 
@@ -16,9 +17,12 @@ typedef handle Framebuffer;
 
 enum {
    ERR_GFX_CONTEXT_FAILED = 1,
-   ERR_GFX_SHADER_COMPILATION_FAILED
+   ERR_GFX_SHADER_COMPILATION_FAILED,
+   ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED
 
 };
+
+#define ERR_INFO_GFX_INVALID_FRAMEBUFFER_ATTACHMENT (1u << 0u)
 
 enum {
    GFX_INDEXTYPE_16BIT = 0,
@@ -97,6 +101,18 @@ enum {
 };
 
 enum {
+   GFX_CUBEMAPFACE_POSITIVE_X = 0,
+   GFX_CUBEMAPFACE_NEGATIVE_X,
+   GFX_CUBEMAPFACE_POSITIVE_Y,
+   GFX_CUBEMAPFACE_NEGATIVE_Y,
+   GFX_CUBEMAPFACE_POSITIVE_Z,
+   GFX_CUBEMAPFACE_NEGATIVE_Z
+
+};
+
+#define GFX_CUBEMAPFACE_NONE GFX_CUBEMAPFACE_POSITIVE_X
+
+enum {
    // Standard Color Formats
    GFX_TEXTUREFORMAT_R_U8_NORM = 0,
    GFX_TEXTUREFORMAT_RG_U8_NORM,
@@ -151,13 +167,13 @@ enum {
 };
 
 enum {
-   GFX_TEXTUREFILTER_NEAREST_NO_MIPMAPS = 0,
-   GFX_TEXTUREFILTER_NEAREST_NEAREST_MIPMAPS,
-   GFX_TEXTUREFILTER_NEAREST_LINEAR_MIPMAPS,
+   GFX_TEXTUREFILTER_POINT_NO_MIPMAPS = 0,
+   GFX_TEXTUREFILTER_POINT_NEAREST_MIPMAPS,
+   GFX_TEXTUREFILTER_POINT_LINEAR_MIPMAPS,
    GFX_TEXTUREFILTER_BILINEAR_NO_MIPMAPS,
    GFX_TEXTUREFILTER_BILINEAR_NEAREST_MIPMAPS,
    GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS,
-   GFX_TEXTUREFILTER_NEAREST_MAX_BILINEAR_MIN
+   GFX_TEXTUREFILTER_POINT_MAX_BILINEAR_MIN
 
 };
 
@@ -188,6 +204,22 @@ enum {
    GFX_DEPTHMODE_NONE
 
 };
+
+enum {
+   GFX_ACCESS_READ = 0,
+   GFX_ACCESS_WRITE,
+   GFX_ACCESS_READ_AND_WRITE
+
+};
+
+typedef struct AdvancedBindOptions_t
+{
+   u32 mip_level;
+   i32 layer;
+   u8 cubemap_face;
+   u8 access_type;
+
+} AdvancedBindOptions;
 
 typedef struct Uniform_t
 {
@@ -248,49 +280,46 @@ typedef struct Graphics_t Graphics;
 
 Graphics* Graphics_Init(void);
 void Graphics_Free(Graphics* graphics);
+void Graphics_CheckErrors(Graphics* graphics);
 
 Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, const char* fragment_shader);
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader);
 Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, const char* defines[], const u32 define_count, bool is_compute);
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader);
-u32 Graphics_GetUniformLocation(Graphics* graphics, Shader res_shader, const char* name);
 void Graphics_SetUniform(Graphics* graphics, Uniform uniform);
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks);
-void Graphics_DispatchBarrier(void);
+void Graphics_DispatchBarrier(Graphics* graphics);
 
 Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type);
 Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS total_size, u8 draw_mode, u8 buffer_type);
-void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer);
-void Graphics_ReuseBufferExplicit(Graphics* graphics, void* data, uS total_size, Buffer res_buffer);
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer);
 void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u32 length, uS type_size);
 void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size);
 void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* data, uS offset_bytes, uS total_size);
-void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
+void Graphics_BindBuffer(Graphics* graphics, Buffer res_buffer, u32 slot);
 
 Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode);
-void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry);
 void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry);
-
 void Graphics_SetGeometryFaceCullMode(Graphics* graphics, Geometry res_geometry, u8 face_cull_mode);
 
 Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc);
-void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture);
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture);
-
+void Graphics_UpdateTexture(Graphics* graphics, u8* data, Texture res_texture);
 void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot);
+void Graphics_BindTextureView(Graphics* graphics, Texture res_texture, u32 bind_slot, const AdvancedBindOptions* bind_options);
 void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type);
-
 void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings);
-void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture);
+
+// NOTE: this function allocates memory.
+Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 mip_level, u8 cubemap_face);
 
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer);
-void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer);
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
-
+void Graphics_DrawToFramebufferTargets(Graphics* graphics, Framebuffer res_framebuffer, u32 target_count, u8 target_ids[]);
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
 void Graphics_UnbindFramebuffers(Graphics *graphics);
-void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[]);
+void Graphics_AttachMultipleTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[]);
+void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, Texture res_texture, const AdvancedBindOptions* bind_options, u8 attachment_slot);
 
 void Graphics_Clear(Graphics* graphics);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
@@ -304,6 +333,7 @@ void Graphics_SetClearStencilId(Graphics* graphics, i32 clear_stencil_id);
 void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode);
 void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask);
+
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniform_blocks);
 void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniform_blocks);
 

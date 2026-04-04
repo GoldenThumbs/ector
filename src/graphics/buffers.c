@@ -33,6 +33,7 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
       data,
       GFX_DrawMode(buffer.draw_mode)
    );
+
    if (data == NULL)
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
@@ -40,34 +41,6 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
       return ADD_RESOURCE(graphics->buffers, buffer);
 
    return REUSE_RESOURCE(graphics->buffers, buffer, graphics->freed_buffer_root);
-}
-
-void Graphics_ReuseBuffer(Graphics* graphics, void* data, u32 length, uS type_size, Buffer res_buffer)
-{
-   Graphics_ReuseBufferExplicit(graphics, data, (uS)length * type_size, res_buffer);
-
-}
-
-void Graphics_ReuseBufferExplicit(Graphics* graphics, void* data, uS total_size, Buffer res_buffer)
-{
-   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
-      return;
-
-   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
-   if (buffer.compare.ref != res_buffer.ref)
-      return;
-
-   u32 gl_target = GFX_BufferType(buffer.type);
-
-   glBindBuffer(gl_target, buffer.id.buf);
-
-   glBufferData(
-      gl_target,
-      total_size,
-      data,
-      GFX_DrawMode(buffer.draw_mode)
-   );
-   
 }
 
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
@@ -115,7 +88,7 @@ void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* 
    
 }
 
-void Graphics_UseBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
+void Graphics_BindBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
 {
    if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
       return;

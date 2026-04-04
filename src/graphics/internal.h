@@ -108,12 +108,12 @@ typedef union gfx_State_t
 
 } gfx_State;
 
-struct gfx_Filtering_s
+typedef struct gfx_Filtering_t
 {
    u32 min_filter;
    u32 mag_filter;
 
-};
+} gfx_Filtering;
 
 struct Graphics_t
 {
@@ -136,7 +136,44 @@ struct Graphics_t
 
 };
 
-void GFX_UseUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks);
+static inline bool GFX_IsDepthFormat(u8 texture_format)
+{
+   switch (texture_format)
+   {
+      default:
+         break;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_16:
+      case GFX_TEXTUREFORMAT_DEPTH_24:
+      case GFX_TEXTUREFORMAT_DEPTH_F32:
+      case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+      case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
+         return true;
+
+   }
+
+   return false;
+}
+
+static inline bool GFX_IsStencilFormat(u8 texture_format)
+{
+   switch (texture_format)
+   {
+      default:
+         break;
+      
+      case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+      case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
+         return true;
+
+   }
+
+   return false;
+}
+
+void GFX_CheckOpenGLError(void);
+
+void GFX_BindUniformBlocks(Graphics* graphics, UniformBlockList uniform_blocks);
 
 u8 GFX_MeshPrimitive(u8 mesh_primitive);
 u8 GFX_MeshAttribute(u8 mesh_attribute);
@@ -155,9 +192,9 @@ u32 GFX_TexturePixelFormat(u8 format);
 u32 GFX_TextureFormatType(u8 format);
 u32 GFX_TextureType(u8 type);
 u32 GFX_TextureWrap(u8 wrap);
-struct gfx_Filtering_s GFX_TextureFilter(u8 filter);
+gfx_Filtering GFX_TextureFilter(u8 filter);
 
-void GFX_CreateTexture(gfx_Texture* texture, u8* data);
+void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update);
 
 void GFX_SetFaceCullMode(Graphics* graphics, u8 face_cull_mode);
 void GFX_DrawVertices(u8 primitive, u32 element_count, bool use_index_buffer, u8 index_type, u32 gl_vertex_array, i32 offset, u32 instance_count);
@@ -165,6 +202,5 @@ void GFX_DrawVertices(u8 primitive, u32 element_count, bool use_index_buffer, u8
 u32 GFX_Primitive(u8 primitive_type);
 u32 GFX_DrawMode(u8 draw_mode);
 u32 GFX_BufferType(u8 buffer_type);
-void GFX_SetUniform(Uniform uniform);
 
 #endif

@@ -1,5 +1,6 @@
 #include "util/types.h"
 #include "util/array.h"
+#include "util/files.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -41,6 +42,8 @@ Graphics* Graphics_Init(void)
    Graphics_SetDepthTest(graphics, GFX_DEPTHMODE_LESS_THAN);
    GFX_SetFaceCullMode(graphics, GFX_FACECULL_BACK);
 
+   GFX_CheckOpenGLError();
+
    return graphics;
 }
 
@@ -72,8 +75,19 @@ void Graphics_Free(Graphics* graphics)
 
    free(graphics);
    
+}
 
-   
+void Graphics_CheckErrors(Graphics* graphics)
+{
+   if (graphics == NULL)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_FATAL }, "Graphics module was never created or creation failed!");
+
+      return;
+   }
+
+   GFX_CheckOpenGLError();
+
 }
 
 void Graphics_Clear(Graphics* graphics)
@@ -125,7 +139,7 @@ void Graphics_EnableStencilClear(Graphics* graphics, bool enable_stencil_clear)
       return;
 
    graphics->state.enable_stencil_clear = enable_stencil_clear;
-   
+
 }
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color)
@@ -311,10 +325,57 @@ void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_
 
    glUseProgram(shader.id.program);
 
-   GFX_UseUniformBlocks(graphics, uniforms);
+   GFX_BindUniformBlocks(graphics, uniforms);
    GFX_DrawVertices(geometry.primitive, geometry.element_count, (geometry.id.i_buf != 0), geometry.index_type, geometry.id.vao, 0, instance_count);
 
    glUseProgram(0);
+
+}
+
+void GFX_CheckOpenGLError(void)
+{
+    u32 gl_error = glGetError();
+   if (gl_error != GL_NO_ERROR)
+   {
+      char* error_name = NULL;
+      switch (gl_error)
+      {
+         case GL_INVALID_ENUM:
+            error_name = "INVALID ENUM";
+            break;
+
+         case GL_INVALID_VALUE:
+            error_name = "INVALID VALUE";
+            break;
+
+         case GL_INVALID_OPERATION:
+            error_name = "INVALID OPERATION";
+            break;
+
+         case GL_INVALID_FRAMEBUFFER_OPERATION:
+            error_name = "INVALID FRAMEBUFFER OPERATION";
+            break;
+
+         case GL_OUT_OF_MEMORY:
+            error_name = "OUT OF MEMORY";
+            break;
+
+         case GL_STACK_UNDERFLOW:
+            error_name = "STACK UNDERFLOW";
+            break;
+         
+         case GL_STACK_OVERFLOW:
+            error_name = "STACK OVERFLOW";
+            break;
+         
+         default:
+            error_name = "UNKNOWN ERROR";
+
+      }
+
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_WARN }, "OpenGL Error [%s]", error_name);
+
+   }
 
 }
 
@@ -361,58 +422,5 @@ u32 GFX_DrawMode(u8 draw_mode)
       
       default:
          return GL_DYNAMIC_DRAW;
-   }
-}
-
-void GFX_SetUniform(Uniform uniform)
-{
-   switch (uniform.uniform_type)
-   {
-      case GFX_UNIFORMTYPE_F32_1X:
-         glUniform1fv(uniform.location, 1, uniform.as_float);
-      break;
-      
-      case GFX_UNIFORMTYPE_F32_2X:
-         glUniform2fv(uniform.location, 1, uniform.as_float);
-      break;
-
-      case GFX_UNIFORMTYPE_F32_3X:
-         glUniform3fv(uniform.location, 1, uniform.as_float);
-      break;
-
-      case GFX_UNIFORMTYPE_F32_4X:
-         glUniform4fv(uniform.location, 1, uniform.as_float);
-      break;
-
-      case GFX_UNIFORMTYPE_MAT3:
-         glUniformMatrix3fv(uniform.location, 1, GL_FALSE, uniform.as_float);
-      break;
-      
-      case GFX_UNIFORMTYPE_MAT4:
-         glUniformMatrix4fv(uniform.location, 1, GL_FALSE, uniform.as_float);
-      break;
-
-      case GFX_UNIFORMTYPE_U32_1X:
-         glUniform1uiv(uniform.location, 1, uniform.as_uint);
-      break;
-
-      case GFX_UNIFORMTYPE_U32_2X:
-         glUniform2uiv(uniform.location, 1, uniform.as_uint);
-      break;
-
-      case GFX_UNIFORMTYPE_U32_3X:
-         glUniform3uiv(uniform.location, 1, uniform.as_uint);
-      break;
-
-      case GFX_UNIFORMTYPE_U32_4X:
-         glUniform4uiv(uniform.location, 1, uniform.as_uint);
-      break;
-
-      case GFX_UNIFORMTYPE_TEX_SLOT:
-         glUniform1i(uniform.location, uniform.texslot);
-      break;
-      
-      default:
-         break;
    }
 }

@@ -205,10 +205,10 @@ int main(int argc, char* argv[])
    barrel_data->transform.origin.y -= 0.5f;
    barrel_data->transform.scale = Util_FillVec3(0.5f);
    barrel_data->material.surface = basic_surf;
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel.png", (resolution2d){ 0 }, true, true));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel_n.png", (resolution2d){ 0 }, true, false));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel_r.png", (resolution2d){ 0 }, true, false));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1,Renderer_LoadTexture(renderer, "assets/textures/barrel_m.png", (resolution2d){ 0 }, true, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel.png", (resolution2d){ 0 }, true, true));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel_n.png", (resolution2d){ 0 }, true, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel_r.png", (resolution2d){ 0 }, true, false));
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel_m.png", (resolution2d){ 0 }, true, false));
 
    Model_Free(&barrel_model);
 

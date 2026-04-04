@@ -1,13 +1,18 @@
+#include "image.h"
 #include "util/types.h"
 #include "util/math.h"
 #include "util/array.h"
 #include "util/resource.h"
+#include "util/files.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
 
 #include <glad/gl.h>
+
+#include <assert.h>
 #include <stdlib.h>
+// #include <string.h>
 
 Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 {
@@ -22,7 +27,17 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
    texture.type = desc.texture_type;
    texture.format = desc.texture_format;
 
-   GFX_CreateTexture(&texture, data);
+   glGenTextures(1, &texture.id.tex);
+   
+   u32 gl_target = GFX_TextureType(texture.type);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+   glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, (i32)(texture.mipmap_count));
+
+   GFX_CreateTexture(&texture, data, false);
 
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
@@ -30,28 +45,6 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
       return ADD_RESOURCE(graphics->textures, texture);
 
    return REUSE_RESOURCE(graphics->textures, texture, graphics->freed_texture_root);
-}
-
-void Graphics_ReuseTexture(Graphics* graphics, u8* data, TextureDesc desc, Texture res_texture)
-{
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
-      return;
-
-   gfx_Texture texture = graphics->textures[res_texture.handle];
-   if (texture.compare.ref != res_texture.ref)
-      return;
-
-   glDeleteTextures(1, &texture.id.tex);
-
-   texture.width = M_MAX(1, desc.size.width);
-   texture.height = M_MAX(1, desc.size.height);
-   texture.depth = M_MAX(1, desc.depth);
-   texture.mipmap_count = M_MAX(1, desc.mipmap_count);
-   texture.type = desc.texture_type;
-   texture.format = desc.texture_format;
-
-   GFX_CreateTexture(&texture, data);
-
 }
 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
@@ -70,6 +63,19 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
 
 }
 
+void Graphics_UpdateTexture(Graphics* graphics, u8* data, Texture res_texture)
+{
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (texture.compare.ref != res_texture.ref)
+      return;
+
+   GFX_CreateTexture(&texture, data, true);
+
+}
+
 void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot)
 {
    if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
@@ -83,6 +89,36 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
 
    glActiveTexture(GL_TEXTURE0 + bind_slot);
    glBindTexture(gl_target, texture.id.tex);
+
+}
+
+void Graphics_BindTextureView(Graphics* graphics, Texture res_texture, u32 bind_slot, const AdvancedBindOptions* bind_options)
+{
+   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+      return;
+
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (texture.compare.ref != res_texture.ref)
+      return;
+
+   bool is_layered = false;
+   i32 desired_layer = 0;
+   i32 mip_level = 0;
+   u32 access_type = GL_READ_ONLY;
+
+   if (bind_options != NULL)
+   {
+      is_layered = (bind_options->layer < 0);
+      desired_layer = (is_layered) ? 0 : bind_options->layer;
+      mip_level = (i32)bind_options->mip_level;
+      access_type += bind_options->access_type;
+
+   }
+
+   u32 gl_target = GFX_TextureType(texture.type);
+
+   u32 format = GFX_TextureInternalFormat(texture.format);
+   glBindImageTexture(bind_slot, texture.id.tex, mip_level, is_layered, desired_layer, access_type, format);
 
 }
 
@@ -110,9 +146,9 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
    glBindTexture(gl_target, texture.id.tex);
 
-   f32 aniso = M_CLAMP((f32)interpolation_settings.texture_anisotropy, 0.0f, GL_MAX_TEXTURE_MAX_ANISOTROPY);
+   f32 aniso = M_CLAMP((f32)interpolation_settings.texture_anisotropy, 1.0f, GL_MAX_TEXTURE_MAX_ANISOTROPY);
    u32 wrap = GFX_TextureWrap(interpolation_settings.texture_wrap);
-   struct gfx_Filtering_s filter = GFX_TextureFilter(interpolation_settings.texture_filter);
+   gfx_Filtering filter = GFX_TextureFilter(interpolation_settings.texture_filter);
 
    glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, wrap);
    glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, wrap);
@@ -123,22 +159,72 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
 }
 
-void Graphics_GenerateTextureMipmaps(Graphics* graphics, Texture res_texture)
+Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 mip_level, u8 cubemap_face)
 {
    if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
-      return;
+      return (Image){ NULL };
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
-      return;
+      return (Image){ NULL };
+
+   i32 mip_divisor = 1 << mip_level;
+
+   Image image = { 0 };
+   image.size.width = M_MAX(1, texture.width / mip_divisor);
+   image.size.height = M_MAX(1, texture.height / mip_divisor) * M_MAX(1, texture.depth / mip_divisor);
+   image.depth = 1;
+   image.mipmap_count = 1;
+   image.channel_count = 4;
+   image.image_type = IMG_TYPE_2D;
+   image.image_format = IMG_FORMAT_F32;
+
+   u32 gl_type = GFX_TextureFormatType(texture.format);
+   gl_type = (gl_type == GL_HALF_FLOAT) ? GL_FLOAT : ((gl_type != GL_FLOAT) ? GL_UNSIGNED_BYTE : GL_FLOAT);
+   
+   u32 gl_format = GFX_TexturePixelFormat(texture.format);
+   gl_format = (gl_format == GL_DEPTH_COMPONENT) ? GL_RED : ((gl_format == GL_DEPTH_STENCIL) ? GL_RG : gl_format);
+
+   switch (gl_format)
+   {
+      case GL_RG:
+         image.channel_count = 2;
+         break;
+
+      case GL_RGB:
+         image.channel_count = 3;
+         break;
+
+      case GL_RGBA:
+         image.channel_count = 4;
+         break;
+
+      default:
+      case GL_RED:
+         image.channel_count = 1;
+      
+   }
+
+   image.image_format = (gl_type == GL_FLOAT) ? IMG_FORMAT_F32 : IMG_FORMAT_U8;
 
    u32 gl_target = GFX_TextureType(texture.type);
+   if (texture.format == GFX_TEXTURETYPE_CUBEMAP)
+      gl_target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + cubemap_face;
+
+   uS pixel_size = ((gl_type == GL_FLOAT) ? 4 : 1) * image.channel_count;
+   uS num_bytes = image.size.width * image.size.height * pixel_size;
+   
+   f32* image_data = malloc(num_bytes);
+   assert(image_data != NULL);
 
    glBindTexture(gl_target, texture.id.tex);
-   glGenerateMipmap(gl_target);
-   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, -1);
-   glBindTexture(gl_target, 0);
+   glGetTexImage(gl_target, mip_level, gl_format, gl_type, image_data);
 
+   GFX_CheckOpenGLError();
+
+   image.data = (u8*)image_data;
+
+   return image;
 }
 
 Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer)
@@ -237,8 +323,30 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 
 }
 
+void Graphics_DrawToFramebufferTargets(Graphics* graphics, Framebuffer res_framebuffer, u32 target_count, u8 target_ids[])
+{
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID || target_ids == NULL || target_count > 8)
+      return;
+
+   gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
+   if (framebuffer.compare.ref != res_framebuffer.ref)
+      return;
+
+   u32 targets[8] = { 0 };
+   for (u32 target_i = 0; target_i < target_count; target_i++)
+      targets[target_i] = GL_COLOR_ATTACHMENT0 + (u32)target_ids[target_i];
+
+   glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
+
+   glDrawBuffers(target_count, targets);
+   
+}
+
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 {
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+      return;
+
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
       return;
@@ -255,37 +363,94 @@ void Graphics_UnbindFramebuffers(Graphics *graphics)
 
 }
 
-void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[])
+void Graphics_AttachMultipleTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[])
 {
-   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID || res_textures == NULL)
+      return;
+
+   for (u32 texture_i = 0; texture_i < texture_count; texture_i++)
+      Graphics_AttachTextureToFramebuffer(graphics, res_framebuffer, res_textures[texture_i], &(AdvancedBindOptions){ 0 }, texture_i);
+
+}
+
+void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, Texture res_texture, const AdvancedBindOptions* bind_options, u8 attachment_slot)
+{
+   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID || res_texture.id == INVALID_HANDLE_ID)
       return;
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
       return;
-   
-   glBindTexture(GL_TEXTURE_2D, 0);
+
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (texture.compare.ref != res_texture.ref || (texture.type != GFX_TEXTURETYPE_2D_ARRAY && texture.type != GFX_TEXTURETYPE_CUBEMAP_ARRAY))
+      return;
+
+   bool is_layered = false;
+   i32 desired_layer = 0;
+   i32 mip_level = 0;
+   u8 cubemap_face = GFX_CUBEMAPFACE_NONE;
+
+   if (bind_options != NULL)
+   {
+      is_layered = (bind_options->layer < 0);
+      desired_layer = (is_layered) ? 0 : bind_options->layer;
+      mip_level = (i32)bind_options->mip_level;
+      cubemap_face = bind_options->cubemap_face;
+
+   }
+
+   if (is_layered)
+   {
+      error err = { .general = ERR_ERROR };
+      err.extra = ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED;
+      err.flags |= ERR_INFO_GFX_INVALID_FRAMEBUFFER_ATTACHMENT;
+      
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Invalid framebuffer attachment! Framebuffer attachments cannot be layered.");
+
+      return;
+   }
+
+   bool is_cubemap = (texture.type == GFX_TEXTURETYPE_CUBEMAP_ARRAY || texture.type == GFX_TEXTURETYPE_CUBEMAP);
+   bool is_array = (texture.type == GFX_TEXTURETYPE_2D_ARRAY || texture.type == GFX_TEXTURETYPE_CUBEMAP_ARRAY);
+
+   u32 attachment = GL_COLOR_ATTACHMENT0 + attachment_slot;
+   if (GFX_IsDepthFormat(texture.format))
+      attachment = (GFX_IsStencilFormat(texture.format)) ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
+
+   if (is_cubemap && is_array)
+      desired_layer = desired_layer * 6 + cubemap_face;
 
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
 
-   for (u32 i=0; i<texture_count; i++)
-   {
-      if (res_textures[i].id == INVALID_HANDLE_ID)
-         continue;
+   if (is_array || texture.format == GFX_TEXTURETYPE_3D)
+      glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, texture.id.tex, mip_level, desired_layer);
+   else {
+      u32 gl_target = 0;
+      if (!is_cubemap)
+         gl_target = GFX_TextureType(texture.type);
+      else
+         gl_target =  GL_TEXTURE_CUBE_MAP_POSITIVE_X + cubemap_face;
 
-      gfx_Texture texture = graphics->textures[res_textures[i].handle];
-      if (texture.compare.ref != res_textures[i].ref)
-         continue;
+      glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, gl_target, texture.id.tex, mip_level);
 
-      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GFX_TextureType(texture.type), texture.id.tex, 0);
    }
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+   {
+      error err = { .general = ERR_ERROR };
+      err.extra = ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED;
+
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Texture failed to attach to framebuffer! Intended attachment slot: %u", attachment_slot);
+
       return;
+   }
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+   GFX_CheckOpenGLError();
 
 }
 
@@ -565,52 +730,43 @@ u32 GFX_TextureWrap(u8 wrap)
    }
 }
 
-struct gfx_Filtering_s GFX_TextureFilter(u8 filter)
+gfx_Filtering GFX_TextureFilter(u8 filter)
 {
    switch (filter)
    {
-      case GFX_TEXTUREFILTER_NEAREST_NO_MIPMAPS:
-         return (struct gfx_Filtering_s){ GL_NEAREST, GL_NEAREST };
+      case GFX_TEXTUREFILTER_POINT_NO_MIPMAPS:
+         return (gfx_Filtering){ GL_NEAREST, GL_NEAREST };
       
-      case GFX_TEXTUREFILTER_NEAREST_NEAREST_MIPMAPS:
-         return (struct gfx_Filtering_s){ GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST };
+      case GFX_TEXTUREFILTER_POINT_NEAREST_MIPMAPS:
+         return (gfx_Filtering){ GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST };
       
-      case GFX_TEXTUREFILTER_NEAREST_LINEAR_MIPMAPS:
-         return (struct gfx_Filtering_s){ GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST };
+      case GFX_TEXTUREFILTER_POINT_LINEAR_MIPMAPS:
+         return (gfx_Filtering){ GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST };
       
       case GFX_TEXTUREFILTER_BILINEAR_NO_MIPMAPS:
-         return (struct gfx_Filtering_s){ GL_LINEAR, GL_LINEAR };
+         return (gfx_Filtering){ GL_LINEAR, GL_LINEAR };
       
       case GFX_TEXTUREFILTER_BILINEAR_NEAREST_MIPMAPS:
-         return (struct gfx_Filtering_s){ GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR };
+         return (gfx_Filtering){ GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR };
       
       case GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS:
-         return (struct gfx_Filtering_s){ GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR };
+         return (gfx_Filtering){ GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR };
       
-      case GFX_TEXTUREFILTER_NEAREST_MAX_BILINEAR_MIN:
-         return (struct gfx_Filtering_s){ GL_LINEAR, GL_NEAREST };
+      case GFX_TEXTUREFILTER_POINT_MAX_BILINEAR_MIN:
+         return (gfx_Filtering){ GL_LINEAR, GL_NEAREST };
 
       default:
-         return (struct gfx_Filtering_s){ GL_NEAREST, GL_NEAREST };
+         return (gfx_Filtering){ GL_NEAREST, GL_NEAREST };
    }
 }
 
-void GFX_CreateTexture(gfx_Texture* texture, u8* data)
+void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update)
 {
    if (texture == NULL)
       return;
    
    u32 gl_target = GFX_TextureType(texture->type);
-
-   glGenTextures(1, &texture->id.tex);
    glBindTexture(gl_target, texture->id.tex);
-
-   glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
-   glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-   glTexParameteri(gl_target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-   glTexParameteri(gl_target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   glTexParameteri(gl_target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-   glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, (i32)(texture->mipmap_count));
 
    i32 width = texture->width;
    i32 height = texture->height;
@@ -654,11 +810,18 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data)
                case GFX_TEXTURETYPE_3D:
                case GFX_TEXTURETYPE_2D_ARRAY:
                case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
-                  glTexImage3D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, mip_depth, 0, pixel_format, format_type, data + offset);
+                  if (!is_update)
+                     glTexImage3D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, mip_depth, 0, pixel_format, format_type, data + offset);
+                  else
+                     glTexSubImage3D(gl_face + face_i, mip_i, 0, 0, 0, mip_width, mip_height, mip_depth, pixel_format, format_type, data + offset);
                   break;
                
                default:
-                  glTexImage2D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, 0, pixel_format, format_type, data + offset);
+               case GFX_TEXTURETYPE_2D:
+                  if(!is_update)
+                     glTexImage2D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, 0, pixel_format, format_type, data + offset);
+                  else
+                     glTexSubImage2D(gl_face + face_i, mip_i, 0, 0, mip_width, mip_height, pixel_format, format_type, data + offset);
                
             }
 

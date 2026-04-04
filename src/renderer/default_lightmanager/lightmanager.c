@@ -108,8 +108,8 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
    
    Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
 
-   Graphics_UseBuffer(graphics, lightmanager->cluster_ssbo, 1);
-   Graphics_UseBuffer(graphics, lightmanager->light_ssbo, 2);
+   Graphics_BindBuffer(graphics, lightmanager->cluster_ssbo, 1);
+   Graphics_BindBuffer(graphics, lightmanager->light_ssbo, 2);
 
    Graphics_Dispatch(
       graphics,
@@ -119,7 +119,7 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
       lightmanager->cluster_dimensions[2],
       (UniformBlockList){ .count = 0 }
    );
-   Graphics_DispatchBarrier();
+   Graphics_DispatchBarrier(graphics);
 
    Graphics_Dispatch(
       graphics,
@@ -129,7 +129,7 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
       1,
       (UniformBlockList){ .count = 0 }
    );
-   Graphics_DispatchBarrier();
+   Graphics_DispatchBarrier(graphics);
 
 }
 
@@ -346,7 +346,14 @@ void LIGHTMAN_LightEnableFunc(Renderer* renderer, Drawable self)
       SET_ARRAY_LENGTH(lightmanager->packed_lights, light_count + 1);
 
       if (old_light_memory != Util_ArrayMemory(lightmanager->packed_lights))
-         Graphics_ReuseBufferExplicit(graphics, lightmanager->packed_lights, LIGHTMAN_LightBufferSize(lightmanager), lightmanager->light_ssbo);
+      {
+         Graphics_FreeBuffer(graphics, lightmanager->light_ssbo);
+         lightmanager->light_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_LightBufferSize(lightmanager), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
+
+         Graphics_UpdateBufferExplicit(graphics, lightmanager->light_ssbo, lightmanager->packed_lights, sizeof(i32) * 4, (light_count + 1) * sizeof(lightman_PackedLight));
+         Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
+
+      }
 
    } else {
       lightman_LightDrawable* free_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, lightmanager->freed_light_root_idx);
