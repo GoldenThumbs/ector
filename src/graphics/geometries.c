@@ -78,11 +78,11 @@ void Graphics_SetGeometryFaceCullMode(Graphics* graphics, Geometry res_geometry,
    if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
       return;
 
-   gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
-   if (geometry.compare.ref != res_geometry.ref)
+   gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
+   if (geometry->compare.ref != res_geometry.ref)
       return;
 
-   geometry.face_cull_mode = face_cull_mode;
+   geometry->face_cull_mode = face_cull_mode;
 
 }
 

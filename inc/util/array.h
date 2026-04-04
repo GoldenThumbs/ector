@@ -31,7 +31,7 @@ enum {
 
 };
 
-#define WARN_ARRAY_INDEX_OVER (1u >> 0u)
+#define WARN_ARRAY_INDEX_OVER (1u << 0u)
 #define WARN_ARRAY_JOIN_SIZE_MISMATCH (1u << 1u)
 
 typedef struct Array_t

@@ -13,8 +13,9 @@ void Model_Free(Model* model)
    {
       for (u32 node_i = 0; node_i < model->node_count; node_i++)
          free(model->nodes[node_i].name);
-      free(model->meshes);
-      model->meshes = NULL;
+      
+      free(model->nodes);
+      model->nodes = NULL;
 
    }
 
@@ -22,6 +23,7 @@ void Model_Free(Model* model)
    {
       for (u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++)
          Mesh_Free(&model->meshes[mesh_i]);
+
       free(model->meshes);
       model->meshes = NULL;
 

@@ -64,8 +64,17 @@ void Graphics_Free(Graphics* graphics)
    for (u32 i=0; i<Util_ArrayLength(graphics->framebuffers); i++)
       Graphics_FreeFramebuffer(graphics, graphics->framebuffers[i].compare);
 
+   FREE_ARRAY(graphics->shaders);
+   FREE_ARRAY(graphics->buffers);
    FREE_ARRAY(graphics->geometries);
+   FREE_ARRAY(graphics->textures);
+   FREE_ARRAY(graphics->framebuffers);
+
    free(graphics);
+   
+
+   
+}
 
 void Graphics_Clear(Graphics* graphics)
 {
