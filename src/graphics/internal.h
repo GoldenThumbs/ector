@@ -100,6 +100,9 @@ typedef union gfx_State_t
       u16 face_cull_mode: 1;
       u16 blend_mode: 3;
       u16 depth_mode: 3;
+      u16 enable_color_clear: 1;
+      u16 enable_depth_clear: 1;
+      u16 enable_stencil_clear: 1;
 
    };
 
@@ -128,6 +131,8 @@ struct Graphics_t
 
    gfx_State state;
    color8 clear_color;
+   f32 clear_depth;
+   i32 clear_stencil_id;
 
 };
 

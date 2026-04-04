@@ -292,9 +292,15 @@ void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
 void Graphics_UnbindFramebuffers(Graphics *graphics);
 void Graphics_AttachTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[]);
 
-void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
+void Graphics_Clear(Graphics* graphics);
 void Graphics_Viewport(Graphics* graphics, resolution2d size);
 void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y);
+void Graphics_EnableColorClear(Graphics* graphics, bool enable_color_clear);
+void Graphics_EnableDepthClear(Graphics* graphics, bool enable_depth_clear);
+void Graphics_EnableStencilClear(Graphics* graphics, bool enable_stencil_clear);
+void Graphics_SetClearColor(Graphics* graphics, color8 clear_color);
+void Graphics_SetClearDepth(Graphics* graphics, f32 clear_depth);
+void Graphics_SetClearStencilId(Graphics* graphics, i32 clear_stencil_id);
 void Graphics_SetBlending(Graphics* graphics, u8 blend_mode);
 void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode);
 void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask);

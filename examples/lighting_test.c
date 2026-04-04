@@ -317,6 +317,7 @@ int main(int argc, char* argv[])
 
       resolution2d size = Engine_GetFrameSize(engine);
       Graphics_Viewport(graphics, size);
+      Graphics_Clear(graphics);
 
       Graphics_UseBuffer(graphics, global_ubo, 0);
 

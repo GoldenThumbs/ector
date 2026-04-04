@@ -29,9 +29,14 @@ Graphics* Graphics_Init(void)
    graphics->freed_texture_root = INVALID_HANDLE;
    graphics->freed_framebuffer_root = INVALID_HANDLE;
    graphics->state.state_id = 0;
+   graphics->state.enable_color_clear = true;
+   graphics->state.enable_depth_clear = true;
+   graphics->state.enable_stencil_clear = false;
    graphics->clear_color.hex = 0;
 
    Graphics_SetClearColor(graphics, (color8){ 127, 127, 127, 255 });
+   Graphics_SetClearDepth(graphics, 1.0f);
+   Graphics_SetClearStencilId(graphics, 0);
    Graphics_SetBlending(graphics, GFX_BLENDMODE_MIX);
    Graphics_SetDepthTest(graphics, GFX_DEPTHMODE_LESS_THAN);
    GFX_SetFaceCullMode(graphics, GFX_FACECULL_BACK);
@@ -61,26 +66,104 @@ void Graphics_Free(Graphics* graphics)
 
    FREE_ARRAY(graphics->geometries);
    free(graphics);
+
+void Graphics_Clear(Graphics* graphics)
+{
+   if (graphics == NULL)
+      return;
+
+   u32 color_bit = (graphics->state.enable_color_clear) ? GL_COLOR_BUFFER_BIT : 0;
+   u32 depth_bit = (graphics->state.enable_depth_clear) ? GL_DEPTH_BUFFER_BIT : 0;
+   u32 stencil_bit = (graphics->state.enable_stencil_clear) ? GL_STENCIL_BUFFER_BIT : 0;
+
+   glClear(color_bit | depth_bit | stencil_bit);
+
+}
+
+void Graphics_Viewport(Graphics* graphics, resolution2d size)
+{
+   glViewport(0, 0, size.width, size.height);
+
+}
+
+void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y)
+{
+   glViewport(offset_x, offset_y, size.width, size.height);
+
+}
+
+void Graphics_EnableColorClear(Graphics* graphics, bool enable_color_clear)
+{
+   if (graphics == NULL)
+      return;
+
+   graphics->state.enable_color_clear = enable_color_clear;
+   
+}
+
+void Graphics_EnableDepthClear(Graphics* graphics, bool enable_depth_clear)
+{
+   if (graphics == NULL)
+      return;
+
+   graphics->state.enable_depth_clear = enable_depth_clear;
+
+}
+
+void Graphics_EnableStencilClear(Graphics* graphics, bool enable_stencil_clear)
+{
+   if (graphics == NULL)
+      return;
+
+   graphics->state.enable_stencil_clear = enable_stencil_clear;
    
 }
 
 void Graphics_SetClearColor(Graphics* graphics, color8 clear_color)
 {
+   if (graphics == NULL)
+      return;
+
    graphics->clear_color = clear_color;
 
-   const f32 rcp_byte = 1.0f / 255.0f;
-   f32 r = (f32)clear_color.r * rcp_byte;
-   f32 g = (f32)clear_color.g * rcp_byte;
-   f32 b = (f32)clear_color.b * rcp_byte;
-   f32 a = (f32)clear_color.a * rcp_byte;
+   f32 r = (f32)BYTE_TO_F32(clear_color.r);
+   f32 g = (f32)BYTE_TO_F32(clear_color.g);
+   f32 b = (f32)BYTE_TO_F32(clear_color.b);
+   f32 a = (f32)BYTE_TO_F32(clear_color.a);
 
    glClearColor(r, g, b, a);
 
 }
 
+void Graphics_SetClearDepth(Graphics* graphics, f32 clear_depth)
+{
+   if (graphics == NULL)
+      return;
+
+   graphics->clear_depth = clear_depth;
+
+   glClearDepthf(clear_depth);
+
+}
+
+void Graphics_SetClearStencilId(Graphics* graphics, i32 clear_stencil_id)
+{
+   if (graphics == NULL)
+      return;
+
+   graphics->clear_stencil_id = clear_stencil_id;
+
+   glClearStencil(clear_stencil_id);
+
+}
+
 void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
 {
+   if (graphics == NULL)
+      return;
+
    bool blend_enable = (blend_mode != GFX_BLENDMODE_NONE);
+
    if ((bool)graphics->state.blend_enable != blend_enable)
    {
       graphics->state.blend_enable = (u16)blend_enable;
@@ -126,7 +209,11 @@ void Graphics_SetBlending(Graphics* graphics, u8 blend_mode)
 
 void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode)
 {
+   if (graphics == NULL)
+      return;
+
    bool depthtest_enable = (depth_mode != GFX_DEPTHMODE_NONE);
+
    if ((bool)graphics->state.depthtest_enable != depthtest_enable)
    {
       graphics->state.depthtest_enable = (u16)depthtest_enable;
@@ -180,31 +267,20 @@ void Graphics_SetDepthTest(Graphics* graphics, u8 depth_mode)
 
 void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask)
 {
+   if (graphics == NULL)
+      return;
+
    if ((bool)graphics->state.depthmask_enable != depth_mask)
       glDepthMask((GLboolean)depth_mask);
-   graphics->state.depthmask_enable = (u16)depth_mask;
-
-}
-
-void Graphics_Viewport(Graphics* graphics, resolution2d size)
-{
-   Graphics_OffsetViewport(graphics, size, 0, 0);
-}
-
-void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y)
-{
-   glViewport(offset_x, offset_y, size.width, size.height);
-
-   u32 color_bit = GL_COLOR_BUFFER_BIT;
-   u32 depth_bit = GL_DEPTH_BUFFER_BIT;
-   u32 stencil_bit = GL_STENCIL_BUFFER_BIT;
-   glClear(color_bit | depth_bit | stencil_bit);
+   
+   graphics->state.depthmask_enable = depth_mask;
 
 }
 
 void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry, UniformBlockList uniforms)
 {
    Graphics_DrawInstanced(graphics, res_shader, res_geometry, 0, uniforms);
+
 }
 
 void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniforms)
