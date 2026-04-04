@@ -60,6 +60,9 @@
    #define M_ATAN32(x) (M_TO_TURN32 * atanf(x))
    #define M_ATAN64(x) (M_TO_TURN64 * atan(x))
 
+   #define M_ATAN32_2(x, y) (M_TO_TURN32 * atan2f(x, y))
+   #define M_ATAN64_2(x, y) (M_TO_TURN64 * atan2(x, y))
+
    #define M_SQRT32 sqrtf
    #define M_SQRT64 sqrt
 
@@ -96,6 +99,12 @@
    #define M_ATAN(x) _Generic((x), \
       f32: M_ATAN32((x)), \
       f64: M_ATAN64((x)), \
+      default: (f32)(x) \
+   )
+
+   #define M_ATAN_2(x, y) _Generic((x), \
+      f32: M_ATAN32_2((x), (y)), \
+      f64: M_ATAN64_2((x), (y)), \
       default: (f32)(x) \
    )
 
