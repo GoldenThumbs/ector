@@ -193,6 +193,8 @@ mat4x4 Renderer_GetViewMatrix(Renderer* renderer);
 mat4x4 Renderer_GetProjectionMatrix(Renderer* renderer);
 mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer);
 
+f32 Renderer_GetFrameDelta(Renderer* renderer);
+
 Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceDesc* desc);
 void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface);
 
