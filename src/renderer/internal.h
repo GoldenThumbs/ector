@@ -178,8 +178,8 @@ static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_ty
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
 }
 
-Geometry RNDR_Plane(Graphics* graphics);
-Geometry RNDR_Box(Graphics* graphics);
+Geometry RNDR_CreateDefaultPlane(Graphics* graphics);
+Geometry RNDR_CreateDefaultBox(Graphics* graphics);
 
 void RNDR_HandleMatrices(Renderer* renderer, resolution2d size);
 

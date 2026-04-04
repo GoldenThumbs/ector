@@ -41,8 +41,8 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    renderer->built_in.texture.gray = Renderer_CreateColorTexture(renderer, (color8){ .hex = 0xFF808080 }, GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.normal = Renderer_CreateColorTexture(renderer, (color8){ .hex = 0xFFFF8080 }, GFX_TEXTURETYPE_2D);
    
-   renderer->built_in.geometry.plane = RNDR_Plane(graphics);
-   renderer->built_in.geometry.box = RNDR_Box(graphics);
+   renderer->built_in.geometry.plane = RNDR_CreateDefaultPlane(graphics);
+   renderer->built_in.geometry.box = RNDR_CreateDefaultBox(graphics);
    
    renderer->built_in.shader.unlit.id = INVALID_HANDLE_ID;
    renderer->built_in.shader.basic.id = INVALID_HANDLE_ID;
@@ -859,7 +859,7 @@ void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i3
    
 }
 
-Geometry RNDR_Plane(Graphics* graphics)
+Geometry RNDR_CreateDefaultPlane(Graphics* graphics)
 {
    if (graphics == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
@@ -870,7 +870,7 @@ Geometry RNDR_Plane(Graphics* graphics)
    return plane;
 }
 
-Geometry RNDR_Box(Graphics* graphics)
+Geometry RNDR_CreateDefaultBox(Graphics* graphics)
 {
    if (graphics == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
