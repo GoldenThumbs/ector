@@ -29,6 +29,8 @@ typedef struct rndr_DrawableType_t
    u8* drawable_buffer;
    
    DrawableRenderFunc render;
+   DrawableFunc on_create;
+   DrawableFunc on_remove;
    DrawableFunc on_enable;
    DrawableFunc on_disable;
    
@@ -193,6 +195,7 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
 
 UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial material, u32 pass_id);
 
+void RNDR_GeometryOnCreateFunc(Renderer* renderer, Drawable self);
 void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id);
 
 #endif

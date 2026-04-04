@@ -123,6 +123,8 @@ typedef struct DrawableTypeDesc_t
    DrawableRenderFunc render_func;
    DrawableFunc on_enable_func;
    DrawableFunc on_disable_func;
+   DrawableFunc on_create_func;
+   DrawableFunc on_remove_func;
    uS data_size;
 
 } DrawableTypeDesc;

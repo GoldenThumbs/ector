@@ -431,6 +431,8 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
       return;
 
    DrawableRenderFunc render_func = NULL;
+   DrawableFunc on_create_func = NULL;
+   DrawableFunc on_remove_func = NULL;
    DrawableFunc on_enable_func = NULL;
    DrawableFunc on_disable_func = NULL;
    uS data_size = 0;
@@ -438,6 +440,8 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
    if (desc != NULL)
    {
       render_func = desc->render_func; 
+      on_create_func = desc->on_create_func;
+      on_remove_func = desc->on_remove_func;
       on_enable_func = desc->on_enable_func; 
       on_disable_func = desc->on_disable_func; 
       data_size = desc->data_size;
@@ -457,6 +461,8 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
    SET_ARRAY_LENGTH(renderer->drawable_types, drawable_type_count + 1);
 
    renderer->drawable_types[drawable_type_count].render = render_func;
+   renderer->drawable_types[drawable_type_count].on_create = on_create_func;
+   renderer->drawable_types[drawable_type_count].on_remove = on_remove_func;
    renderer->drawable_types[drawable_type_count].on_enable = on_enable_func;
    renderer->drawable_types[drawable_type_count].on_disable = on_disable_func;
 
@@ -543,6 +549,9 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    drawable_handle.id = drawable->compare.id;
    drawable_handle.drawable_type_idx = drawable_type_idx;
 
+   if (drawable_type->on_create != NULL)
+      drawable_type->on_create(renderer, drawable_handle);
+
    if (drawable_type->on_enable != NULL)
       drawable_type->on_enable(renderer, drawable_handle);
 
@@ -564,6 +573,9 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
 
    if (drawable_type->on_disable != NULL)
       drawable_type->on_disable(renderer, res_drawable);
+
+   if (drawable_type->on_remove != NULL)
+      drawable_type->on_remove(renderer, res_drawable);
 
    drawable->enabled = false;
 
@@ -992,6 +1004,7 @@ void RNDR_RegisterDefaultDrawables(Renderer* renderer)
    Renderer_RegisterDrawableType(renderer, EMPTY_DRAWABLE_TYPE, NULL);
    Renderer_RegisterDrawableType(renderer, GEOMETRY_DRAWABLE_TYPE, &(DrawableTypeDesc){
       .data_size = sizeof(GeometryDrawable),
+      .on_create_func = RNDR_GeometryOnCreateFunc,
       .render_func = RNDR_GeometryRenderFunc
    });
 }
@@ -1050,10 +1063,22 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
    return uniform_blocks;
 }
 
+void RNDR_GeometryOnCreateFunc(Renderer* renderer, Drawable self)
+{
+   rndr_Drawable* drawable = RNDR_GetDrawable(renderer, self);
+   GeometryDrawable* drawable_data = (GeometryDrawable*)drawable->data;
+
+   if (drawable_data == NULL)
+      return;
+
+   drawable_data->color.hex = 0xFFFFFFFF;
+   drawable_data->transform = Util_IdentityTransform();
+
+}
+
 void RNDR_GeometryRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
 {
    rndr_Drawable* drawable = RNDR_GetDrawable(renderer, self);
-
    GeometryDrawable* drawable_data = (GeometryDrawable*)drawable->data;
 
    if (drawable_data == NULL)
