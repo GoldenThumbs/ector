@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
 {
@@ -51,6 +52,8 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
       renderer->graphics, NULL, sizeof(CameraData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
    renderer->ubo.model_buffer = Graphics_CreateBufferExplicit(
       renderer->graphics, NULL, sizeof(ModelData), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
+
+   Graphics_CheckErrors(graphics);
 
    renderer->near_clip = 0.05f;
    renderer->far_clip = 100.0f;
@@ -110,6 +113,9 @@ void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame
    if (renderer == NULL)
       return;
 
+   u32 cambuffer_id = renderer->ubo.camera_buffer.id;
+   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
+
    renderer->frame_delta = (f32)engine_frame_delta;
 
    RNDR_HandleMatrices(renderer, size);
@@ -127,9 +133,13 @@ void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame
    Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.camera_buffer, &camera_data, 1, sizeof(CameraData));
    Graphics_BindBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
 
+   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
+
    if (renderer->lightmanager_info.lightman_prerender != NULL)
       renderer->lightmanager_info.lightman_prerender(renderer);
 
+   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
+   
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
    for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
    {
@@ -156,7 +166,11 @@ void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame
          drawable_type->render(renderer, drawable_handle, pass_id);
 
       }
+
    }
+
+   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
+
 }
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot)

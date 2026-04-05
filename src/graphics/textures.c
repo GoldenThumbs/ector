@@ -52,14 +52,18 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
    if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
       return;
 
-   gfx_Texture texture = graphics->textures[res_texture.handle];
-   if (texture.compare.ref != res_texture.ref)
-      return;
+   gfx_Texture* texture = &graphics->textures[res_texture.handle];
+   if (texture->compare.ref != res_texture.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
 
-   texture.next_freed = graphics->freed_texture_root;
+      return;
+   }
+
+   texture->next_freed = graphics->freed_texture_root;
    graphics->freed_texture_root = (u32)res_texture.handle;
 
-   glDeleteTextures(1, &texture.id.tex);
+   glDeleteTextures(1, &texture->id.tex);
 
 }
 
@@ -70,7 +74,11 @@ void Graphics_UpdateTexture(Graphics* graphics, u8* data, Texture res_texture)
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
+
       return;
+   }
 
    GFX_CreateTexture(&texture, data, true);
 
@@ -83,7 +91,11 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
+
       return;
+   }
 
    u32 gl_target = GFX_TextureType(texture.type);
 
@@ -99,7 +111,11 @@ void Graphics_BindTextureView(Graphics* graphics, Texture res_texture, u32 bind_
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
+
       return;
+   }
 
    bool is_layered = false;
    i32 desired_layer = 0;
@@ -140,7 +156,11 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
+
       return;
+   }
 
    u32 gl_target = GFX_TextureType(texture.type);
 
@@ -166,7 +186,11 @@ Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref)
-      return (Image){ NULL };
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
+
+      return (Image){ NULL };;
+   }
 
    i32 mip_divisor = 1 << mip_level;
 
@@ -267,7 +291,11 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, resolution2d size, bool depth
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
+
       return;
+   }
 
    glDeleteFramebuffers(1, &framebuffer.id.fbo);
    if (framebuffer.id.rbo != 0)
@@ -310,16 +338,20 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
    if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
       return;
 
-   gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
-   if (framebuffer.compare.ref != res_framebuffer.ref)
-      return;
+   gfx_Framebuffer* framebuffer = &graphics->framebuffers[res_framebuffer.handle];
+   if (framebuffer->compare.ref != res_framebuffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
 
-   framebuffer.next_freed = graphics->freed_framebuffer_root;
+      return;
+   }
+
+   framebuffer->next_freed = graphics->freed_framebuffer_root;
    graphics->freed_framebuffer_root = (u32)res_framebuffer.handle;
 
-   glDeleteFramebuffers(1, &framebuffer.id.fbo);
-   if (framebuffer.id.rbo != 0)
-      glDeleteRenderbuffers(1, &framebuffer.id.rbo);
+   glDeleteFramebuffers(1, &framebuffer->id.fbo);
+   if (framebuffer->id.rbo != 0)
+      glDeleteRenderbuffers(1, &framebuffer->id.rbo);
 
 }
 
@@ -330,7 +362,11 @@ void Graphics_DrawToFramebufferTargets(Graphics* graphics, Framebuffer res_frame
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
+
       return;
+   }
 
    u32 targets[8] = { 0 };
    for (u32 target_i = 0; target_i < target_count; target_i++)
@@ -349,7 +385,11 @@ void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
+
       return;
+   }
 
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
    glBindRenderbuffer(GL_RENDERBUFFER, framebuffer.id.rbo);
@@ -380,11 +420,19 @@ void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_fra
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
    if (framebuffer.compare.ref != res_framebuffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
+
       return;
+   }
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
    if (texture.compare.ref != res_texture.ref || (texture.type != GFX_TEXTURETYPE_2D_ARRAY && texture.type != GFX_TEXTURETYPE_CUBEMAP_ARRAY))
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Texture)", res_texture.id);
+
       return;
+   }
 
    bool is_layered = false;
    i32 desired_layer = 0;

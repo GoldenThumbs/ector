@@ -1,5 +1,6 @@
 #include "util/types.h"
 #include "util/resource.h"
+#include "util/files.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -48,14 +49,18 @@ void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
    if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
       return;
 
-   gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
-   if (buffer.compare.ref != res_buffer.ref)
+   gfx_Buffer* buffer = &graphics->buffers[res_buffer.handle];
+   if (buffer->compare.ref != res_buffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Buffer)", res_buffer.id);
+
       return;
+   }
 
-   buffer.next_freed = graphics->freed_buffer_root;
-   graphics->freed_buffer_root = (u32)res_buffer.handle;
+   buffer->next_freed = graphics->freed_buffer_root;
+   graphics->freed_buffer_root = res_buffer.handle;
 
-   glDeleteBuffers(1, &buffer.id.buf);
+   glDeleteBuffers(1, &buffer->id.buf);
 
 }
 
@@ -78,13 +83,16 @@ void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* 
 
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Buffer)", res_buffer.id);
+
       return;
+   }
 
    u32 gl_target = GFX_BufferType(buffer.type);
    
    glBindBuffer(gl_target, buffer.id.buf);
    glBufferSubData(gl_target, offset_bytes, total_size, data);
-   glBindBuffer(gl_target, 0);
    
 }
 
@@ -95,7 +103,11 @@ void Graphics_BindBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
 
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
    if (buffer.compare.ref != res_buffer.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Buffer)", res_buffer.id);
+
       return;
+   }
 
    u32 gl_target = GFX_BufferType(buffer.type);
 

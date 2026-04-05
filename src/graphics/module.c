@@ -313,13 +313,26 @@ void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Shader)", res_shader.id);
+
       return;
+   }
+
    if (shader.is_compute)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Cannot use compute shader in draw call!");
+
       return;
+   }
 
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
    if (geometry.compare.ref != res_geometry.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
+
       return;
+   }
 
    GFX_SetFaceCullMode(graphics, geometry.face_cull_mode);
 

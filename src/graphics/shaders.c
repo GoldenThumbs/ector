@@ -159,14 +159,19 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 {
    if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
       return;
-   gfx_Shader shader = graphics->shaders[res_shader.handle];
-   if (shader.compare.ref != res_shader.ref)
-      return;
 
-   shader.next_freed = graphics->freed_shader_root;
+   gfx_Shader* shader = &graphics->shaders[res_shader.handle];
+   if (shader->compare.ref != res_shader.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Shader)", res_shader.id);
+
+      return;
+   }
+
+   shader->next_freed = graphics->freed_shader_root;
    graphics->freed_shader_root = (u32)res_shader.handle;
 
-   glDeleteProgram(shader.id.program);
+   glDeleteProgram(shader->id.program);
 }
 
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks)
@@ -176,9 +181,18 @@ void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 si
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];
    if (shader.compare.ref != res_shader.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Shader)", res_shader.id);
+
       return;
+   }
+
    if (!shader.is_compute)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Only compute shaders can be used in dispatch call!");
+
       return;
+   }
 
    glUseProgram(shader.id.program);
    

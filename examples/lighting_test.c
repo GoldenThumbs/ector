@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
       Graphics_Viewport(graphics, size);
       Graphics_Clear(graphics);
 
-      Graphics_UseBuffer(graphics, global_ubo, 0);
+      Graphics_BindBuffer(graphics, global_ubo, 0);
 
       Renderer_UpdateCamera(renderer, player.origin, player.euler, cam_dist);
       Renderer_RenderPass(renderer, size, frame_delta, 0);

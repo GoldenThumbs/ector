@@ -1,6 +1,7 @@
-#include "mesh.h"
 #include "util/types.h"
 #include "util/resource.h"
+#include "util/files.h"
+#include "mesh.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -34,7 +35,11 @@ void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometr
 
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
    if (geometry.compare.ref != res_geometry.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
+
       return;
+   }
 
    glDeleteVertexArrays(1, &geometry.id.vao);
 
@@ -57,19 +62,23 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
    if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
       return;
 
-   gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
-   if (geometry.compare.ref != res_geometry.ref)
-      return;
+   gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
+   if (geometry->compare.ref != res_geometry.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
 
-   geometry.next_freed = graphics->freed_geometry_root;
+      return;
+   }
+
+   geometry->next_freed = graphics->freed_geometry_root;
    graphics->freed_geometry_root = (u32)res_geometry.handle;
 
-   glDeleteVertexArrays(1, &geometry.id.vao);
+   glDeleteVertexArrays(1, &geometry->id.vao);
 
-   if (geometry.id.v_buf != 0)
-      glDeleteBuffers(1, &geometry.id.v_buf);
-   if (geometry.id.i_buf != 0)
-      glDeleteBuffers(1, &geometry.id.i_buf);
+   if (geometry->id.v_buf != 0)
+      glDeleteBuffers(1, &geometry->id.v_buf);
+   if (geometry->id.i_buf != 0)
+      glDeleteBuffers(1, &geometry->id.i_buf);
 
 }
 
@@ -80,7 +89,11 @@ void Graphics_SetGeometryFaceCullMode(Graphics* graphics, Geometry res_geometry,
 
    gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
    if (geometry->compare.ref != res_geometry.ref)
+   {
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
+
       return;
+   }
 
    geometry->face_cull_mode = face_cull_mode;
 
