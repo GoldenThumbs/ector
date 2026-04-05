@@ -114,9 +114,10 @@ typedef struct SurfaceMaterial_t
 
 } SurfaceMaterial;
 
-struct Renderer_t;
-typedef void (*DrawableFunc)(struct Renderer_t* renderer, Drawable self);
-typedef void (*DrawableRenderFunc)(struct Renderer_t* renderer, Drawable self, u32 pass_id);
+typedef struct Renderer_t Renderer;
+
+typedef void (*DrawableFunc)(Renderer* renderer, Drawable self);
+typedef void (*DrawableRenderFunc)(Renderer* renderer, Drawable self, u32 pass_id);
 
 typedef struct DrawableTypeDesc_t
 {
@@ -137,8 +138,8 @@ typedef struct ShaderDefines_t
 } ShaderDefines;
 
 struct LightManagerInfo_t;
-typedef error (*LightManagerFunc)(struct Renderer_t* renderer);
-typedef ShaderDefines (*LightManagerDefines)(struct Renderer_t* renderer);
+typedef error (*LightManagerFunc)(Renderer* renderer);
+typedef ShaderDefines (*LightManagerDefines)(Renderer* renderer);
 
 typedef struct LightManagerInfo_t
 {
@@ -165,9 +166,6 @@ typedef struct GeometryDrawable_t
    Transform3D transform;
    
 } GeometryDrawable;
-
-
-typedef struct Renderer_t Renderer;
 
 Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
