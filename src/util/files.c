@@ -173,6 +173,6 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
    vfprintf(stream_out, message, args);
    va_end(args);
 
-   fprintf(stream_out, "\n[error info: %u, error flags: %014b]\n\n", err.extra, err.flags);
+   fprintf(stream_out, "\n[error info: 0x%x, error flags: %014b]\n\n", err.extra, err.flags);
 
 }

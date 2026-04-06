@@ -4,25 +4,40 @@
 #include "util/types.h"
 #include "util/keymap.h"
 
+enum {
+   ERR_ENG_INIT_FAILED = 0x1001
+
+};
+
+#define ERR_FLAG_WINDOW_INIT_FAILED (1u << 0)
+#define ERR_FLAG_WINDOW_CREATION_FAILED (1u << 1)
+#define ERR_FLAG_ENGINE_ALLOC_FAILED (1u << 2)
+
 typedef enum MouseMode_t
 {
    MOUSE_DEFAULT = 0,
    MOUSE_HIDE_CURSOR,
    MOUSE_DISABLE_CURSOR,
    MOUSE_CAPTURE_CURSOR
+
 } MouseMode;
 
 typedef struct EngineDesc_t
 {
    char* app_name;
+
    struct {
       char* title;
-      i32 width, height;
+      res2D size;
       bool hidden;
+
    } window;
+
    struct {
       bool enabled;
+
    } renderer;
+
 } EngineDesc;
 
 
@@ -37,9 +52,10 @@ typedef struct Module_t
    ModuleFunc mod_init;
    ModuleFunc mod_free;
    void* data;
+
 } Module;
 
-Engine* Engine_Init(i32 argc, char* argv[], EngineDesc* desc);
+Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc);
 void Engine_Free(Engine* engine);
 
 void Engine_RequestExit(Engine* engine);
@@ -57,7 +73,7 @@ void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode);
 
 void Engine_Present(Engine* engine);
 
-resolution2d Engine_GetFrameSize(Engine* engine);
+res2D Engine_GetFrameSize(Engine* engine);
 f64 Engine_GetFrameDelta(Engine* engine);
 
 vec2 Engine_GetMousePos(Engine* engine);

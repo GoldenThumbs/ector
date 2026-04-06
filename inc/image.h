@@ -19,8 +19,7 @@ typedef struct Image_t
 {
    u8* data;
 
-   resolution2d size;
-   i32 depth;
+   res3D size;
    u8 mipmap_count;
    u8 channel_count;
    u8 image_type;
@@ -28,7 +27,7 @@ typedef struct Image_t
 
 } Image;
 
-Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, bool is_srgb);
+Image Image_CreateImage(memblob memory, u8 image_type, res2D slice_size, bool is_srgb);
 void Image_Free(Image* image);
 
 void Image_GenerateMipmaps(Image* image);

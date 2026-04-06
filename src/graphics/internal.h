@@ -2,6 +2,7 @@
 #define GFX_INTERNAL
 
 #include "util/types.h"
+#include "util/files.h"
 
 #include "graphics.h"
 
@@ -169,6 +170,45 @@ static inline bool GFX_IsStencilFormat(u8 texture_format)
    }
 
    return false;
+}
+
+static inline bool GFX_CheckHandleIsValid(handle compare_handle, handle res_handle, const char* resource_type_name, const u32 invalid_handle_error_code)
+{
+   if (compare_handle.id == res_handle.id)
+      return true;
+
+   error err = { 0 };
+   err.general = ERR_ERROR;
+   err.extra = invalid_handle_error_code;
+
+   Util_Log(NULL, GRAPHICS_MODULE, err, "Invalid handle! Handle ID: %u (%s)", res_handle.id, resource_type_name);
+
+   return false;
+}
+
+static inline bool GFX_IsShaderValid(gfx_Shader shader, handle res_handle)
+{
+   return GFX_CheckHandleIsValid(shader.compare, res_handle, "Shader", ERR_GFX_SHADER_INVALID_HANDLE);
+}
+
+static inline bool GFX_IsBufferValid(gfx_Buffer buffer, handle res_handle)
+{
+   return GFX_CheckHandleIsValid(buffer.compare, res_handle, "Buffer", ERR_GFX_BUFFER_INVALID_HANDLE);
+}
+
+static inline bool GFX_IsGeometryValid(gfx_Geometry geometry, handle res_handle)
+{
+   return GFX_CheckHandleIsValid(geometry.compare, res_handle, "Geometry", ERR_GFX_GEOMETRY_INVALID_HANDLE);
+}
+
+static inline bool GFX_IsTextureValid(gfx_Texture texture, handle res_handle)
+{
+   return GFX_CheckHandleIsValid(texture.compare, res_handle, "Texture", ERR_GFX_TEXTURE_INVALID_HANDLE);
+}
+
+static inline bool GFX_IsFramebufferValid(gfx_Framebuffer framebuffer, handle res_handle)
+{
+   return GFX_CheckHandleIsValid(framebuffer.compare, res_handle, "Framebuffer", ERR_GFX_FRAMEBUFFER_INVALID_HANDLE);
 }
 
 void GFX_CheckOpenGLError(void);

@@ -14,6 +14,8 @@
 #define MAX_KEYS 512
 #define MAX_MOUSE_BUTTONS 8
 
+#define ENGINE_LOG_NAME "Engine"
+
 typedef struct eng_EngineGlobal_t
 {
    struct {
@@ -40,20 +42,28 @@ typedef struct eng_EngineGlobal_t
    GLFWwindow* window;
    f64 up_time;
    f64 frame_delta;
-   resolution2d frame_size;
+   res2D frame_size;
 } eng_EngineGlobal;
 
 struct Engine_t
 {
-   char* app_name;
-   char* app_path;
    Module* modules;
 
+   uS engine_string_size;
+   char* engine_strings;
+
+   u32 window_title_ofs;
+   u32 app_name_ofs;
+   u32 app_path_ofs;
+
    union {
-      u64 state;
+      u32 state;
+
       struct {
-         u64 exit_requested: 1;
+         u32 exit_requested: 1;
+
       };
+
    };
 
    eng_EngineGlobal internal;

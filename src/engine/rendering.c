@@ -6,14 +6,20 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
-resolution2d Engine_GetFrameSize(Engine* engine)
+res2D Engine_GetFrameSize(Engine* engine)
 {
+   if (engine == NULL)
+      return (res2D){ 0 };
+
    eng_EngineGlobal eng_glb = engine->internal;
    return eng_glb.frame_size;
 }
 
 f64 Engine_GetFrameDelta(Engine* engine)
 {
+   if (engine == NULL)
+      return 0.0;
+
    eng_EngineGlobal* eng_glb = &engine->internal;
 
    return eng_glb->frame_delta;
@@ -21,6 +27,10 @@ f64 Engine_GetFrameDelta(Engine* engine)
 
 void Engine_Present(Engine* engine)
 {
+   if (engine == NULL)
+      return;
+
    eng_EngineGlobal* eng_glb = &engine->internal;
    glfwSwapBuffers(eng_glb->window);
+   
 }

@@ -16,13 +16,25 @@ typedef handle Texture;
 typedef handle Framebuffer;
 
 enum {
-   ERR_GFX_CONTEXT_FAILED = 1,
+   ERR_GFX_CONTEXT_FAILED = 0x2001,
+   ERR_GFX_SHADER_INVALID_HANDLE,
+   ERR_GFX_BUFFER_INVALID_HANDLE,
+   ERR_GFX_GEOMETRY_INVALID_HANDLE,
+   ERR_GFX_TEXTURE_INVALID_HANDLE,
+   ERR_GFX_FRAMEBUFFER_INVALID_HANDLE,
+   ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED,
    ERR_GFX_SHADER_COMPILATION_FAILED,
-   ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED
+   ERR_GFX_SHADER_WRONG_TYPE
 
 };
 
-#define ERR_INFO_GFX_INVALID_FRAMEBUFFER_ATTACHMENT (1u << 0u)
+// shader error flags
+#define ERR_FLAG_SHADER_WAS_COMPUTE (1u << 0)
+#define ERR_FLAG_SHADER_WAS_NOT_COMPUTE (1u << 1)
+#define ERR_FLAG_BAD_SHADER_CODE (1u << 2)
+
+// framebuffer error flags
+#define ERR_FLAG_ATTEMPTED_LAYERED_ATTACHMENT (1u << 0)
 
 enum {
    GFX_INDEXTYPE_16BIT = 0,
@@ -260,7 +272,7 @@ typedef struct UniformBlockList_t
 
 typedef struct TextureDesc_t
 {
-   resolution2d size;
+   res2D size;
    i32 depth;
    u16 mipmap_count;
    u8 texture_type;
@@ -313,7 +325,7 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 // NOTE: this function allocates memory.
 Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 mip_level, u8 cubemap_face);
 
-Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, resolution2d size, bool depthstencil_renderbuffer);
+Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, res2D size, bool depthstencil_renderbuffer);
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
 void Graphics_DrawToFramebufferTargets(Graphics* graphics, Framebuffer res_framebuffer, u32 target_count, u8 target_ids[]);
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer);
@@ -322,8 +334,8 @@ void Graphics_AttachMultipleTexturesToFramebuffer(Graphics* graphics, Framebuffe
 void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, Texture res_texture, const AdvancedBindOptions* bind_options, u8 attachment_slot);
 
 void Graphics_Clear(Graphics* graphics);
-void Graphics_Viewport(Graphics* graphics, resolution2d size);
-void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y);
+void Graphics_Viewport(Graphics* graphics, res2D size);
+void Graphics_OffsetViewport(Graphics* graphics, res2D size, i32 offset_x, i32 offset_y);
 void Graphics_EnableColorClear(Graphics* graphics, bool enable_color_clear);
 void Graphics_EnableDepthClear(Graphics* graphics, bool enable_depth_clear);
 void Graphics_EnableStencilClear(Graphics* graphics, bool enable_stencil_clear);

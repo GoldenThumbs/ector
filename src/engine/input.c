@@ -8,6 +8,9 @@
 
 bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action)
 {
+   if (engine == NULL)
+      return false;
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    KeyState key_state = eng_glb.input.keyboard.key_state[key];
@@ -15,19 +18,29 @@ bool Engine_CheckKey(Engine* engine, Key key, KeyAction key_action)
    {
       case KEY_IS_UP:
          return !key_state.is_down;
+
       case KEY_IS_DOWN:
          return key_state.is_down;
+
       case KEY_JUST_RELEASED:
          return (!key_state.is_down && key_state.was_down);
+         
       case KEY_JUST_PRESSED:
          return (key_state.is_down && !key_state.was_down);
+
       default:
-         return false;
+         break;
+      
    }
+
+   return false;
 }
 
 bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyModifiers modifiers)
 {
+   if (engine == NULL)
+      return false;
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    bool ignore_mods = false;
@@ -73,12 +86,18 @@ bool Engine_CheckKeyAdvanced(Engine* engine, Key key, KeyAction key_action, KeyM
 
 KeyState Engine_KeyState(Engine* engine, Key key)
 {
+   if (engine == NULL)
+      return (KeyState){ 0 };
+
    eng_EngineGlobal eng_glb = engine->internal;
    return eng_glb.input.keyboard.key_state[key];
 }
 
 void Engine_SetRawMouseInput(Engine* engine, bool raw_mouse_input)
 {
+   if (engine == NULL)
+      return;
+
    eng_EngineGlobal eng_glb = engine->internal;
    
    if (glfwRawMouseMotionSupported())
@@ -95,6 +114,9 @@ void Engine_SetRawMouseInput(Engine* engine, bool raw_mouse_input)
 
 void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode)
 {
+   if (engine == NULL)
+      return;
+
    eng_EngineGlobal* eng_glb = &engine->internal;
 
    glfwSetInputMode(eng_glb->window, GLFW_CURSOR, GLFW_CURSOR_NORMAL + mouse_mode);
@@ -109,6 +131,9 @@ void Engine_SetMouseMode(Engine* engine, MouseMode mouse_mode)
 
 vec2 Engine_GetMousePos(Engine* engine)
 {
+   if (engine == NULL)
+      return (vec2){ 0 };
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
@@ -120,6 +145,9 @@ vec2 Engine_GetMousePos(Engine* engine)
 
 vec2 Engine_GetMouseDelta(Engine* engine)
 {
+   if (engine == NULL)
+      return (vec2){ 0 };
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
@@ -131,6 +159,9 @@ vec2 Engine_GetMouseDelta(Engine* engine)
 
 vec2 Engine_GetMouseScroll(Engine* engine)
 {
+   if (engine == NULL)
+      return (vec2){ 0 };
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    vec2 res = { 0 };
@@ -142,6 +173,9 @@ vec2 Engine_GetMouseScroll(Engine* engine)
 
 bool Engine_CheckMouseButton(Engine* engine, MouseButton button, KeyAction button_action)
 {
+   if (engine == NULL)
+      return false;
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    KeyState button_state = eng_glb.input.mouse.button_state[button];
@@ -149,18 +183,28 @@ bool Engine_CheckMouseButton(Engine* engine, MouseButton button, KeyAction butto
    {
       case KEY_IS_UP:
          return !button_state.is_down;
+         
       case KEY_IS_DOWN:
          return button_state.is_down;
+
       case KEY_JUST_RELEASED:
          return (!button_state.is_down && button_state.was_down);
+
       case KEY_JUST_PRESSED:
          return (button_state.is_down && !button_state.was_down);
+
       default:
-         return false;
+         break;
    }
+
+   return false;
 }
+
 bool Engine_CheckMouseButtonAdvanced(Engine* engine, MouseButton button, KeyAction button_action, KeyModifiers modifiers)
 {
+   if (engine == NULL)
+      return false;
+
    eng_EngineGlobal eng_glb = engine->internal;
 
    bool ignore_mods = false;
@@ -206,6 +250,9 @@ bool Engine_CheckMouseButtonAdvanced(Engine* engine, MouseButton button, KeyActi
 
 KeyState Engine_GetMouseButtonState(Engine* engine, MouseButton button)
 {
+   if (engine == NULL)
+      return (KeyState){ 0 };
+
    eng_EngineGlobal eng_glb = engine->internal;
    return eng_glb.input.mouse.button_state[button];
 }

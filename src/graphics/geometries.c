@@ -1,6 +1,5 @@
 #include "util/types.h"
 #include "util/resource.h"
-#include "util/files.h"
 #include "mesh.h"
 
 #include "graphics.h"
@@ -34,12 +33,8 @@ void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometr
       return;
 
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
-   if (geometry.compare.ref != res_geometry.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
-
+   if (!GFX_IsGeometryValid(geometry, res_geometry))
       return;
-   }
 
    glDeleteVertexArrays(1, &geometry.id.vao);
 
@@ -63,12 +58,8 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
       return;
 
    gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
-   if (geometry->compare.ref != res_geometry.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
-
+   if (!GFX_IsGeometryValid(*geometry, res_geometry))
       return;
-   }
 
    geometry->next_freed = graphics->freed_geometry_root;
    graphics->freed_geometry_root = (u32)res_geometry.handle;
@@ -88,12 +79,8 @@ void Graphics_SetGeometryFaceCullMode(Graphics* graphics, Geometry res_geometry,
       return;
 
    gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
-   if (geometry->compare.ref != res_geometry.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
-
+   if (!GFX_IsGeometryValid(*geometry, res_geometry))
       return;
-   }
 
    geometry->face_cull_mode = face_cull_mode;
 

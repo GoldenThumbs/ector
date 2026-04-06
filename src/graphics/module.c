@@ -103,13 +103,13 @@ void Graphics_Clear(Graphics* graphics)
 
 }
 
-void Graphics_Viewport(Graphics* graphics, resolution2d size)
+void Graphics_Viewport(Graphics* graphics, res2D size)
 {
    glViewport(0, 0, size.width, size.height);
 
 }
 
-void Graphics_OffsetViewport(Graphics* graphics, resolution2d size, i32 offset_x, i32 offset_y)
+void Graphics_OffsetViewport(Graphics* graphics, res2D size, i32 offset_x, i32 offset_y)
 {
    glViewport(offset_x, offset_y, size.width, size.height);
 
@@ -312,27 +312,24 @@ void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_
       return;
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];
-   if (shader.compare.ref != res_shader.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Shader)", res_shader.id);
-
+   if (!GFX_IsShaderValid(shader, res_shader))
       return;
-   }
 
    if (shader.is_compute)
    {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Cannot use compute shader in draw call!");
+      error err = { 0 };
+      err.general = ERR_ERROR;
+      err.extra = ERR_GFX_SHADER_WRONG_TYPE;
+      err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE;
+
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Cannot use compute shader in draw call!");
 
       return;
    }
 
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
-   if (geometry.compare.ref != res_geometry.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Geometry)", res_geometry.id);
-
+   if (!GFX_IsGeometryValid(geometry, res_geometry))
       return;
-   }
 
    GFX_SetFaceCullMode(graphics, geometry.face_cull_mode);
 

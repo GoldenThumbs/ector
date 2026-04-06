@@ -140,7 +140,7 @@ struct Renderer_t
    f32 fov;
 
    f32 aspect_ratio;
-   resolution2d size;
+   res2D size;
 
    mat4x4 view;
    mat4x4 inv_view;
@@ -183,7 +183,7 @@ static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_ty
 Geometry RNDR_CreateDefaultPlane(Graphics* graphics);
 Geometry RNDR_CreateDefaultBox(Graphics* graphics);
 
-void RNDR_HandleMatrices(Renderer* renderer, resolution2d size);
+void RNDR_HandleMatrices(Renderer* renderer, res2D size);
 
 u16 RNDR_GetSurfaceIndex(Renderer* renderer, const char* surface_name);
 u16 RNDR_GetDrawableTypeIndex(Renderer* renderer, const char* drawable_type_name);

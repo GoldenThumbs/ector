@@ -41,6 +41,7 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
       error err = { 0 };
       err.general = ERR_ERROR;
       err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
+      err.flags |= ERR_FLAG_SHADER_WAS_NOT_COMPUTE | ERR_FLAG_BAD_SHADER_CODE;
 
       Util_Log(NULL, GRAPHICS_MODULE, err, "Shader Failed To Compile!\n%s", shd_log);
 
@@ -84,6 +85,7 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
       error err = { 0 };
       err.general = ERR_ERROR;
       err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
+      err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE | ERR_FLAG_BAD_SHADER_CODE;
 
       Util_Log(NULL, GRAPHICS_MODULE, err, "Compute Shader Failed To Compile!\n%s", shd_log);
 
@@ -124,6 +126,7 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
          
          err.general = ERR_WARN;
          err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
+         err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE;
          
       }
 
@@ -139,6 +142,7 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
       {
          err.general = ERR_WARN;
          err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
+         err.flags |= ERR_FLAG_SHADER_WAS_NOT_COMPUTE;
 
       }
 
@@ -161,12 +165,8 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
       return;
 
    gfx_Shader* shader = &graphics->shaders[res_shader.handle];
-   if (shader->compare.ref != res_shader.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Shader)", res_shader.id);
-
+   if (!GFX_IsShaderValid(*shader, res_shader))
       return;
-   }
 
    shader->next_freed = graphics->freed_shader_root;
    graphics->freed_shader_root = (u32)res_shader.handle;
@@ -180,16 +180,17 @@ void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 si
       return;
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];
-   if (shader.compare.ref != res_shader.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Shader)", res_shader.id);
-
+   if (!GFX_IsShaderValid(shader, res_shader))
       return;
-   }
 
    if (!shader.is_compute)
    {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Only compute shaders can be used in dispatch call!");
+      error err = { 0 };
+      err.general = ERR_ERROR;
+      err.extra = ERR_GFX_SHADER_WRONG_TYPE;
+      err.flags |= ERR_FLAG_SHADER_WAS_NOT_COMPUTE;
+
+      Util_Log(NULL, GRAPHICS_MODULE, err, "Only compute shaders can be used in a dispatch call!");
 
       return;
    }

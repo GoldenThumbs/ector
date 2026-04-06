@@ -171,7 +171,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
 Graphics* Renderer_Graphics(Renderer* renderer);
-void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame_delta, u32 pass_id);
+void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta, u32 pass_id);
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
 void Renderer_SetTextureToDefault(Renderer* renderer, u8 texture_default, u32 bind_slot);
@@ -231,7 +231,7 @@ void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_
 bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id);
 
 Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture_type);
-Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, resolution2d slice_size, bool generate_mipmaps, bool is_srgb);
+Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb);
 Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute);
 Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path);
 

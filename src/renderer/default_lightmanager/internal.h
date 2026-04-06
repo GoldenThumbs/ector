@@ -124,9 +124,9 @@ struct DefaultLightManager_t
       Texture sunlight;
 
       i32 num_cascades;
-      resolution2d cascade_size;
-      resolution2d atlas_count;
-      resolution2d atlas_size;
+      res2D cascade_size;
+      res2D atlas_count;
+      res2D atlas_size;
 
    } shadow;
 

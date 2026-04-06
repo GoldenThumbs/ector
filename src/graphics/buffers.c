@@ -1,13 +1,10 @@
 #include "util/types.h"
 #include "util/resource.h"
-#include "util/files.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
 
 #include <glad/gl.h>
-
-#include <string.h>
 
 Buffer Graphics_CreateBuffer(Graphics* graphics, void* data, u32 length, uS type_size, u8 draw_mode, u8 buffer_type)
 {
@@ -50,12 +47,8 @@ void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
       return;
 
    gfx_Buffer* buffer = &graphics->buffers[res_buffer.handle];
-   if (buffer->compare.ref != res_buffer.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Buffer)", res_buffer.id);
-
+   if (!GFX_IsBufferValid(*buffer, res_buffer))
       return;
-   }
 
    buffer->next_freed = graphics->freed_buffer_root;
    graphics->freed_buffer_root = res_buffer.handle;
@@ -82,12 +75,8 @@ void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* 
       return;
 
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
-   if (buffer.compare.ref != res_buffer.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Buffer)", res_buffer.id);
-
+   if (!GFX_IsBufferValid(buffer, res_buffer))
       return;
-   }
 
    u32 gl_target = GFX_BufferType(buffer.type);
    
@@ -102,12 +91,8 @@ void Graphics_BindBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
       return;
 
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
-   if (buffer.compare.ref != res_buffer.ref)
-   {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_ERROR }, "Invalid handle! Handle ID: %u (Buffer)", res_buffer.id);
-
+   if (!GFX_IsBufferValid(buffer, res_buffer))
       return;
-   }
 
    u32 gl_target = GFX_BufferType(buffer.type);
 

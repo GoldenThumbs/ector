@@ -59,7 +59,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    renderer->far_clip = 100.0f;
    renderer->fov = 40.0f;
    renderer->aspect_ratio = 1.0f;
-   renderer->size = (resolution2d){ 1, 1 };
+   renderer->size = (res2D){ 1, 1 };
    renderer->update_projection = true;
    renderer->update_view_projection = true;
 
@@ -108,7 +108,7 @@ Graphics* Renderer_Graphics(Renderer* renderer)
    return renderer->graphics;
 }
 
-void Renderer_RenderPass(Renderer* renderer, resolution2d size, f64 engine_frame_delta, u32 pass_id)
+void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta, u32 pass_id)
 {
    if (renderer == NULL)
       return;
@@ -793,7 +793,7 @@ Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture
    return Graphics_CreateTexture(renderer->graphics, color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_U8_NORM });
 }
 
-Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, resolution2d slice_size, bool generate_mipmaps, bool is_srgb)
+Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb)
 {
    if (renderer == NULL || renderer->app_path == NULL || texture_file_path == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
@@ -817,8 +817,8 @@ Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, 
       return (handle){ .id = INVALID_HANDLE_ID };
 
    TextureDesc desc = { 0 };
-   desc.size = image.size;
-   desc.depth = image.depth;
+   desc.size = image.size.width_height;
+   desc.depth = image.size.depth;
    desc.mipmap_count = image.mipmap_count;
    desc.texture_type = (image_type == IMG_TYPE_2D) ? GFX_TEXTURETYPE_2D : GFX_TEXTURETYPE_3D;
    if (image.image_format == IMG_FORMAT_U8_SRGB)
@@ -907,7 +907,7 @@ Geometry RNDR_CreateDefaultBox(Graphics* graphics)
    return box;
 }
 
-void RNDR_HandleMatrices(Renderer* renderer, resolution2d size)
+void RNDR_HandleMatrices(Renderer* renderer, res2D size)
 {
    if (renderer == NULL)
       return;

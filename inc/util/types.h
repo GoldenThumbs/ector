@@ -5,6 +5,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
+#include <stdlib.h>
+#define ECT_PATH_MAX _MAX_PATH
+#define ECT_FILE_NAME_MAX _MAX_FNAME
+#else
+#include <linux/limits.h>
+#define ECT_PATH_MAX PATH_MAX
+#define ECT_FILE_NAME_MAX NAME_MAX
+#endif
+
+#define ECT_NAME_MAX 255
+
 #define ECT_STRINGIFY(x) ECT_STRINGIFY_2(x)
 #define ECT_STRINGIFY_2(x) #x
 
@@ -44,9 +56,12 @@ typedef union color8_t
 {
    struct {
       u8 r, g, b, a;
+
    };
-   u8 arr[4];
+
    u32 hex;
+   u8 arr[4];
+
 } color8;
 
 enum {
@@ -54,6 +69,7 @@ enum {
    ERR_WARN,
    ERR_ERROR,
    ERR_FATAL
+
 };
 
 #define ERR_EXTRA_NONE ERR_OK
@@ -61,20 +77,26 @@ enum {
 typedef union error_t
 {
    u32 total_bits;
+
    struct {
-       u32 flags: 14;
-       u32 general: 2;
-       u32 extra: 16;
+      u32 flags: 14;
+      u32 general: 2;
+      u32 extra: 16;
+
    };
+
 } error;
 
 typedef union handle_t
 {
    u32 id;
+
    struct {
       u16 handle;
       u16 ref;
+
    };
+
 } handle;
 
 typedef struct memblob_t
@@ -83,10 +105,28 @@ typedef struct memblob_t
    uS size;
 } memblob;
 
-typedef struct resolution2d_t
+typedef union res2D_t
 {
-   i32 width, height;
-} resolution2d;
+   struct {
+      i32 width, height;
+
+   };
+   
+   i32 arr[2];
+
+} res2D;
+
+typedef union res3D_t
+{
+   struct {
+      i32 width, height, depth;
+
+   };
+
+   res2D width_height;
+   i32 arr[3];
+
+} res3D;
 
 typedef union vec2_t
 {
@@ -158,7 +198,7 @@ static inline color8 Util_IntToColor(u32 hex)
    return color;
 }
 
-static inline vec3 Util_VecF32Vec3(vec2 xy, f32 z)
+static inline vec3 Util_FillVec3_XY_Z(vec2 xy, f32 z)
 {
    vec3 res = { 0 };
    res.xy = xy;
@@ -166,7 +206,7 @@ static inline vec3 Util_VecF32Vec3(vec2 xy, f32 z)
    return res;
 }
 
-static inline vec4 Util_VecVecVec4(vec2 xy, vec2 zw)
+static inline vec4 Util_FillVec4_XY_ZW(vec2 xy, vec2 zw)
 {
    vec4 res = { 0 };
    res.xy = xy;
@@ -174,7 +214,7 @@ static inline vec4 Util_VecVecVec4(vec2 xy, vec2 zw)
    return res;
 }
 
-static inline vec4 Util_VecF32Vec4(vec3 xyz, f32 w)
+static inline vec4 Util_FillVec4_XYZ_W(vec3 xyz, f32 w)
 {
    vec4 res = { 0 };
    res.xyz = xyz;

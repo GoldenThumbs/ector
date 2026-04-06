@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, bool is_srgb)
+Image Image_CreateImage(memblob memory, u8 image_type, res2D slice_size, bool is_srgb)
 {
    if (memory.data == NULL || memory.size == 0)
       return (Image){ .data = NULL };
@@ -35,12 +35,12 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
    image.image_format = is_hdr ? IMG_FORMAT_F32 : (is_srgb ? IMG_FORMAT_U8_SRGB : IMG_FORMAT_U8);
    image.channel_count = (u8)image_channels;
    image.mipmap_count = 1;
-   image.depth = 1;
+   image.size.depth = 1;
 
    u8* slice_data = NULL;
    if (slice_size.width > 0 && slice_size.height > 0)
    {
-      resolution2d slices;
+      res2D slices;
       slices.width = image.size.width / slice_size.width;
       slices.height = image.size.height / slice_size.height;
 
@@ -59,7 +59,7 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
 
       if (slice_data != NULL)
       {
-         image.depth = slice_count;
+         image.size.depth = slice_count;
 
          i32 slice_idx = 0;
          for (i32 slice_y = 0; slice_y < slices.height; slice_y++)
@@ -91,12 +91,12 @@ Image Image_CreateImage(memblob memory, u8 image_type, resolution2d slice_size, 
 
          stbi_image_free(image.data);
          image.data = slice_data;
-         image.size = slice_size;
+         image.size.width_height = slice_size;
 
          if (image.image_type != IMG_TYPE_3D)
          {
-            image.size.height *= image.depth;
-            image.depth = 1;
+            image.size.height *= image.size.depth;
+            image.size.depth = 1;
 
          }
       }
@@ -133,12 +133,12 @@ void Image_GenerateMipmaps(Image* image)
    data = memcpy(data, image->data, total_bytes);
 
    u8 mipmap_count = 1;
-   resolution2d mip_size = image->size;
+   res3D mip_size = image->size;
 
    uS prev_mip_offset = 0;
    while (mip_size.width > 1 || mip_size.height > 1)
    {
-      resolution2d prev_mip_size = mip_size;
+      res3D prev_mip_size = mip_size;
       mip_size.width = M_MAX(mip_size.width / 2, 1);
       mip_size.height = M_MAX(mip_size.height / 2, 1);
 
@@ -148,6 +148,7 @@ void Image_GenerateMipmaps(Image* image)
       if (tmp_data == NULL)
       {
          free(data);
+
          return;
       }
 
@@ -231,6 +232,7 @@ void Image_GenerateMipmaps(Image* image)
    }
 
    free(image->data);
+   
    image->data = data;
    image->mipmap_count = mipmap_count;
 

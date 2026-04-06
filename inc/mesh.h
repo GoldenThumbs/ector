@@ -165,7 +165,12 @@ Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bo
 Mesh Mesh_CreateSphere(u32 faces, f32 size);
 
 Mesh Mesh_LoadEctorMesh(memblob memory);
-Model Mesh_LoadEctorModel(memblob memory);
+Model Mesh_LoadEctorModel(memblob memory); // I dislike the naming of this function
+// Which is a better alternative?
+// - Mesh_LoadEctorModel
+// - Model_LoadEctorModel
+// - Model_LoadEBMF
+// - Model_LoadEctorBinaryModel
 
 
 #endif
