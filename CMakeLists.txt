@@ -18,7 +18,7 @@ add_subdirectory("external/")
 add_subdirectory("src/")
 
 add_library(Ector STATIC ${ector_src})
-target_compile_features(Ector PRIVATE c_std_11)
+target_compile_features(Ector PRIVATE c_std_23)
 target_include_directories(Ector
     PUBLIC
         "inc/"
