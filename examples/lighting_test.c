@@ -15,27 +15,38 @@
 #include <default_modules.h>
 #include <default_lightmanager.h>
 
-#include <stdlib.h>
 #include <stdio.h>
 
-struct LampInfo_t
+typedef struct DemoPlayer_t
 {
-   Geometry* geometries;
-   SurfaceMaterial* materials;
+   vec3 origin;
+   vec3 euler;
+   vec3 velocity;
 
-} LampInfo;
+   f32 move_speed;
+   f32 look_speed;
 
-Model LoadModel(const char* model_name, const char* base_path);
-void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path);
+   Key key_forward;
+   Key key_backward;
+   Key key_left;
+   Key key_right;
 
-void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness);
+} DemoPlayer;
+
+void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform);
+void CreateScene(Renderer* renderer, Surface scene_surface);
+void CreateLampGrid(Renderer* renderer);
 
 int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
       argc, argv,
-      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
-   );
+      &(EngineDesc){
+         .app_name = "Lighting Test",
+         .window = {
+            .title = "Ector Sample - Lighting Test"
+         }
+   });
 
    Engine_SetRawMouseInput(engine, true);
    Engine_SetMouseMode(engine, MOUSE_DISABLE_CURSOR);
@@ -43,13 +54,9 @@ int main(int argc, char* argv[])
    Module_Defaults(engine, 0, NULL);
 
    Graphics* graphics = Engine_FetchModule(engine, GRAPHICS_MODULE);
-   Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
-
-   Mesh sphere_mesh = Mesh_CreateSphere(12, 1.0f);
-   Geometry sphere = Graphics_CreateGeometry(graphics, sphere_mesh, GFX_DRAWMODE_STATIC);
-   Mesh_Free(&sphere_mesh);
-
    Renderer* renderer = Engine_FetchModule(engine, RENDERER_MODULE);
+
+   Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
    Renderer_SetLightManager(renderer, DefaultLightManager_Info(renderer));
 
    Surface unlit_surf = Renderer_AddSurface(renderer, "Unlit", &(SurfaceDesc){
@@ -73,30 +80,202 @@ int main(int argc, char* argv[])
       .texture_defaults[3] = RNDR_SURF_TEXTURE_BLACK
    });
 
-   Model level_model = LoadModel("assets/models/rocks.ebmf", argv[0]);
+   Model barrel_model = Renderer_LoadModel(renderer, "assets/models/barrel.ebmf");
+   Model ball_model = Renderer_LoadModel(renderer, "assets/models/pball_11.ebmf");
+
+   Texture toybox_normal = Renderer_LoadTexture(renderer, "assets/textures/toybox_n.png", (res2D){ 0 }, true, false);
+   Texture barrel_albedo = Renderer_LoadTexture(renderer, "assets/textures/barrel.png", (res2D){ 0 }, true, true);
+   Texture barrel_normal = Renderer_LoadTexture(renderer, "assets/textures/barrel_n.png", (res2D){ 0 }, true, false);
+   Texture barrel_roughness = Renderer_LoadTexture(renderer, "assets/textures/barrel_r.png", (res2D){ 0 }, true, false);
+   Texture barrel_metalness = Renderer_LoadTexture(renderer, "assets/textures/barrel_m.png", (res2D){ 0 }, true, false);
+   Texture ball_albedo = Renderer_LoadTexture(renderer, "assets/textures/pball_11.png", (res2D){ 0 }, true, true);
+   Texture ball_roughness = Renderer_LoadTexture(renderer, "assets/textures/smooth.png", (res2D){ 0 }, true, false);
 
    // NOTE: all angles are in half-turns (50 half-turns == 90 degrees, 100 half-turns == 180, etc...)
-   struct {
-      vec3 origin;
-      vec3 euler;
-      const f32 move_speed;
-      const f32 look_speed;
-      const Key key_forward;
-      const Key key_backward;
-      const Key key_left;
-      const Key key_right;
-   } player = {
-      VEC3(0, 1, 3),
-      VEC3(0, 0, 0),
-      8,
-      0.1f,
-      KEY_W,
-      KEY_S,
-      KEY_A,
-      KEY_D
-   };
+   DemoPlayer player = { 0 };
+   player.origin = VEC3(0, 1, 3);
+   player.euler = VEC3(0, 0, 0);
+   player.move_speed = 8.0f;
+   player.look_speed = 0.1f;
+   player.key_forward = KEY_W;
+   player.key_backward = KEY_S;
+   player.key_left = KEY_A;
+   player.key_right = KEY_D;
 
-   const char* level_model_textures[4][3] = {
+   f32 cam_dist = 2.0f;
+   f32 cam_dist_delta = 0.0f;
+
+   Drawable block_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* block_data = Renderer_DrawableData(renderer, block_object);
+   
+   block_data->geometry = Renderer_BoxGeometry(renderer);
+   block_data->color = Util_IntToColor(0xFFE010FF);
+   block_data->transform.scale = Util_FillVec3(0.5f);
+   block_data->transform.rotation = Util_IdentityQuat();
+
+   block_data->material.surface = basic_surf;
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 1, toybox_normal);
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
+
+   Drawable barrel_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* barrel_data = Renderer_DrawableData(renderer, barrel_object);
+
+   barrel_data->geometry = Graphics_CreateGeometry(graphics, barrel_model.meshes[0], GFX_DRAWMODE_STATIC);
+   barrel_data->transform.origin.z -= 7.0f;
+   barrel_data->transform.origin.y -= 0.5f;
+   barrel_data->transform.scale = Util_FillVec3(0.5f);
+
+   barrel_data->material.surface = basic_surf;
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1, 0, barrel_albedo);
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1, 1, barrel_normal);
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1, 2, barrel_roughness);
+   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1, 3, barrel_metalness);
+
+   Drawable ball_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
+   GeometryDrawable* ball_data = Renderer_DrawableData(renderer, ball_object);
+
+   ball_data->geometry = Graphics_CreateGeometry(graphics, ball_model.meshes[0], GFX_DRAWMODE_STATIC);;
+   ball_data->transform.scale = Util_FillVec3(0.5f);
+   ball_data->transform.rotation = Util_IdentityQuat();
+
+   ball_data->material.surface = basic_surf;
+   Renderer_SetSurfaceMaterialTexture(&ball_data->material,-1, 0, ball_albedo);
+   Renderer_SetSurfaceMaterialTexture(&ball_data->material,-1, 2, ball_roughness);
+
+   f64 fps_timer = 0.0f;
+   u32 frames_rendered = 0;
+   f32 global_timer = 0.0f;
+
+   Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
+
+   CreateLampGrid(renderer);
+   CreateScene(renderer, basic_surf);
+
+   while(!Engine_CheckExitConditions(engine))
+   {
+      if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
+         Engine_RequestExit(engine);
+
+      res2D size = Engine_GetFrameSize(engine);
+      f64 frame_delta = Engine_GetFrameDelta(engine);
+      global_timer += (f32)frame_delta;
+
+      quat block_frame_rotation = Util_MakeQuatEuler(VEC3(0, (f32)frame_delta * 10.0f, 0));
+      block_data->transform.rotation = Util_MulQuat(block_data->transform.rotation, block_frame_rotation);
+
+      vec2 scroll_delta = Engine_GetMouseScroll(engine);
+      f32 desired_cam_dist_delta = -(scroll_delta.y * 0.25f);
+
+      f32 lerp_fac = (f32)frame_delta * 20.0f;
+      f32 inv_lerp_fac = 1.0f - lerp_fac;
+      cam_dist_delta = cam_dist_delta * inv_lerp_fac + desired_cam_dist_delta * lerp_fac;
+      cam_dist_delta = M_CLAMP(cam_dist_delta, -2.0f, 2.0f);
+
+      cam_dist = M_CLAMP(cam_dist + cam_dist_delta, 0.0f, 5.0f);
+
+      MovePlayer(engine, &player, &ball_data->transform);
+
+      Graphics_Viewport(graphics, size);
+      Graphics_Clear(graphics);
+      Graphics_UpdateBuffer(graphics, global_ubo, &global_timer, 1, sizeof(f32));
+      Graphics_BindBuffer(graphics, global_ubo, 0);
+
+      Renderer_UpdateCamera(renderer, player.origin, player.euler, cam_dist);
+      Renderer_RenderPass(renderer, size, frame_delta, 0);
+      
+      Engine_Present(engine);
+
+      fps_timer += frame_delta;
+
+      frames_rendered++;
+      if (fps_timer >= 1.0f)
+      {
+         printf("%u fps\n", frames_rendered);
+         frames_rendered = 0;
+         fps_timer -= 1.0f;
+
+      }
+
+   }
+
+   Model_Free(&barrel_model);
+   Model_Free(&ball_model);
+
+   Engine_Free(engine);
+
+   return 0;
+}
+
+void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
+{
+   f32 frame_delta = (f32)Engine_GetFrameDelta(engine);
+   vec2 mouse_delta = Engine_GetMouseDelta(engine);
+
+   player->euler.y -= mouse_delta.x * player->look_speed;
+   player->euler.y += (player->euler.y > 200) ?-200 : ((player->euler.y < 0) ? 200 : 0);
+
+   player->euler.x -= mouse_delta.y * player->look_speed;
+   player->euler.x = M_MAX(-50, M_MIN( 50, player->euler.x));
+
+   f32 yaw_sin = M_SIN(player->euler.y);
+   f32 yaw_cos = M_COS(player->euler.y);
+
+   vec3 move_vec = VEC3(0, 0, 0);
+
+   if (Engine_CheckKey(engine, player->key_forward, KEY_IS_DOWN))
+   {
+      move_vec = Util_AddVec3(
+         move_vec,
+         VEC3(-yaw_sin, 0,-yaw_cos)
+      );
+      
+   }
+
+   if (Engine_CheckKey(engine, player->key_backward, KEY_IS_DOWN))
+   {
+      move_vec = Util_AddVec3(
+         move_vec,
+         VEC3( yaw_sin, 0, yaw_cos)
+      );
+      
+   }
+
+   if (Engine_CheckKey(engine, player->key_left, KEY_IS_DOWN))
+   {
+      move_vec = Util_AddVec3(
+         move_vec,
+         VEC3(-yaw_cos, 0, yaw_sin)
+      );
+      
+   }
+
+   if (Engine_CheckKey(engine, player->key_right, KEY_IS_DOWN))
+   {
+      move_vec = Util_AddVec3(
+         move_vec,
+         VEC3( yaw_cos, 0,-yaw_sin)
+      );
+      
+   }
+
+   move_vec = Util_NormalizeVec3(move_vec);
+   vec3 desired_velocity = Util_ScaleVec3(move_vec, player->move_speed * frame_delta);
+
+   f32 friction = frame_delta * 2.0f;
+   f32 inv_friction = 1.0f - friction;
+   player->velocity = Util_AddVec3(Util_ScaleVec3(player->velocity, inv_friction), Util_ScaleVec3(desired_velocity, friction));
+   player->origin = Util_AddVec3(player->origin, player->velocity);
+   
+   vec3 axis_vec = VEC3(-player->velocity.z, 0, player->velocity.x);
+   quat frame_rotation = Util_MakeQuat(Util_NormalizeVec3(axis_vec), Util_MagVec3(axis_vec) * 100.0f);
+   transform->rotation = Util_MulQuat(transform->rotation, frame_rotation);
+   transform->origin = player->origin;
+
+}
+
+void CreateScene(Renderer* renderer, Surface scene_surface)
+{
+   const char* scene_textures[4][3] = {
       {
          "assets/textures/rock0_albedo.png",
          "assets/textures/rock0_normal.png",
@@ -119,41 +298,66 @@ int main(int argc, char* argv[])
       }
    };
 
-   for (u32 mesh_i = 0; mesh_i < level_model.mesh_count; mesh_i++)
+   Model scene_model = Renderer_LoadModel(renderer, "assets/models/rocks.ebmf");
+   Graphics* graphics = Renderer_Graphics(renderer);
+
+   for (u32 mesh_i = 0; mesh_i < scene_model.mesh_count; mesh_i++)
    {
       Drawable mesh_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
       GeometryDrawable* mesh_data = Renderer_DrawableData(renderer, mesh_object);
-      mesh_data->geometry = Graphics_CreateGeometry(graphics, level_model.meshes[mesh_i], GFX_DRAWMODE_STATIC);
-      mesh_data->color.hex = 0xFF808080;
-      if (level_model.meshes[mesh_i].node_id >= 0)
-         mesh_data->transform = level_model.nodes[level_model.meshes[mesh_i].node_id].transform;
+
+      Mesh mesh = scene_model.meshes[mesh_i];
+      mesh_data->geometry = Graphics_CreateGeometry(graphics, mesh, GFX_DRAWMODE_STATIC);
+      mesh_data->material.surface = scene_surface;
+
+      for (u32 tex_i = 0; tex_i < 3; tex_i++)
+      {
+         if (scene_textures[mesh_i][tex_i] == NULL)
+            continue;
+
+         Texture model_texture = Renderer_LoadTexture(renderer, scene_textures[mesh_i][tex_i], (res2D){ 0 }, true, (tex_i == 0));
+         Renderer_SetSurfaceMaterialTexture(&mesh_data->material,-1, (i32)tex_i, model_texture);
+
+      }
+
+      if (mesh.node_id >= 0)
+         mesh_data->transform = scene_model.nodes[mesh.node_id].transform;
       else
          mesh_data->transform = Util_IdentityTransform();
       
       mesh_data->transform.origin.y -= 0.5f;
 
-      mesh_data->material.surface = basic_surf;
-      
-      for (u32 tex_i = 0; tex_i < 3; tex_i++)
-      {
-         if (level_model_textures[mesh_i][tex_i] == NULL)
-            continue;
-
-         Texture model_texture = Renderer_LoadTexture(renderer, level_model_textures[mesh_i][tex_i], (res2D){ 0 }, true, (tex_i == 0));
-         Renderer_SetSurfaceMaterialTexture(&mesh_data->material,-1, (i32)tex_i, model_texture);
-
-      }
-
    }
 
-   Model_Free(&level_model);
+   Model_Free(&scene_model);
 
-   LampInfo.geometries = NEW_ARRAY(Geometry);
-   CreateModelGeometry(graphics, &LampInfo.geometries, "assets/models/floor_torch.ebmf", argv[0]);
-   LampInfo.materials = NEW_ARRAY_N(SurfaceMaterial, Util_ArrayLength(LampInfo.geometries));
-   LampInfo.materials[0].surface = basic_surf;
-   LampInfo.materials[1].surface = unlit_surf;
+}
 
+void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness)
+{
+   Drawable light1 = DefaultLightManager_CreateLight(renderer);
+
+   DefaultLightManager_SetLightOrigin(renderer, light1, Util_AddVec3(origin, VEC3(0, 2.0f * scale, 0)));
+   DefaultLightManager_SetLightRadius(renderer, light1, 2.5f * scale);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light1, 60.0f);
+   DefaultLightManager_SetLightSpotlightSoftness(renderer, light1, 0.4f);
+   DefaultLightManager_SetLightColor(renderer, light1, color);
+   DefaultLightManager_SetLightBrightness(renderer, light1, brightness);
+   DefaultLightManager_SetLightAngles(renderer, light1, 0.0f, 0.0f);
+
+   Drawable light2 = DefaultLightManager_CreateLight(renderer);
+
+   DefaultLightManager_SetLightOrigin(renderer, light2, Util_AddVec3(origin, VEC3(0, 1.8f * scale, 0)));
+   DefaultLightManager_SetLightRadius(renderer, light2, 4.0f * scale);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light2, 200.0f);
+   DefaultLightManager_SetLightColor(renderer, light2, color);
+   DefaultLightManager_SetLightBrightness(renderer, light2, brightness * 0.6f);
+   DefaultLightManager_SetLightAngles(renderer, light2, 100.0f, 0.0f);
+
+}
+
+void CreateLampGrid(Renderer* renderer)
+{
    for (i32 y =-1; y <= 1; y++)
       for (i32 x =-1; x <= 1; x++)
    {
@@ -179,231 +383,7 @@ int main(int argc, char* argv[])
       AddLamp(renderer, VEC3(-1 + x_f,-1, 3 + y_f), 0.5f, Util_IntToColor(0x1616FFFF), 0.5f);
       AddLamp(renderer, VEC3( 1 + x_f,-1, 3 + y_f), 0.25f, Util_IntToColor(0x1616FFFF), 0.5f);
       AddLamp(renderer, VEC3( 3 + x_f,-1, 3 + y_f), 0.125f, Util_IntToColor(0x1616FFFF), 0.5f);
-   }
-
-   Texture toybox_normal = Renderer_LoadTexture(renderer, "assets/textures/toybox_n.png", (res2D){ 0 }, true, false);
-
-   Drawable block_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* block_data = Renderer_DrawableData(renderer, block_object);
-   block_data->geometry = Renderer_BoxGeometry(renderer);
-   block_data->color.hex = 0xFF10E0FF;
-   block_data->transform.scale = Util_FillVec3(0.5f);
-   block_data->transform.rotation = Util_IdentityQuat();
-   block_data->transform.origin = VEC3(0.0f);
-   block_data->material.surface = basic_surf;
-   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 1, toybox_normal);
-   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
-
-   Model barrel_model = LoadModel("assets/models/barrel.ebmf", argv[0]);
-
-   Drawable barrel_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* barrel_data = Renderer_DrawableData(renderer, barrel_object);
-   barrel_data->geometry = Graphics_CreateGeometry(graphics, barrel_model.meshes[0], GFX_DRAWMODE_STATIC);
-   barrel_data->color.hex = 0xFFFFFFFF;
-   barrel_data->transform = Util_IdentityTransform();
-   barrel_data->transform.origin.z -= 7.0f;
-   barrel_data->transform.origin.y -= 0.5f;
-   barrel_data->transform.scale = Util_FillVec3(0.5f);
-   barrel_data->material.surface = basic_surf;
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel.png", (res2D){ 0 }, true, true));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel_n.png", (res2D){ 0 }, true, false));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel_r.png", (res2D){ 0 }, true, false));
-   Renderer_SetSurfaceMaterialTexture(&barrel_data->material,-1,-1, Renderer_LoadTexture(renderer, "assets/textures/barrel_m.png", (res2D){ 0 }, true, false));
-
-   Model_Free(&barrel_model);
-
-   Drawable player_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* player_data = Renderer_DrawableData(renderer, player_object);
-   player_data->geometry = sphere;
-   player_data->color.hex = 0xFFFFFFFF;
-   player_data->transform.scale = Util_FillVec3(0.5f);
-   player_data->transform.rotation = Util_IdentityQuat();
-   player_data->material.surface = basic_surf;
-   Renderer_SetSurfaceMaterialTexture(&player_data->material,-1, 2, Renderer_LoadTexture(renderer, "assets/textures/smooth.png", (res2D){ 0 }, true, false));
-
-   Buffer global_ubo = Graphics_CreateBuffer(graphics, NULL, 1, sizeof(f32), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_UNIFORM);
-   
-   f32 global_timer = 0.0f;
-   f64 fps_timer = 0.0f;
-   u32 frames_rendered = 0;
-
-   f32 cam_dist = 2.0f;
-
-   bool slot_is_reserved = false;
-
-   while(!Engine_CheckExitConditions(engine))
-   {
-      if (Engine_CheckKey(engine, KEY_ESCAPE, KEY_IS_DOWN))
-         Engine_RequestExit(engine);
-
-      if (Engine_CheckKey(engine, KEY_3, KEY_JUST_PRESSED))
-      {
-         slot_is_reserved = !slot_is_reserved;
-
-         if (slot_is_reserved)
-         {
-            Renderer_ReserveTexture(renderer, 0);
-            Graphics_BindTexture(graphics, Renderer_BlackTexture(renderer), 0);
-
-         }
-         else
-            Renderer_UnreserveTexture(renderer, 0);
-
-      }
-
-      f64 frame_delta = Engine_GetFrameDelta(engine);
-      vec2 mouse_delta = Engine_GetMouseDelta(engine);
-
-      vec2 scroll_delta = Engine_GetMouseScroll(engine);
-      cam_dist = cam_dist - (scroll_delta.y * 0.25f);
-      cam_dist = M_CLAMP(cam_dist, 0.0f, 5.0f);
-
-      block_data->transform.rotation = Util_MulQuat(Util_MakeQuatEuler(VEC3(0, (f32)frame_delta * 10.0f, 0)), block_data->transform.rotation);
-
-      global_timer += (f32)frame_delta;
-      Graphics_UpdateBuffer(graphics, global_ubo, &global_timer, 1, sizeof(f32));
-
-      {
-         player.euler.y -= mouse_delta.x * player.look_speed;
-         player.euler.y += (player.euler.y > 200) ?-200 : ((player.euler.y < 0) ? 200 : 0);
-         player.euler.x -= mouse_delta.y * player.look_speed;
-         player.euler.x = M_MAX(-50, M_MIN( 50, player.euler.x));
-
-         f32 yaw_sin = M_SIN(player.euler.y);
-         f32 yaw_cos = M_COS(player.euler.y);
-
-         vec3 move_vec = VEC3(0, 0, 0);
-         if (Engine_CheckKey(engine, player.key_forward, KEY_IS_DOWN))
-         {
-            move_vec = Util_AddVec3(
-               move_vec,
-               VEC3(-yaw_sin, 0,-yaw_cos)
-            );
-         }
-
-         if (Engine_CheckKey(engine, player.key_backward, KEY_IS_DOWN))
-         {
-            move_vec = Util_AddVec3(
-               move_vec,
-               VEC3( yaw_sin, 0, yaw_cos)
-            );
-         }
-
-         if (Engine_CheckKey(engine, player.key_left, KEY_IS_DOWN))
-         {
-            move_vec = Util_AddVec3(
-               move_vec,
-               VEC3(-yaw_cos, 0, yaw_sin)
-            );
-         }
-
-         if (Engine_CheckKey(engine, player.key_right, KEY_IS_DOWN))
-         {
-            move_vec = Util_AddVec3(
-               move_vec,
-               VEC3( yaw_cos, 0,-yaw_sin)
-            );
-         }
-
-         move_vec = Util_NormalizeVec3(move_vec);
-         player.origin = Util_AddVec3(
-            player.origin,
-            Util_ScaleVec3(move_vec, player.move_speed * (f32)frame_delta)
-         );
-
-         player_data->transform.origin = player.origin;
-
-      }
-
-      res2D size = Engine_GetFrameSize(engine);
-      Graphics_Viewport(graphics, size);
-      Graphics_Clear(graphics);
-
-      Graphics_BindBuffer(graphics, global_ubo, 0);
-
-      Renderer_UpdateCamera(renderer, player.origin, player.euler, cam_dist);
-      Renderer_RenderPass(renderer, size, frame_delta, 0);
-      
-      Engine_Present(engine);
-
-      fps_timer += frame_delta;
-
-      frames_rendered++;
-      if (fps_timer >= 1.0f)
-      {
-         printf("%u fps\n", frames_rendered);
-         frames_rendered = 0;
-         fps_timer -= 1.0f;
-      }
 
    }
-
-   FREE_ARRAY(LampInfo.materials);
-   FREE_ARRAY(LampInfo.geometries);
-
-   Engine_Free(engine);
-   return 0;
-}
-
-Model LoadModel(const char* model_name, const char* base_path)
-{
-   char* model_path = Util_MakeFilePath(base_path, model_name);
-   memblob model_memory = Util_LoadFileIntoMemory(model_path, true);
-   Model model = Mesh_LoadEctorModel(model_memory);
-   free(model_path);
-   free(model_memory.data);
-
-   return model;
-}
-
-void CreateModelGeometry(Graphics* graphics, Geometry** geometries, const char* model_name, const char* base_path)
-{
-   Model model = LoadModel(model_name, base_path);
-
-   for (u32 mesh_i = 0; mesh_i < model.mesh_count; mesh_i++)
-   {
-      u32 index = Util_ArrayLength(*geometries);
-
-      Geometry geometry = Graphics_CreateGeometry(graphics, model.meshes[mesh_i], GFX_DRAWMODE_STATIC);
-      Util_InsertArrayIndex((void**)geometries, index);
-      (*geometries)[index] = geometry;
-      
-   }
-
-   Model_Free(&model);
-}
-
-void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brightness)
-{
-   // for (u32 object_i = 0; object_i < Util_ArrayLength(LampInfo.geometries); object_i++)
-   // {
-   //    Drawable lamp_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   //    GeometryDrawable* lamp_data = Renderer_DrawableData(renderer, lamp_object);
-   //    lamp_data->geometry = LampInfo.geometries[object_i];
-   //    lamp_data->color.hex = (object_i != 1) ? 0xFFFFFFFF : color.hex;
-   //    lamp_data->transform = Util_IdentityTransform();
-   //    lamp_data->transform.origin = origin;
-   //    lamp_data->transform.scale = Util_FillVec3(3.0f * scale);
-   //    lamp_data->material = LampInfo.materials[object_i];
-   // }
-
-   Drawable light1 = DefaultLightManager_CreateLight(renderer);
-
-   DefaultLightManager_SetLightOrigin(renderer, light1, Util_AddVec3(origin, VEC3(0, 2.0f * scale, 0)));
-   DefaultLightManager_SetLightRadius(renderer, light1, 2.5f * scale);
-   DefaultLightManager_SetLightSpotlightAngle(renderer, light1, 60.0f);
-   DefaultLightManager_SetLightSpotlightSoftness(renderer, light1, 0.4f);
-   DefaultLightManager_SetLightColor(renderer, light1, color);
-   DefaultLightManager_SetLightBrightness(renderer, light1, brightness);
-   DefaultLightManager_SetLightAngles(renderer, light1, 0.0f, 0.0f);
-
-   Drawable light2 = DefaultLightManager_CreateLight(renderer);
-
-   DefaultLightManager_SetLightOrigin(renderer, light2, Util_AddVec3(origin, VEC3(0, 1.8f * scale, 0)));
-   DefaultLightManager_SetLightRadius(renderer, light2, 4.0f * scale);
-   DefaultLightManager_SetLightSpotlightAngle(renderer, light2, 200.0f);
-   DefaultLightManager_SetLightColor(renderer, light2, color);
-   DefaultLightManager_SetLightBrightness(renderer, light2, brightness * 0.6f);
-   DefaultLightManager_SetLightAngles(renderer, light2, 100.0f, 0.0f);
 
 }
