@@ -18,7 +18,6 @@ add_subdirectory("external/")
 add_subdirectory("src/")
 
 add_library(Ector STATIC ${ector_src})
-target_compile_features(Ector PRIVATE c_std_23)
 target_include_directories(Ector
     PUBLIC
         "inc/"
@@ -27,10 +26,14 @@ target_include_directories(Ector
 )
 target_link_libraries(Ector PRIVATE external)
 
-if(${ECTOR_BUILD_EXAMPLES})
+if(NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+target_compile_features(Ector PRIVATE c_std_23)
+else()
+target_compile_features(Ector PRIVATE c_std_11)
+endif()
 
+if(${ECTOR_BUILD_EXAMPLES})
 file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
 add_subdirectory("examples")
-
 endif()
 

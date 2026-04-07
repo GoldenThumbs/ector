@@ -173,6 +173,13 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
    vfprintf(stream_out, message, args);
    va_end(args);
 
+#ifndef _WIN32
    fprintf(stream_out, "\n[error info: 0x%x, error flags: 0b%014b]\n\n", err.extra, err.flags);
+#else
+   fprintf(stream_out, "\n[error info: 0x%x, error flags: 0b", err.extra);
+   for (u32 bit_i = 0; bit_i < 14; bit_i++)
+      fprintf(stream_out, "%01u", (err.flags >> (13 - bit_i)) & 1u);
+   fprintf(stream_out, "]\n\n");
+#endif
 
 }
