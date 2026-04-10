@@ -1,12 +1,15 @@
 #ifndef DEFAULT_LIGHTMANAGER_INTERNAL
 #define DEFAULT_LIGHTMANAGER_INTERNAL
 
+#include "util/extra_types.h"
+#include "util/matrix.h"
 #include "util/types.h"
 #include "util/array.h"
 #include "graphics.h"
 #include "renderer.h"
 
 #include "default_lightmanager.h"
+#include "util/vec3.h"
 
 #define LIGHTMAN_INVALID_LIST_LINK UINT16_MAX
 
@@ -78,11 +81,13 @@ typedef struct lightman_LightDrawable_t
    u16 light_idx;
    i16 next_light_idx;
    i16 prev_light_idx;
+   i16 shadow_idx;
 
    struct {
       u16 enabled: 1;
       u16 culled: 1;
       u16 needs_update: 1;
+      u16 casts_shadows: 1;
 
    };
 
@@ -110,8 +115,11 @@ struct DefaultLightManager_t
    u16 freed_light_root_idx;
    u16 active_light_root_idx;
 
-   Texture shadow_cascades;
-   Texture shadow_atlas;
+   u16 light_drawable_type_idx;
+
+   Framebuffer cascade_fbo;
+   Framebuffer shadow_fbo;
+
    Buffer cluster_ssbo;
    Buffer sun_light_ssbo;
    Buffer light_ssbo;
@@ -124,9 +132,9 @@ struct DefaultLightManager_t
       Texture sunlight;
 
       i32 num_cascades;
+      i32 num_shadows;
       res2D cascade_size;
-      res2D atlas_count;
-      res2D atlas_size;
+      res2D shadow_size;
 
    } shadow;
 
@@ -154,6 +162,40 @@ static inline u16 LIGHTMAN_U16Norm(f32 value)
    return (u16)(f * u16_maxf);
 }
 
+static inline mat4x4 LIGHTMAN_CubemapViewMatrix(vec3 origin, u8 cubemap_face)
+{
+   const vec3 s[2] = { { 1, 0, 0 }, {-1, 0, 0 } };
+   const vec3 u[2] = { { 0, 1, 0 }, { 0,-1, 0 } };
+   const vec3 f[2] = { { 0, 0, 1 }, { 0, 0,-1 } };
+
+   switch (cubemap_face)
+   {
+      case GFX_CUBEMAPFACE_POSITIVE_X:
+         return Util_LookAtMatrix(origin, Util_AddVec3(origin, s[1]), u[1]);
+      
+      case GFX_CUBEMAPFACE_NEGATIVE_X:
+         return Util_LookAtMatrix(origin, Util_AddVec3(origin, s[0]), u[1]);
+
+      case GFX_CUBEMAPFACE_POSITIVE_Y:
+         Util_ViewMatrix(origin, VEC3(50, 0, 0), 0);
+      
+      case GFX_CUBEMAPFACE_NEGATIVE_Y:
+         return Util_ViewMatrix(origin, VEC3(150, 0, 0), 0);
+
+      case GFX_CUBEMAPFACE_POSITIVE_Z:
+         return Util_LookAtMatrix(origin, Util_AddVec3(origin, f[1]), u[1]);
+      
+      case GFX_CUBEMAPFACE_NEGATIVE_Z:
+         return Util_LookAtMatrix(origin, Util_AddVec3(origin, f[0]), u[1]);
+
+      default:
+         break;
+
+   }
+
+   return Util_IdentityMat4();
+}
+
 static inline lightman_PackedLight LIGHTMAN_CreatePackedLight(lightman_LightDrawable light_drawable)
 {
    vec4 base_color = Util_Vec4FromColor(light_drawable.color);
@@ -172,16 +214,19 @@ static inline lightman_PackedLight LIGHTMAN_CreatePackedLight(lightman_LightDraw
    packed_light.spot_softness = LIGHTMAN_U16Norm(spot_softness);
    packed_light.theta = LIGHTMAN_U16Norm(theta);
    packed_light.phi = LIGHTMAN_U16Norm(phi);
-   packed_light.shadow_id = 0;
+   packed_light.shadow_id = light_drawable.shadow_idx;
    packed_light.next_light = light_drawable.next_light_idx;
 
    return packed_light;
 }
 
+void LIGHTMAN_AddLight(Renderer* renderer, Drawable light_obj);
+void LIGHTMAN_RemoveLight(Renderer* renderer, Drawable light_obj);
+
 error LIGHTMAN_InitFunc(Renderer* renderer);
 error LIGHTMAN_FreeFunc(Renderer* renderer);
-error LIGHTMAN_PreRenderFunc(Renderer* renderer);
-error LIGHTMAN_OnRenderFunc(Renderer* renderer);
+error LIGHTMAN_PreRenderFunc(Renderer* renderer, u32 pass_id);
+error LIGHTMAN_OnRenderFunc(Renderer* renderer, u32 pass_id);
 ShaderDefines LIGHTMAN_Defines(Renderer* renderer);
 
 void LIGHTMAN_UpdateLight(Renderer* renderer, u16 index);

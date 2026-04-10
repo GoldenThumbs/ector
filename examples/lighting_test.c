@@ -82,19 +82,33 @@ int main(int argc, char* argv[])
    Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
    Renderer_SetLightManager(renderer, DefaultLightManager_Info(renderer));
 
+   const char* defs[] = {
+      "SHADOW_CASTER"
+   };
+
+   Shader shadow_caster_shader = Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", defs, 1, false);
+
    Surface unlit_surf = Renderer_AddSurface(renderer, "Unlit", &(SurfaceDesc){
-      .pass_count = 1,
+      .pass_count = 2,
       .passes[0] = {
          .shader = Renderer_UnlitShader(renderer),
+         .uniform_block_count = 0
+      },
+      .passes[1] = {
+         .shader = shadow_caster_shader,
          .uniform_block_count = 0
       },
       .texture_defaults[0] = RNDR_SURF_TEXTURE_WHITE
    });
 
    Surface basic_surf = Renderer_AddSurface(renderer, "Basic", &(SurfaceDesc){
-      .pass_count = 1,
+      .pass_count = 2,
       .passes[0] = {
          .shader = Renderer_BasicShader(renderer),
+         .uniform_block_count = 0
+      },
+      .passes[1] = {
+         .shader = shadow_caster_shader,
          .uniform_block_count = 0
       },
       .texture_defaults[0] = RNDR_SURF_TEXTURE_WHITE,
@@ -230,12 +244,16 @@ int main(int argc, char* argv[])
       camera_speed = M_CLAMP(camera_speed, 0.0f, camera.move_max);
       camera.origin = Util_AddVec3(desired_cam_origin, Util_ScaleVec3(camera_move_dir, camera_speed * inv_move_lerp_fac));
 
-      Graphics_Viewport(graphics, size);
-      Graphics_Clear(graphics);
+      Renderer_UpdateCamera(renderer, camera.origin, player.euler, camera.distance);
+
       Graphics_UpdateBuffer(graphics, global_ubo, &global_timer, 1, sizeof(f32));
       Graphics_BindBuffer(graphics, global_ubo, 0);
 
-      Renderer_UpdateCamera(renderer, camera.origin, player.euler, camera.distance);
+      Renderer_PreRender(renderer);
+
+      Graphics_Viewport(graphics, size);
+      Graphics_Clear(graphics);
+
       Renderer_RenderPass(renderer, size, frame_delta, 0);
       
       Engine_Present(engine);
@@ -398,52 +416,34 @@ void AddLamp(Renderer* renderer, vec3 origin, f32 scale, color8 color, f32 brigh
 {
    Drawable light1 = DefaultLightManager_CreateLight(renderer);
 
-   DefaultLightManager_SetLightOrigin(renderer, light1, Util_AddVec3(origin, VEC3(0, 2.0f * scale, 0)));
-   DefaultLightManager_SetLightRadius(renderer, light1, 2.5f * scale);
-   DefaultLightManager_SetLightSpotlightAngle(renderer, light1, 60.0f);
-   DefaultLightManager_SetLightSpotlightSoftness(renderer, light1, 0.4f);
+   DefaultLightManager_SetLightOrigin(renderer, light1, origin);
+   DefaultLightManager_SetLightRadius(renderer, light1, 5.5f);
+   DefaultLightManager_SetLightSpotlightAngle(renderer, light1, 200.0f);
    DefaultLightManager_SetLightColor(renderer, light1, color);
    DefaultLightManager_SetLightBrightness(renderer, light1, brightness);
-   DefaultLightManager_SetLightAngles(renderer, light1, 0.0f, 0.0f);
-
-   Drawable light2 = DefaultLightManager_CreateLight(renderer);
-
-   DefaultLightManager_SetLightOrigin(renderer, light2, Util_AddVec3(origin, VEC3(0, 1.8f * scale, 0)));
-   DefaultLightManager_SetLightRadius(renderer, light2, 4.0f * scale);
-   DefaultLightManager_SetLightSpotlightAngle(renderer, light2, 200.0f);
-   DefaultLightManager_SetLightColor(renderer, light2, color);
-   DefaultLightManager_SetLightBrightness(renderer, light2, brightness * 0.6f);
-   DefaultLightManager_SetLightAngles(renderer, light2, 100.0f, 0.0f);
+   DefaultLightManager_SetLightAngles(renderer, light1, 0.0f, -50.0f);
+   DefaultLightManager_SetLightShadowCasting(renderer, light1, true);
 
 }
 
 void CreateLampGrid(Renderer* renderer)
 {
-   for (i32 y =-1; y <= 1; y++)
-      for (i32 x =-1; x <= 1; x++)
+
+   for (u32 y = 0; y < 2; y++)
+      for (u32 x = 0; x < 2; x++)
    {
-      f32 x_f = (f32)x * 10.0f;
-      f32 y_f = (f32)y * 10.0f;
+      f32 x_f = (f32)x * 6.0f + 3.0f;
+      f32 y_f = (f32)y * 6.0f + 3.0f;
 
-      AddLamp(renderer, VEC3(-3 + x_f,-1,-3 + y_f), 1.0f, Util_IntToColor(0xFF8080FF), 1.0f);
-      AddLamp(renderer, VEC3(-1 + x_f,-1,-3 + y_f), 0.6f, Util_IntToColor(0xFF8080FF), 0.6f);
-      AddLamp(renderer, VEC3( 1 + x_f,-1,-3 + y_f), 0.3f, Util_IntToColor(0xFF8080FF), 0.3f);
-      AddLamp(renderer, VEC3( 3 + x_f,-1,-3 + y_f), 1.2f, Util_IntToColor(0xFF8080FF), 1.2f);
+      AddLamp(renderer, VEC3( x_f, 2.0f, y_f), 1.0f, Util_IntToColor(0xFFFFFFFF), 2.0f);
+      AddLamp(renderer, VEC3(-x_f, 2.0f, y_f), 1.0f, Util_IntToColor(0xFFFFFFFF), 2.0f);
+      AddLamp(renderer, VEC3(-x_f, 2.0f,-y_f), 1.0f, Util_IntToColor(0xFFFFFFFF), 2.0f);
+      AddLamp(renderer, VEC3( x_f, 2.0f,-y_f), 1.0f, Util_IntToColor(0xFFFFFFFF), 2.0f);
 
-      AddLamp(renderer, VEC3(-3 + x_f,-1,-1 + y_f), 0.3f, Util_IntToColor(0xFFFF00FF), 0.3f);
-      AddLamp(renderer, VEC3(-1 + x_f,-1,-1 + y_f), 1.2f, Util_IntToColor(0xFFFF00FF), 1.2f);
-      AddLamp(renderer, VEC3( 1 + x_f,-1,-1 + y_f), 1.0f, Util_IntToColor(0xFFFF00FF), 1.0f);
-      AddLamp(renderer, VEC3( 3 + x_f,-1,-1 + y_f), 0.6f, Util_IntToColor(0xFFFF00FF), 0.6f);
-
-      AddLamp(renderer, VEC3(-3 + x_f,-1, 1 + y_f), 0.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
-      AddLamp(renderer, VEC3(-1 + x_f,-1, 1 + y_f), 1.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
-      AddLamp(renderer, VEC3( 1 + x_f,-1, 1 + y_f), 2.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
-      AddLamp(renderer, VEC3( 3 + x_f,-1, 1 + y_f), 3.5f, Util_IntToColor(0xFFFFFFFF), 0.5f);
-
-      AddLamp(renderer, VEC3(-3 + x_f,-1, 3 + y_f), 1.0f, Util_IntToColor(0x1616FFFF), 0.5f);
-      AddLamp(renderer, VEC3(-1 + x_f,-1, 3 + y_f), 0.5f, Util_IntToColor(0x1616FFFF), 0.5f);
-      AddLamp(renderer, VEC3( 1 + x_f,-1, 3 + y_f), 0.25f, Util_IntToColor(0x1616FFFF), 0.5f);
-      AddLamp(renderer, VEC3( 3 + x_f,-1, 3 + y_f), 0.125f, Util_IntToColor(0x1616FFFF), 0.5f);
+      AddLamp(renderer, VEC3( x_f + 3.0f, 2.2f, y_f + 3.0f), 1.6f, Util_IntToColor(0x8080FFFF), 3.0f);
+      AddLamp(renderer, VEC3(-x_f + 3.0f, 2.2f, y_f + 3.0f), 1.6f, Util_IntToColor(0x80FFFFFF), 3.0f);
+      AddLamp(renderer, VEC3(-x_f + 3.0f, 2.2f,-y_f + 3.0f), 1.6f, Util_IntToColor(0xFF80FFFF), 3.0f);
+      AddLamp(renderer, VEC3( x_f + 3.0f, 2.2f,-y_f + 3.0f), 1.6f, Util_IntToColor(0xFFFF80FF), 3.0f);
 
    }
 

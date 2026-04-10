@@ -139,6 +139,7 @@ typedef struct ShaderDefines_t
 
 struct LightManagerInfo_t;
 typedef error (*LightManagerFunc)(Renderer* renderer);
+typedef error (*LightManagerRenderFunc)(Renderer* renderer, u32 pass_id);
 typedef ShaderDefines (*LightManagerDefines)(Renderer* renderer);
 
 typedef struct LightManagerInfo_t
@@ -151,8 +152,8 @@ typedef struct LightManagerInfo_t
 
    LightManagerFunc lightman_init;
    LightManagerFunc lightman_free;
-   LightManagerFunc lightman_prerender;
-   LightManagerFunc lightman_on_render;
+   LightManagerRenderFunc lightman_prerender;
+   LightManagerRenderFunc lightman_on_render;
    LightManagerDefines lightman_defs;
    void* data;
 
@@ -171,6 +172,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
 Graphics* Renderer_Graphics(Renderer* renderer);
+void Renderer_PreRender(Renderer* renderer);
 void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta, u32 pass_id);
 
 void Renderer_SetTexture(Renderer* renderer, Texture texture, u32 bind_slot);
@@ -187,6 +189,9 @@ void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov);
 void Renderer_SetClippingPlanes(Renderer* renderer, f32 near_clip, f32 far_clip);
 void Renderer_UpdateCamera(Renderer* renderer, vec3 origin, vec3 euler, f32 distance);
 
+f32 Renderer_GetFieldOfView(Renderer* renderer);
+f32 Renderer_GetNearClippingPlane(Renderer* renderer);
+f32 Renderer_GetFarClippingPlane(Renderer* renderer);
 mat4x4 Renderer_GetViewMatrix(Renderer* renderer);
 mat4x4 Renderer_GetProjectionMatrix(Renderer* renderer);
 mat4x4 Renderer_GetViewAndProjectionMatrix(Renderer* renderer);

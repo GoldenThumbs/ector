@@ -188,6 +188,23 @@ static inline mat4x4 Util_ScalingMatrix(vec3 scale)
    );
 }
 
+static inline mat4x4 Util_LookAtMatrix(vec3 origin, vec3 target, vec3 up)
+{
+   vec3 forward_vec = Util_NormalizeVec3(Util_SubVec3(target, origin));
+   vec3 right_vec = Util_NormalizeVec3(Util_CrossVec3(up, forward_vec));
+   vec3 up_vec = Util_CrossVec3(forward_vec, right_vec);
+
+   mat4x4 res = Util_IdentityMat4();
+   res.v[0].xyz = right_vec;
+   res.v[1].xyz = up_vec;
+   res.v[2].xyz = forward_vec;
+   res.v[3].x = -Util_DotVec3(origin, right_vec);
+   res.v[3].y = -Util_DotVec3(origin, up_vec);
+   res.v[3].z = -Util_DotVec3(origin, forward_vec);
+
+   return res;
+}
+
 static inline mat4x4 Util_ViewMatrix(vec3 origin, vec3 euler, f32 distance)
 {
    f32 a = M_COS(euler.y);

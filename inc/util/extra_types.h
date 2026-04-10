@@ -56,6 +56,15 @@ static inline vec3 Util_FromRGBE(color8 rgbe_color)
    return VEC3(0, 0, 0);
 }
 
+static inline f32 Util_AngleWrap(f32 angle, f32 min_angle, f32 max_angle)
+{
+   min_angle = M_CLAMP(min_angle, 0, 200);
+   max_angle = M_CLAMP(max_angle, 0, 200);
+
+   f32 a = (angle > max_angle) ? (min_angle + angle - max_angle) : angle;
+   return ((angle < 0) ? max_angle : min_angle) + fmodf(angle, max_angle - min_angle);
+}
+
 static inline color8 Util_ColorFromVec4(vec4 vec_color)
 {
    return (color8){

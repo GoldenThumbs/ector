@@ -19,7 +19,7 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer);
 void DefaultLightManager_Free(DefaultLightManager* lightmanager);
 
 void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* renderer);
-// void DefaultLightManager_OnRender(DefaultLightManager* lightmanager, Renderer* renderer);
+void DefaultLightManager_OnRender(DefaultLightManager* lightmanager, Renderer* renderer);
 
 Drawable DefaultLightManager_CreateLight(Renderer* renderer);
 
@@ -30,6 +30,7 @@ void DefaultLightManager_SetLightBrightness(Renderer* renderer, Drawable light_d
 void DefaultLightManager_SetLightSpotlightAngle(Renderer* renderer, Drawable light_drawable, f32 spotlight_angle);
 void DefaultLightManager_SetLightSpotlightSoftness(Renderer* renderer, Drawable light_drawable, f32 spotlight_softness);
 void DefaultLightManager_SetLightAngles(Renderer* renderer, Drawable light_drawable, f32 azimuth_angle, f32 zenith_angle);
+void DefaultLightManager_SetLightShadowCasting(Renderer* renderer, Drawable light_drawable, bool casts_shadows);
 
 
 #endif

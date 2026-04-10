@@ -247,8 +247,16 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, res2D size, bool dept
 
    }
 
-   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-      return (handle){ 0 };
+   // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+   // {
+   //    error err = { 0 };
+   //    err.general = ERR_ERROR;
+   //    err.extra = ERR_GFX_FRAMEBUFFER_IS_INCOMPLETE;
+
+   //    Util_Log(NULL, GRAPHICS_MODULE, err, "Framebuffer is incomplete!");
+
+   //    return (handle){ 0 };
+   // }
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
@@ -575,13 +583,17 @@ i32 GFX_TextureInternalFormat(u8 format)
          return GL_R11F_G11F_B10F;
       
       case GFX_TEXTUREFORMAT_DEPTH_16:
+         return GL_DEPTH_COMPONENT16;
       case GFX_TEXTUREFORMAT_DEPTH_24:
+         return GL_DEPTH_COMPONENT24;
       case GFX_TEXTUREFORMAT_DEPTH_F32:
-         return GL_DEPTH_COMPONENT;
+         return GL_DEPTH_COMPONENT32F;
+         
 
       case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
+         return GL_DEPTH24_STENCIL8;
       case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
-         return GL_DEPTH_STENCIL;
+         return GL_DEPTH32F_STENCIL8;
       
       case GFX_TEXTUREFORMAT_SRGB:
          return GL_SRGB8;
@@ -782,6 +794,9 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update)
    i32 height = texture->height;
    i32 depth = texture->depth;
 
+   if (texture->type == GFX_TEXTURETYPE_CUBEMAP_ARRAY)
+      depth *= 6;
+
    i32 internal_format = GFX_TextureInternalFormat(texture->format);
    u32 pixel_format = GFX_TexturePixelFormat(texture->format);
    u32 format_type = GFX_TextureFormatType(texture->format);
@@ -792,11 +807,13 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update)
          case GFX_TEXTURETYPE_3D:
          case GFX_TEXTURETYPE_2D_ARRAY:
          case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
-            glTexStorage3D(gl_target, texture->mipmap_count, internal_format, width, height, depth);
+            GFX_CheckOpenGLError();
+            glTexStorage3D(gl_target, (i32)texture->mipmap_count, internal_format, width, height, depth);
+            GFX_CheckOpenGLError();
             break;
          
          default:
-            glTexStorage2D(gl_target, texture->mipmap_count, internal_format, width, height);
+            glTexStorage2D(gl_target, (i32)texture->mipmap_count, internal_format, width, height);
          
       }
       

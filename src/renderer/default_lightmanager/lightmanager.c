@@ -1,3 +1,5 @@
+#include "util/extra_types.h"
+#include "util/matrix.h"
 #include "util/types.h"
 #include "util/array.h"
 #include "graphics.h"
@@ -17,7 +19,7 @@ LightManagerInfo DefaultLightManager_Info(Renderer* renderer)
       .lightman_init = LIGHTMAN_InitFunc,
       .lightman_free = LIGHTMAN_FreeFunc,
       .lightman_prerender = LIGHTMAN_PreRenderFunc,
-      .lightman_on_render = NULL,
+      .lightman_on_render = LIGHTMAN_OnRenderFunc,
       .lightman_defs = LIGHTMAN_Defines
    };
 
@@ -82,8 +84,28 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
       .data_size = sizeof(lightman_LightDrawable)
    });
 
+   lightmanager->light_drawable_type_idx = Renderer_GetDrawableTypeIndexFromName(renderer, LIGHT_DRAWABLE_TYPE);
+
    Renderer_SetUnlitShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", NULL, 0, false));
    Renderer_SetBasicShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", defs, 2, false));
+
+   lightmanager->shadow.shadow_size = (res2D){ 256, 256 };
+   lightmanager->shadow.num_shadows = 32;
+
+   TextureDesc point_shadow_desc = {
+      .size = lightmanager->shadow.shadow_size,
+      .depth = lightmanager->shadow.num_shadows,
+      .mipmap_count = 1,
+      .texture_type = GFX_TEXTURETYPE_CUBEMAP_ARRAY,
+      .texture_format = GFX_TEXTUREFORMAT_DEPTH_16
+   };
+   
+   lightmanager->shadow.pointlight = Graphics_CreateTexture(graphics, NULL, point_shadow_desc);
+   Graphics_CheckErrors(graphics);
+   Graphics_CreateFramebuffer(graphics, lightmanager->shadow.shadow_size, false);
+   Graphics_CheckErrors(graphics);
+
+   Renderer_ReserveTexture(renderer, 5);
 
    return lightmanager;
 }
@@ -105,9 +127,70 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
       return;
 
    Graphics* graphics = Renderer_Graphics(renderer);
-   
-   Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
 
+   u16 current_light_idx = lightmanager->active_light_root_idx;
+   i32 num_shadow_casters = 0;
+
+   mat4x4 mat_view = Renderer_GetViewMatrix(renderer);
+
+   f32 near_clip = Renderer_GetNearClippingPlane(renderer);
+   f32 far_clip = Renderer_GetFarClippingPlane(renderer);
+
+   while (current_light_idx != INVALID_HANDLE)
+   {
+      lightman_LightDrawable* light_data = Renderer_GetDrawableDataFromIndex(renderer, lightmanager->light_drawable_type_idx, current_light_idx);
+
+      if (!light_data->casts_shadows)
+         continue;
+
+      Renderer_SetClippingPlanes(renderer, 0.01f, light_data->radius);
+      mat4x4 mat_proj = Util_PerspectiveMatrix(50.0f, 1.0f, 0.01f, light_data->radius);
+      for (u8 face_i = 0; face_i < 6; face_i++)
+      {
+         Graphics_AttachTextureToFramebuffer(graphics, lightmanager->shadow_fbo, lightmanager->shadow.pointlight, &(AdvancedBindOptions){
+            .mip_level = 0,
+            .layer = num_shadow_casters,
+            .cubemap_face = face_i },
+            0
+         );
+
+         Graphics_BindFramebuffer(graphics, lightmanager->shadow_fbo);
+         Graphics_Viewport(graphics, lightmanager->shadow.shadow_size);
+         Graphics_Clear(graphics);
+
+         Renderer_SetViewMatrix(renderer, LIGHTMAN_CubemapViewMatrix(light_data->origin, face_i));
+         Renderer_SetProjectionMatrix(renderer, mat_proj);
+         Renderer_RenderPass(renderer, lightmanager->shadow.shadow_size, 0, 1);
+
+      }
+
+      lightmanager->packed_lights[light_data->light_idx].shadow_id = ((i16)(num_shadow_casters + 1));
+      LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
+
+      num_shadow_casters++;
+      if (num_shadow_casters >= lightmanager->shadow.num_shadows)
+         break;
+
+      current_light_idx = light_data->next_idx;
+
+      Graphics_UnbindFramebuffers(graphics);
+
+   }
+
+   Renderer_SetViewMatrix(renderer, mat_view);
+   Renderer_SetClippingPlanes(renderer, near_clip, far_clip);
+   Graphics_UnbindFramebuffers(graphics);
+
+}
+
+void DefaultLightManager_OnRender(DefaultLightManager* lightmanager, Renderer* renderer)
+{
+   if (lightmanager == NULL || renderer == NULL)
+      return;
+
+   Graphics* graphics = Renderer_Graphics(renderer);
+
+   Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
    Graphics_BindBuffer(graphics, lightmanager->cluster_ssbo, 1);
    Graphics_BindBuffer(graphics, lightmanager->light_ssbo, 2);
 
@@ -130,6 +213,14 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
       (UniformBlockList){ .count = 0 }
    );
    Graphics_DispatchBarrier(graphics);
+
+   TextureInterpolation shadow_interp = {
+      .texture_filter = GFX_TEXTUREFILTER_BILINEAR_NO_MIPMAPS,
+      .texture_wrap = GFX_TEXTUREWRAP_CLAMP
+   };
+
+   Graphics_SetTextureInterpolation(graphics, lightmanager->shadow.pointlight, shadow_interp);
+   Graphics_BindTexture(graphics, lightmanager->shadow.pointlight, 5);
 
 }
 
@@ -231,9 +322,152 @@ void DefaultLightManager_SetLightAngles(Renderer* renderer, Drawable light_drawa
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
-   light_data->theta = azimuth_angle;
-   light_data->phi = zenith_angle;
+   light_data->theta = Util_AngleWrap(azimuth_angle, 0.0f, 200.0f);
+   light_data->phi = Util_AngleWrap(zenith_angle, 0.0f, 200.0f);
    light_data->needs_update = true;
+
+}
+
+void DefaultLightManager_SetLightShadowCasting(Renderer* renderer, Drawable light_drawable, bool casts_shadows)
+{
+   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
+      return;
+
+   light_data->casts_shadows = casts_shadows;
+
+}
+
+void LIGHTMAN_AddLight(Renderer* renderer, Drawable light_obj)
+{
+   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_obj);
+   if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
+      return;
+
+   Graphics* graphics = Renderer_Graphics(renderer);
+   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+
+   light_data->prev_idx = INVALID_HANDLE;
+   light_data->prev_light_idx = 0;
+
+   light_data->next_idx = lightmanager->active_light_root_idx;
+   light_data->next_light_idx = 0;
+   
+   lightmanager->active_light_root_idx = light_obj.id;
+
+   u32 light_count = Util_ArrayLength(lightmanager->packed_lights);
+   light_data->light_idx = (u16)light_count;
+
+   if (lightmanager->freed_light_root_idx == INVALID_HANDLE)
+   {
+      uS old_light_memory = Util_ArrayMemory(lightmanager->packed_lights);
+      SET_ARRAY_LENGTH(lightmanager->packed_lights, light_count + 1);
+
+      if (old_light_memory != Util_ArrayMemory(lightmanager->packed_lights))
+      {
+         Graphics_FreeBuffer(graphics, lightmanager->light_ssbo);
+         lightmanager->light_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_LightBufferSize(lightmanager), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
+
+         Graphics_UpdateBufferExplicit(graphics, lightmanager->light_ssbo, lightmanager->packed_lights, sizeof(i32) * 4, (light_count + 1) * sizeof(lightman_PackedLight));
+         Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
+
+      }
+
+   } else {
+      lightman_LightDrawable* free_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, lightmanager->freed_light_root_idx);
+
+      if (free_light_data != NULL)
+      {
+         light_data->light_idx = free_light_data->light_idx;
+
+         lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, free_light_data->next_idx);
+
+         if (next_light_data != NULL)
+         {
+            next_light_data->prev_idx = INVALID_HANDLE;
+            next_light_data->prev_light_idx = 0;
+
+         }
+
+      }
+
+   }
+
+   lightmanager->light_list = (i32)light_data->light_idx;
+
+   lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, light_data->next_idx);
+
+   if (next_light_data != NULL)
+   {
+      next_light_data->prev_idx = light_obj.id;
+      next_light_data->prev_light_idx = (i16)((i32)light_data->light_idx - (i32)next_light_data->light_idx);
+
+      light_data->next_light_idx = (i16)((i32)next_light_data->light_idx - (i32)light_data->light_idx);
+
+   }
+
+   lightman_PackedLight packed_light = LIGHTMAN_CreatePackedLight(*light_data);
+   lightmanager->packed_lights[light_data->light_idx] = packed_light;
+
+   light_data->enabled = true;
+   light_data->casts_shadows = false;
+   LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
+
+}
+
+void LIGHTMAN_RemoveLight(Renderer* renderer, Drawable light_obj)
+{
+   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_obj);
+   if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
+      return;
+
+   Graphics* graphics = Renderer_Graphics(renderer);
+   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+   
+   lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, light_data->next_idx);
+   lightman_LightDrawable* prev_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, light_data->prev_idx);
+
+   if (next_light_data != NULL)
+   {
+      next_light_data->prev_idx = light_data->prev_idx;
+      next_light_data->prev_light_idx = (prev_light_data == NULL) ? 0 : (i16)((i32)prev_light_data->light_idx - (i32)next_light_data->light_idx);
+
+   }
+
+   if (prev_light_data != NULL)
+   {
+      prev_light_data->next_idx = light_data->next_idx;
+      prev_light_data->next_light_idx = (next_light_data == NULL) ? 0 : (i16)((i32)next_light_data->light_idx - (i32)prev_light_data->light_idx);
+
+      lightmanager->packed_lights[prev_light_data->light_idx].next_light = prev_light_data->next_light_idx;
+
+      LIGHTMAN_UpdateLight(renderer, prev_light_data->light_idx);
+
+   } else {
+      lightmanager->active_light_root_idx = light_data->next_idx;
+      lightmanager->light_list = (next_light_data == NULL) ? -1 : (i32)next_light_data->light_idx;
+
+   }
+
+   light_data->prev_idx = INVALID_HANDLE;
+   light_data->prev_light_idx = 0;
+
+   light_data->next_idx = lightmanager->freed_light_root_idx;
+   lightmanager->freed_light_root_idx = light_obj.id;
+
+   Drawable next_free_drawable = light_obj;
+   next_free_drawable.id = light_data->next_idx;
+   lightman_LightDrawable* next_free_light_data = Renderer_DrawableData(renderer, next_free_drawable);
+
+   if (next_free_light_data != NULL)
+   {
+      next_free_light_data->prev_idx = light_obj.id;
+      next_free_light_data->prev_light_idx = (i16)((i32)light_data->light_idx - (i32)next_free_light_data->light_idx);
+
+   }
+
+   light_data->enabled = false;
+   LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
 
 }
 
@@ -258,12 +492,22 @@ error LIGHTMAN_FreeFunc(Renderer* renderer)
    return (error){ 0 };
 }
 
-error LIGHTMAN_PreRenderFunc(Renderer* renderer)
+error LIGHTMAN_PreRenderFunc(Renderer* renderer, u32 pass_id)
 {
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return (error){ .general = ERR_ERROR };
 
    DefaultLightManager_PreRender(Renderer_LightManager(renderer), renderer);
+
+   return (error){ 0 };
+}
+
+error LIGHTMAN_OnRenderFunc(Renderer* renderer, u32 pass_id)
+{
+   if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID) || pass_id == 1)
+      return (error){ .general = ERR_ERROR };
+
+   DefaultLightManager_OnRender(Renderer_LightManager(renderer), renderer);
 
    return (error){ 0 };
 }
@@ -322,134 +566,12 @@ void LIGHTMAN_LightRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
 
 void LIGHTMAN_LightEnableFunc(Renderer* renderer, Drawable self)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, self);
-   if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
-      return;
-
-   Graphics* graphics = Renderer_Graphics(renderer);
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
-
-   light_data->prev_idx = INVALID_HANDLE;
-   light_data->prev_light_idx = 0;
-
-   light_data->next_idx = lightmanager->active_light_root_idx;
-   light_data->next_light_idx = 0;
-   
-   lightmanager->active_light_root_idx = self.id;
-
-   u32 light_count = Util_ArrayLength(lightmanager->packed_lights);
-   light_data->light_idx = (u16)light_count;
-
-   if (lightmanager->freed_light_root_idx == INVALID_HANDLE)
-   {
-      uS old_light_memory = Util_ArrayMemory(lightmanager->packed_lights);
-      SET_ARRAY_LENGTH(lightmanager->packed_lights, light_count + 1);
-
-      if (old_light_memory != Util_ArrayMemory(lightmanager->packed_lights))
-      {
-         Graphics_FreeBuffer(graphics, lightmanager->light_ssbo);
-         lightmanager->light_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_LightBufferSize(lightmanager), GFX_DRAWMODE_DYNAMIC, GFX_BUFFERTYPE_STORAGE);
-
-         Graphics_UpdateBufferExplicit(graphics, lightmanager->light_ssbo, lightmanager->packed_lights, sizeof(i32) * 4, (light_count + 1) * sizeof(lightman_PackedLight));
-         Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
-
-      }
-
-   } else {
-      lightman_LightDrawable* free_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, lightmanager->freed_light_root_idx);
-
-      if (free_light_data != NULL)
-      {
-         light_data->light_idx = free_light_data->light_idx;
-
-         lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, free_light_data->next_idx);
-
-         if (next_light_data != NULL)
-         {
-            next_light_data->prev_idx = INVALID_HANDLE;
-            next_light_data->prev_light_idx = 0;
-
-         }
-
-      }
-
-   }
-
-   lightmanager->light_list = (i32)light_data->light_idx;
-
-   lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, light_data->next_idx);
-
-   if (next_light_data != NULL)
-   {
-      next_light_data->prev_idx = self.id;
-      next_light_data->prev_light_idx = (i16)((i32)light_data->light_idx - (i32)next_light_data->light_idx);
-
-      light_data->next_light_idx = (i16)((i32)next_light_data->light_idx - (i32)light_data->light_idx);
-
-   }
-
-   lightman_PackedLight packed_light = LIGHTMAN_CreatePackedLight(*light_data);
-   lightmanager->packed_lights[light_data->light_idx] = packed_light;
-
-   light_data->enabled = true;
-
-   LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
+   LIGHTMAN_AddLight(renderer, self);
 
 }
 
 void LIGHTMAN_LightDisableFunc(Renderer* renderer, Drawable self)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, self);
-   if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
-      return;
-
-   Graphics* graphics = Renderer_Graphics(renderer);
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
-   
-   lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, light_data->next_idx);
-   lightman_LightDrawable* prev_light_data = Renderer_GetDrawableDataFromIndex(renderer, self.drawable_type_idx, light_data->prev_idx);
-
-   if (next_light_data != NULL)
-   {
-      next_light_data->prev_idx = light_data->prev_idx;
-      next_light_data->prev_light_idx = (prev_light_data == NULL) ? 0 : (i16)((i32)prev_light_data->light_idx - (i32)next_light_data->light_idx);
-
-   }
-
-   if (prev_light_data != NULL)
-   {
-      prev_light_data->next_idx = light_data->next_idx;
-      prev_light_data->next_light_idx = (next_light_data == NULL) ? 0 : (i16)((i32)next_light_data->light_idx - (i32)prev_light_data->light_idx);
-
-      lightmanager->packed_lights[prev_light_data->light_idx].next_light = prev_light_data->next_light_idx;
-
-      LIGHTMAN_UpdateLight(renderer, prev_light_data->light_idx);
-
-   } else {
-      lightmanager->active_light_root_idx = light_data->next_idx;
-      lightmanager->light_list = (next_light_data == NULL) ? -1 : (i32)next_light_data->light_idx;
-
-   }
-
-   light_data->prev_idx = INVALID_HANDLE;
-   light_data->prev_light_idx = 0;
-
-   light_data->next_idx = lightmanager->freed_light_root_idx;
-   lightmanager->freed_light_root_idx = self.id;
-
-   Drawable next_free_drawable = self;
-   next_free_drawable.id = light_data->next_idx;
-   lightman_LightDrawable* next_free_light_data = Renderer_DrawableData(renderer, next_free_drawable);
-
-   if (next_free_light_data != NULL)
-   {
-      next_free_light_data->prev_idx = self.id;
-      next_free_light_data->prev_light_idx = (i16)((i32)light_data->light_idx - (i32)next_free_light_data->light_idx);
-
-   }
-
-   light_data->enabled = false;
-
-   LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
+   LIGHTMAN_RemoveLight(renderer, self);
 
 }

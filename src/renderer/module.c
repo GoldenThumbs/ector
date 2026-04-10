@@ -108,13 +108,20 @@ Graphics* Renderer_Graphics(Renderer* renderer)
    return renderer->graphics;
 }
 
-void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta, u32 pass_id)
+void Renderer_PreRender(Renderer* renderer)
 {
    if (renderer == NULL)
       return;
 
-   u32 cambuffer_id = renderer->ubo.camera_buffer.id;
-   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
+   if (renderer->lightmanager_info.lightman_prerender != NULL)
+      renderer->lightmanager_info.lightman_prerender(renderer, 0);
+
+}
+
+void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta, u32 pass_id)
+{
+   if (renderer == NULL)
+      return;
 
    renderer->frame_delta = (f32)engine_frame_delta;
 
@@ -133,12 +140,8 @@ void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta,
    Graphics_UpdateBuffer(renderer->graphics, renderer->ubo.camera_buffer, &camera_data, 1, sizeof(CameraData));
    Graphics_BindBuffer(renderer->graphics, renderer->ubo.camera_buffer, 1);
 
-   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
-
-   if (renderer->lightmanager_info.lightman_prerender != NULL)
-      renderer->lightmanager_info.lightman_prerender(renderer);
-
-   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
+   if (renderer->lightmanager_info.lightman_on_render != NULL)
+      renderer->lightmanager_info.lightman_on_render(renderer, pass_id);
    
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
    for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
@@ -159,17 +162,12 @@ void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta,
          Drawable drawable_handle = { 0 };
          drawable_handle.id = drawable->compare.id;
          drawable_handle.drawable_type_idx = type_i;
-
-         if (renderer->lightmanager_info.lightman_on_render != NULL)
-            renderer->lightmanager_info.lightman_on_render(renderer);
          
          drawable_type->render(renderer, drawable_handle, pass_id);
 
       }
 
    }
-
-   assert(cambuffer_id == renderer->ubo.camera_buffer.id);
 
 }
 
@@ -317,6 +315,30 @@ void Renderer_UpdateCamera(Renderer* renderer, vec3 origin, vec3 euler, f32 dist
 
    Renderer_SetViewMatrix(renderer, Util_ViewMatrix(origin, euler, distance));
 
+}
+
+f32 Renderer_GetFieldOfView(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return 50.0f;
+
+   return renderer->fov;
+}
+
+f32 Renderer_GetNearClippingPlane(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return 0.1f;
+
+   return renderer->near_clip;
+}
+
+f32 Renderer_GetFarClippingPlane(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return 10.0f;
+
+   return renderer->far_clip;
 }
 
 mat4x4 Renderer_GetViewMatrix(Renderer* renderer)

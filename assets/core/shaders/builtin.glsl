@@ -39,10 +39,18 @@ out vec3 v2f_bitangent;
 out vec3 v2f_position;
 #endif // USE_LIGHTING
 
+#ifdef SHADOW_CASTER
+out float v2f_depth;
+#endif
+
 void main()
 {
    v2f_texcoord = vrt_texcoord;
    gl_Position = mat_mvp * vec4(vrt_position, 1.0);
+
+#if defined(USE_LIGHTING) || defined(SHADOW_CASTER)
+   vec3 vs_position = (mat_view * mat_model * vec4(vrt_position, 1.0)).xyz;
+#endif
 
 #ifdef USE_LIGHTING
    vec3 vs_normal = mat3(mat_view) * mat3(mat_normal_model_u_color) * vrt_normal;
@@ -50,8 +58,13 @@ void main()
    v2f_normal = normalize(vs_normal);
    v2f_tangent = normalize(vs_tangent);
    v2f_bitangent = normalize(cross(v2f_normal, v2f_tangent)) * vrt_tangent.w;
-   v2f_position = (mat_view * mat_model * vec4(vrt_position, 1.0)).xyz;
+   v2f_position = vs_position;
 #endif // USE_LIGHTING
+
+#ifdef SHADOW_CASTER
+   vs_position *= 1.0 / u_near_far.y;
+   v2f_depth = dot(vs_position, vs_position);
+#endif
 
 }
 
@@ -77,6 +90,8 @@ const float M_INVPI = 1.0 / M_PI;
 layout(binding=1) uniform sampler2D tex_normal;
 layout(binding=2) uniform sampler2D tex_roughness;
 layout(binding=3) uniform sampler2D tex_metallic;
+
+layout(binding=5) uniform samplerCubeArray tex_pointlight_shadows;
 
 in vec3 v2f_normal;
 in vec3 v2f_tangent;
@@ -113,6 +128,7 @@ struct LightData
    float phi;
    int shadow_id;
    int next_light;
+   bool pointlight_shadow;
 
 };
 
@@ -132,6 +148,8 @@ struct SurfaceData
    vec3 albedo;
    vec3 f0;
 
+   vec2 screen_coord;
+
 };
 
 layout(std430, binding=1) restrict buffer ClusterSSBO
@@ -147,6 +165,12 @@ layout(std430, binding=2) restrict buffer LightSSBO
    PackedLight lights[];
 
 };
+
+float InterleavedGradientNoise(vec2 coords)
+{
+   const vec3 ign_magic = vec3(0.06711056, 0.00583715, 52.9829189);
+   return fract(ign_magic.z * fract(dot(ign_magic.xy, coords)));
+}
 
 vec3 DecodeColor(uint rgbe_color)
 {
@@ -164,19 +188,9 @@ vec3 DecodeColor(uint rgbe_color)
    return vec3(v.xyz) * f;
 }
 
-vec2 DecodeHalfFloats(uint packed_floats)
-{
-   uint exponent_mask = 63u << 26;
-   uvec2 v = uvec2(packed_floats & 65535u, packed_floats >> 16);
-   uvec2 mantissa = (v & 1023u) << 13;
-   uvec2 exponent = (v << 16) & exponent_mask;
-
-   return uintBitsToFloat(exponent | mantissa);
-}
-
 ivec2 DecodeHalfInts(uint packed_floats)
 {
-   uvec2 v = uvec2(packed_floats, packed_floats >> 16) & 65535u;
+   ivec2 v = ivec2(packed_floats, packed_floats >> 16) & int(0xFFFFu);
 
    return ivec2(v);
 }
@@ -197,13 +211,13 @@ LightData DecodeLightData(PackedLight packed_light)
    light.spot_softness = cosang_softness[1];
    light.theta = angles[0] * M_TAU;
    light.phi = angles[1] * M_TAU;
-   light.shadow_id = shad_next[0];
+   light.shadow_id = abs(shad_next[0]) - 1;
    light.next_light = shad_next[1];
 
    return light;
 }
 
-SurfaceData FillSurfaceData(vec3 surf_color, vec3 surf_normal, float surf_roughness, float surf_metallic, vec3 position_vs)
+SurfaceData FillSurfaceData(vec2 screen_coord, vec3 surf_color, vec3 surf_normal, float surf_roughness, float surf_metallic, vec3 position_vs)
 {
    SurfaceData surf_data;
 
@@ -221,6 +235,8 @@ SurfaceData FillSurfaceData(vec3 surf_color, vec3 surf_normal, float surf_roughn
    surf_data.albedo = surf_color * surf_data.inv_metallic;
    surf_data.f0 = surf_color * surf_metallic + surf_data.inv_metallic * 0.04;
 
+   surf_data.screen_coord = screen_coord;
+
    return surf_data;
 }
 
@@ -232,9 +248,9 @@ float PointAttenution(vec3 light_position)
 float SpotAttenuation(vec3 light_dir, LightData light)
 {
    float cos_half_angle = light.cos_half_angle;
-   vec4 cs_polar = -vec4(cos(light.theta), sin(light.theta), cos(light.phi), sin(light.phi));
+   vec4 cs_polar = vec4(cos(light.theta), sin(light.theta), cos(light.phi), sin(light.phi));
 
-   vec3 spot_dir = vec3(cs_polar.y * cs_polar.z, cs_polar.x * cs_polar.z, cs_polar.w);
+   vec3 spot_dir = vec3(cs_polar.y * cs_polar.z, -cs_polar.w, cs_polar.x * cs_polar.z);
    spot_dir = mat3(mat_view) * spot_dir;
 
    float spot_dist = dot(light_dir, spot_dir) * 0.5 + 0.5;
@@ -255,16 +271,27 @@ vec3 Fresnel(vec3 f0, float x)
 {
    return f0 + (1.0 - f0) * pow(1.0 - x, 5.0);
 }
+
 float Visibility(float nDl, float nDv, float r)
 {
    return max(0.5 / mix(2.0 * nDl * nDv, nDl + nDv, r), M_EPSILON);
 }
+
 float Distribution(float nDh, float r)
 {
    float inv_sqrmag = 1.0 - nDh * nDh;
    float a = r * nDh;
    float k = r / (inv_sqrmag + a * a);
    return max(k * k * M_INVPI, M_EPSILON);
+}
+
+float SampleShadow(float depth, vec3 shadowmap_coords, int shadow_id)
+{
+   vec4 sm = vec4(shadowmap_coords, float(shadow_id));
+   vec4 shadowmap_depth = textureGather(tex_pointlight_shadows, sm, 0);
+   vec4 comp = step(depth, shadowmap_depth);
+
+   return (comp.r + comp.g + comp.b + comp.a) * 0.25;
 }
 
 vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
@@ -282,6 +309,45 @@ vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
    float attenuation = PointAttenution(light_position);
    attenuation *= SpotAttenuation(light_dir, light);
 
+   float shadow_spread = 0.2 / float(textureSize(tex_pointlight_shadows, 0).x);
+   float noise_spread = 1.5 * shadow_spread;
+   if (light.shadow_id > -1)
+   {
+      vec3 surf_to_light = -(mat3(mat_invview) * light_position);
+
+      const float g_3d = 1.32471795724474602596;
+      const vec3 p_3d = 1.0 / (vec3(g_3d, g_3d * g_3d, g_3d * g_3d * g_3d));
+
+      float ign = InterleavedGradientNoise(surf_data.screen_coord);
+      vec3 ign_p = 0.5 + ign * 15.0 * p_3d;
+      
+      float bias = mix(0.16, 0.1, nDl * nDl);
+      float surf_depth = dot(surf_to_light, surf_to_light) - bias * bias;
+
+      const vec3 shadow_offsets[8] = vec3[](
+         vec3( -1.0, -1.0, -1.0 ),
+         vec3( -1.0,  1.0, -1.0 ),
+         vec3(  1.0,  1.0, -1.0 ),
+         vec3(  1.0, -1.0, -1.0 ),
+         vec3( -1.0, -1.0,  1.0 ),
+         vec3( -1.0,  1.0,  1.0 ),
+         vec3(  1.0,  1.0,  1.0 ),
+         vec3(  1.0, -1.0,  1.0 )
+      );
+
+      float shadow = 0.0;
+      for (int s = 0; s < 8; s++)
+      {
+         vec3 shadow_noise = (fract(ign_p + float(s) * p_3d) - 0.5) * noise_spread;
+         vec3 shadowmap_coords = surf_to_light + shadow_noise + shadow_offsets[s] * shadow_spread;
+
+         shadow += SampleShadow(surf_depth, shadowmap_coords, light.shadow_id);
+      }
+
+      attenuation *= shadow * 0.125;
+
+   }
+
    vec3 f = Fresnel(surf_data.f0, lDh);
    float d = Distribution(nDh, surf_data.roughness_sqr);
    float v = Visibility(nDl, surf_data.nDv, surf_data.roughness_sqr);
@@ -293,6 +359,10 @@ vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
 }
 #endif // USE_LIGHTING
 
+#ifdef SHADOW_CASTER
+in float v2f_depth;
+#endif
+
 out vec4 frg_color;
 void main()
 {
@@ -300,6 +370,7 @@ void main()
 
 #ifdef USE_LIGHTING
    SurfaceData surf_data = FillSurfaceData(
+      gl_FragCoord.xy,
       color.rgb,
       NormalMapped(tex_normal, v2f_texcoord, v2f_tangent, v2f_bitangent, v2f_normal),
       texture(tex_roughness, v2f_texcoord).r,
@@ -307,7 +378,7 @@ void main()
       v2f_position
    );
 
-   vec3 final_color = surf_data.surf_color * 0.01;
+   vec3 final_color = surf_data.surf_color * 0.0001;
 
    vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy); 
    uint z_id = uint((log(abs(surf_data.position_vs.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));   
@@ -333,8 +404,8 @@ void main()
    float a = max(light_fac - 1, 0);
    float b = min(light_fac, 1);
 
-   final_color = clamp(final_color, 0.0, 1.0) * 0.25;
-   final_color += mix(cool, mix(warm, hot, a), b);
+   // final_color = clamp(final_color, 0.0, 1.0) * 0.25;
+   final_color = mix(cool, mix(warm, hot, a), b);
 
 #endif
 
@@ -344,6 +415,10 @@ void main()
 
    frg_color.rgb = pow(final_color * color.a, vec3(1.0 / 2.2));
    frg_color.a = color.a;
+
+#ifdef SHADOW_CASTER
+   gl_FragDepth = v2f_depth;
+#endif
    
 }
 

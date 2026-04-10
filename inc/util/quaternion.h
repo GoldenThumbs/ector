@@ -110,6 +110,14 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
    return Util_NormalizeVec4(Util_MulQuat(yaw_q, pitch_q));
 }
 
+static inline vec3 Util_RotatePoint(quat rotation, vec3 point)
+{
+   quat p = Util_FillVec4_XYZ_W(point, 0);
+   quat inv_rot = Util_FillVec4_XYZ_W(rotation.xyz, -rotation.w);
+
+   return Util_MulQuat(Util_MulQuat(rotation, p), inv_rot).xyz;
+}
+
 static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
 {
    f32 cos_angle = Util_DotVec4(a, b);
