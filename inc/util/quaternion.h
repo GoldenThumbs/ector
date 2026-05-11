@@ -86,13 +86,13 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
       yaw_q = Util_MakeQuat(yaw_axis, angle);
    } else {
       yaw_axis = up;
-      
+
       f32 cos_angle = Util_DotVec3(front, tan_dir);
       f32 angle = -M_ACOS(cos_angle);
-      
+
       yaw_q = Util_MakeQuat(yaw_axis, angle);
    }
-   
+
    if (M_ABS(Util_DotVec3(pointing_dir, up)) > 0.001f)
    {
       vec3 pitch_axis = Util_NormalizeVec3(Util_CrossVec3(yaw_axis, tan_dir));
@@ -115,7 +115,7 @@ static inline vec3 Util_RotatePoint(quat rotation, vec3 point)
    quat p = Util_FillVec4_XYZ_W(point, 0);
    quat inv_rot = Util_FillVec4_XYZ_W(rotation.xyz, -rotation.w);
 
-   return Util_MulQuat(Util_MulQuat(rotation, p), inv_rot).xyz;
+   return Util_MulQuat(inv_rot, Util_MulQuat(p, rotation)).xyz;
 }
 
 static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
