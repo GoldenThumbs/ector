@@ -5,6 +5,7 @@
 #include "util/vec4.h"
 #include "util/matrix.h"
 
+#include "mesh/internal.h"
 #include "mesh.h"
 
 //#include <stdio.h>
@@ -19,7 +20,7 @@ Mesh Mesh_CreatePlane(u32 faces_x, u32 faces_y, vec2 size)
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
    mesh.attributes[3] = MESH_ATTRIBUTE_4_CHANNEL;
-   
+
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
    mat4x4 t = Util_ScalingMatrix(VEC3(size.x, 1, size.y));
@@ -41,7 +42,7 @@ Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bo
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
    mesh.attributes[3] = MESH_ATTRIBUTE_4_CHANNEL;
-   
+
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
    mat4x4 s = Util_ScalingMatrix(size);
@@ -75,7 +76,7 @@ Mesh Mesh_CreateSphere(u32 faces, f32 size)
    mesh.attributes[1] = MESH_ATTRIBUTE_3_CHANNEL;
    mesh.attributes[2] = MESH_ATTRIBUTE_2_CHANNEL;
    mesh.attributes[3] = MESH_ATTRIBUTE_4_CHANNEL;
-   
+
    MeshInterface mesh_interface = Mesh_NewInterface(&mesh);
 
    mat4x4 s = Util_ScalingMatrix(Util_FillVec3(size));
@@ -112,6 +113,30 @@ Mesh Mesh_CreateSphere(u32 faces, f32 size)
    return mesh;
 }
 
+#define REALLOC_ATTRIB(ATTRIB_NAME) \
+MSH_RellocAttribute( \
+   vertex_buffer, old_vertex_buffer, \
+   &new_mesh_interface.atr.ATTRIB_NAME ## _size, \
+   &new_mesh_interface.atr.ATTRIB_NAME ## _ofs, \
+   mesh_interface.atr.ATTRIB_NAME ## _size, \
+   mesh_interface.atr.ATTRIB_NAME ## _ofs, \
+   ATTRIB_NAME ## _bytes, \
+   &new_mesh_interface.total_bytes, \
+   !use_ ## ATTRIB_NAME \
+)
+
+#define REALLOC_NUMBER_ATTRIB(ATTRIB_NAME, N) \
+MSH_RellocAttribute( \
+   vertex_buffer, old_vertex_buffer, \
+   &new_mesh_interface.atr.ATTRIB_NAME ## _size[N], \
+   &new_mesh_interface.atr.ATTRIB_NAME ## _ofs[N], \
+   mesh_interface.atr.ATTRIB_NAME ## _size[N], \
+   mesh_interface.atr.ATTRIB_NAME ## _ofs[N], \
+   ATTRIB_NAME ## _bytes, \
+   &new_mesh_interface.total_bytes, \
+   !use_ ## ATTRIB_NAME ## N \
+)
+
 MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool use_texcoord0, bool use_texcoord1, bool use_tangent, MeshInterface mesh_interface)
 {
    if (mesh_interface.mesh == NULL)
@@ -127,7 +152,7 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
       normal_bytes * (uS)use_normal +
       texcoord_bytes * ((uS)use_texcoord0 + (uS)use_texcoord1) +
       tangent_bytes * (uS)use_tangent;
-   
+
    MeshInterface new_mesh_interface = mesh_interface;
 
    u8* old_vertex_buffer = mesh_interface.mesh->vertex_buffer;
@@ -145,100 +170,17 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
       new_mesh_interface.total_bytes = position_bytes;
 
-      if (use_normal)
-      {
-         vec3* old_normal = NULL;
-         uS old_normal_size = mesh_interface.atr.normal_size;
-         if (old_normal_size != 0)
-            old_normal = (vec3*)(old_vertex_buffer + mesh_interface.atr.normal_ofs);
-
-         new_mesh_interface.atr.normal_ofs = new_mesh_interface.total_bytes;
-         new_mesh_interface.atr.normal_size = normal_bytes;
-         vec3* normal = (vec3*)(vertex_buffer + new_mesh_interface.total_bytes);
-
-         if (old_normal != NULL)
-            memcpy(normal, old_normal, old_normal_size);
-
-         new_mesh_interface.total_bytes += normal_bytes;
-
-      } else {
-         new_mesh_interface.atr.normal_ofs = 0;
-         new_mesh_interface.atr.normal_size = 0;
-         
-      }
-
-      if (use_texcoord0)
-      {
-         vec2* old_texcoord0 = NULL;
-         uS old_texcoord0_size = mesh_interface.atr.texcoord_size[0];
-         if (old_texcoord0_size != 0)
-            old_texcoord0 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[0]);
-
-         new_mesh_interface.atr.texcoord_ofs[0] = new_mesh_interface.total_bytes;
-         new_mesh_interface.atr.texcoord_size[0] = texcoord_bytes;
-         vec2* texcoord0 = (vec2*)(vertex_buffer + new_mesh_interface.total_bytes);
-         
-         if (old_texcoord0 != NULL)
-            memcpy(texcoord0, old_texcoord0, old_texcoord0_size);
-
-         new_mesh_interface.total_bytes += texcoord_bytes;
-
-      } else {
-         new_mesh_interface.atr.texcoord_ofs[0] = 0;
-         new_mesh_interface.atr.texcoord_size[0] = 0;
-         
-      }
-
-      if (use_texcoord1)
-      {
-         vec2* old_texcoord1 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[1]);
-         uS old_texcoord1_size = mesh_interface.atr.texcoord_size[1];
-         if (old_texcoord1_size != 0)
-            old_texcoord1 = (vec2*)(old_vertex_buffer + mesh_interface.atr.texcoord_ofs[1]);
-
-         new_mesh_interface.atr.texcoord_ofs[1] = new_mesh_interface.total_bytes;
-         new_mesh_interface.atr.texcoord_size[1] = texcoord_bytes;
-         vec2* texcoord1 = (vec2*)(vertex_buffer + new_mesh_interface.total_bytes);
-         
-         if (old_texcoord1 != NULL)
-            memcpy(texcoord1, old_texcoord1, old_texcoord1_size);
-
-         new_mesh_interface.total_bytes += texcoord_bytes;
-
-      } else {
-         new_mesh_interface.atr.texcoord_ofs[1] = 0;
-         new_mesh_interface.atr.texcoord_size[1] = 0;
-         
-      }
-
-      if (use_tangent)
-      {
-         vec4* old_tangent = (vec4*)(old_vertex_buffer + mesh_interface.atr.tangent_ofs);
-         uS old_tangent_size = mesh_interface.atr.tangent_size;
-         if (old_tangent_size != 0)
-            old_tangent = (vec4*)(old_vertex_buffer + mesh_interface.atr.tangent_ofs);
-
-         new_mesh_interface.atr.tangent_ofs = new_mesh_interface.total_bytes;
-         new_mesh_interface.atr.tangent_size = tangent_bytes;
-         vec4* tangent = (vec4*)(vertex_buffer + new_mesh_interface.total_bytes);
-         
-         if (old_tangent != NULL)
-            memcpy(tangent, old_tangent, old_tangent_size);
-
-         new_mesh_interface.total_bytes += tangent_bytes;
-
-      } else {
-         new_mesh_interface.atr.tangent_ofs = 0;
-         new_mesh_interface.atr.tangent_size = 0;
-
-      }
+      REALLOC_ATTRIB(normal);
+      REALLOC_NUMBER_ATTRIB(texcoord, 0);
+      REALLOC_NUMBER_ATTRIB(texcoord, 1);
+      REALLOC_ATTRIB(tangent);
 
       if (old_vertex_buffer != NULL)
          free(old_vertex_buffer);
 
       new_mesh_interface.mesh->vertex_buffer = vertex_buffer;
       new_mesh_interface.mesh->vertex_count = new_vertex_count;
-      
+
       mesh_interface = new_mesh_interface;
 
    }
@@ -311,10 +253,10 @@ MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, v
 
       }
    }
-   
+
    uS index_size = (mesh_interface.mesh->index_type == MESH_INDEXTYPE_16BIT) ? sizeof(u16) : sizeof(u32);
    u32* index_buffer = realloc(mesh_interface.mesh->index_buffer, (uS)(last_idx + index_count) * index_size);
-   
+
    if (index_buffer != NULL)
    {
       u32 quad_idx = last_idx;
@@ -324,7 +266,7 @@ MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, v
          {
             u32 base_y0 = last_vrt + i * (faces_x + 1) + j;
             u32 base_y1 = last_vrt + (i + 1) * (faces_x + 1) + j;
-            
+
             index_buffer[quad_idx++] = base_y0;
             index_buffer[quad_idx++] = base_y1 + 1;
             index_buffer[quad_idx++] = base_y0 + 1;
@@ -363,7 +305,7 @@ MeshInterface Mesh_GenNormals(MeshInterface mesh_interface)
    memset(normal, 0, new_mesh_interface.atr.normal_size);
 
    mesh_interface = new_mesh_interface;
-   
+
    for (u32 i = 0; i < index_count; i += 3)
    {
       u32 idx_a = Mesh_GetIndexFromBuffer(*mesh_interface.mesh, i + 0);
@@ -440,7 +382,7 @@ MeshInterface Mesh_AverageNormalsOverSeams(MeshInterface mesh_interface)
          normal[i] = Util_NormalizeVec3(tmp_normal[i]);
 
       free(tmp_normal);
-      
+
    }
 
    return mesh_interface;
@@ -450,7 +392,7 @@ MeshInterface Mesh_GenTexcoords(MeshInterface mesh_interface, vec3 triplanar_sca
 {
    if (!Mesh_InterfaceIsValid(mesh_interface, true, true, false, false, false))
       return mesh_interface; // TODO: error tracking...
-   
+
    const f32 sqrt_third = M_SQRT(1.0f / 3.0f);
 
    u32 vertex_count = mesh_interface.mesh->vertex_count;
@@ -548,7 +490,7 @@ MeshInterface Mesh_GenTangents(MeshInterface mesh_interface)
          f32 y2 = vrt_c.y - vrt_a.y;
          f32 z1 = vrt_b.z - vrt_a.z;
          f32 z2 = vrt_c.z - vrt_a.z;
-         
+
          f32 s1 = tex_b.x - tex_a.x;
          f32 s2 = tex_c.x - tex_a.x;
          f32 t1 = tex_b.y - tex_a.y;
@@ -583,4 +525,30 @@ MeshInterface Mesh_GenTangents(MeshInterface mesh_interface)
    }
 
    return mesh_interface;
+}
+
+void MSH_RellocAttribute(u8* new_vertex_buffer, u8* old_vertex_buffer, uS* inout_new_size, uS* inout_new_ofs, uS old_size, uS old_ofs, uS new_bytes, uS* inout_total_bytes, const bool clear_attribute)
+{
+   if (!clear_attribute)
+   {
+      u8* old_attribute_ptr = NULL;
+      if (old_size != 0)
+         old_attribute_ptr = old_vertex_buffer + old_ofs;
+
+      (*inout_new_ofs) = (*inout_total_bytes);
+      (*inout_new_size) = new_bytes;
+
+      u8* attribute_ptr = new_vertex_buffer + (*inout_total_bytes);
+
+      if (old_attribute_ptr != NULL)
+         memcpy(attribute_ptr, old_attribute_ptr, old_size);
+
+      (*inout_total_bytes) += new_bytes;
+
+   } else {
+      (*inout_new_ofs) = 0;
+      (*inout_new_size) = 0;
+
+   }
+
 }

@@ -13,7 +13,7 @@ void Model_Free(Model* model)
    {
       for (u32 node_i = 0; node_i < model->node_count; node_i++)
          free(model->nodes[node_i].name);
-      
+
       free(model->nodes);
       model->nodes = NULL;
 
@@ -47,7 +47,7 @@ void Mesh_Free(Mesh* mesh)
    {
       free(mesh->vertex_buffer);
       mesh->vertex_buffer = NULL;
-      
+
    }
 
    if (mesh->index_buffer != NULL)
@@ -77,7 +77,7 @@ void Mesh_SetIndexInBuffer(Mesh* mesh, u32 at_index, u32 index_value)
       index_buffer[at_index] = index_value;
 
    }
-   
+
 }
 
 u32 Mesh_GetIndexFromBuffer(Mesh mesh, u32 at_index)
@@ -182,22 +182,22 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
    {
       u8 attribute = 0;
       READ_HEAD(read_head, attribute, u8);
-      
+
       switch (attribute)
       {
          case MESH_ATTRIBUTE_1_CHANNEL:
          case MESH_ATTRIBUTE_COLOR:
             vertex_size += 4;
             break;
-         
+
          case MESH_ATTRIBUTE_2_CHANNEL:
             vertex_size += 8;
             break;
-         
+
          case MESH_ATTRIBUTE_3_CHANNEL:
             vertex_size += 12;
             break;
-         
+
          case MESH_ATTRIBUTE_4_CHANNEL:
             vertex_size += 16;
             break;

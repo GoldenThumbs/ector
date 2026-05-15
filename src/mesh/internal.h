@@ -17,7 +17,7 @@
 typedef struct MSH_ModelHeader_t
 {
    union {
-      u8 string[4]; 
+      u8 string[4];
       u32 magic;
    } identifier; // must equal "EBMF"
 
@@ -40,6 +40,7 @@ typedef struct MSH_MeshHeader_t
 
 } MSH_MeshHeader;
 
+void MSH_RellocAttribute(u8* new_vertex_buffer, u8* old_vertex_buffer, uS* inout_new_size, uS* inout_new_ofs, uS old_size, uS old_ofs, uS new_bytes, uS* inout_total_bytes, const bool clear_attribute);
 Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size);
 
 #endif

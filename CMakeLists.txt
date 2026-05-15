@@ -8,6 +8,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(ECTOR_BUILD_EXAMPLES "Build the provided engine example applications." true)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -27,13 +29,12 @@ target_include_directories(Ector
 target_link_libraries(Ector PRIVATE external)
 
 if(NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-target_compile_features(Ector PRIVATE c_std_23)
+   target_compile_features(Ector PRIVATE c_std_23)
 else()
-target_compile_features(Ector PRIVATE c_std_11)
+   target_compile_features(Ector PRIVATE c_std_11)
 endif()
 
 if(${ECTOR_BUILD_EXAMPLES})
-file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
-add_subdirectory("examples")
+   file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
+   add_subdirectory("examples")
 endif()
-

@@ -60,3 +60,5 @@ build/
 .vscode/
 compile_commands.json
 
+.gram/
+.clangd
