@@ -22,29 +22,29 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
 {
    if (graphics == NULL)
       return NULL;
-   
+
    Renderer* renderer = malloc(sizeof(Renderer));
    if (renderer == NULL)
       return NULL;
-   
+
    renderer->app_path = (char*)app_path;
    renderer->graphics = graphics;
-   
+
    renderer->surfaces = NEW_ARRAY_N(rndr_Surface, 16);
    renderer->drawable_types = NEW_ARRAY_N(rndr_DrawableType, 8);
 
    renderer->lightmanager_info = (LightManagerInfo){ 0 };
 
    renderer->freed_surface_root = RNDR_INVALID_LIST_LINK;
-   
+
    renderer->built_in.texture.white = Renderer_CreateColorTexture(renderer, Util_IntToColor(0XFFFFFFFF), GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.black = Renderer_CreateColorTexture(renderer, Util_IntToColor(0x000000FF), GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.gray = Renderer_CreateColorTexture(renderer, (color8){ 128, 128, 128, 255 }, GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.normal = Renderer_CreateColorTexture(renderer, (color8){ 128, 128, 255, 255 }, GFX_TEXTURETYPE_2D);
-   
+
    renderer->built_in.geometry.plane = RNDR_CreateDefaultPlane(graphics);
    renderer->built_in.geometry.box = RNDR_CreateDefaultBox(graphics);
-   
+
    renderer->built_in.shader.unlit.id = INVALID_HANDLE_ID;
    renderer->built_in.shader.basic.id = INVALID_HANDLE_ID;
 
@@ -67,7 +67,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    renderer->inv_view = Util_IdentityMat4();
 
    RNDR_RegisterDefaultDrawables(renderer);
-    
+
    return renderer;
 }
 
@@ -75,6 +75,9 @@ void Renderer_Free(Renderer* renderer)
 {
    if (renderer == NULL)
       return;
+
+   if (renderer->lightmanager_info.lightman_free != NULL)
+      renderer->lightmanager_info.lightman_free(renderer);
 
    u32 surface_count = Util_ArrayLength(renderer->surfaces);
    for (u32 surf_i = 0; surf_i < surface_count; surf_i++)
@@ -142,7 +145,7 @@ void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta,
 
    if (renderer->lightmanager_info.lightman_on_render != NULL)
       renderer->lightmanager_info.lightman_on_render(renderer, pass_id);
-   
+
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
    for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
    {
@@ -162,7 +165,7 @@ void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta,
          Drawable drawable_handle = { 0 };
          drawable_handle.id = drawable->compare.id;
          drawable_handle.drawable_type_idx = type_i;
-         
+
          drawable_type->render(renderer, drawable_handle, pass_id);
 
       }
@@ -207,7 +210,7 @@ void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material)
       user_texture_slots[surf_tex.bind_slot].is_set = true;
       user_texture_slots[surf_tex.bind_slot].texture = surf_tex.texture;
       user_texture_slots[surf_tex.bind_slot].interpolation_settings = surf_tex.interpolation_settings;
-      
+
    }
 
    for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
@@ -294,7 +297,7 @@ void Renderer_SetFieldOfView(Renderer* renderer, f32 vertical_fov)
 
    renderer->fov = vertical_fov;
    renderer->update_projection = true;
-   
+
 }
 
 void Renderer_SetClippingPlanes(Renderer* renderer, f32 near_clip, f32 far_clip)
@@ -420,7 +423,7 @@ void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface)
 
    if (surface.name != NULL)
       free(surface.name);
-   
+
    surface.name = NULL;
 
 }
@@ -441,7 +444,7 @@ SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32
 {
    if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
       return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
-   
+
    rndr_Surface* surface = RNDR_GetSurface(renderer, res_surface);
    if (surface == NULL || surface->pass_count <= pass_id)
       return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
@@ -475,11 +478,11 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
 
    if (desc != NULL)
    {
-      render_func = desc->render_func; 
+      render_func = desc->render_func;
       on_create_func = desc->on_create_func;
       on_remove_func = desc->on_remove_func;
-      on_enable_func = desc->on_enable_func; 
-      on_disable_func = desc->on_disable_func; 
+      on_enable_func = desc->on_enable_func;
+      on_disable_func = desc->on_disable_func;
       data_size = desc->data_size;
 
    }
@@ -626,10 +629,10 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
    {
       rndr_Drawable* last_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->prev_active);
       last_drawable->next_active = drawable->next_active;
-      
+
    } else
       drawable_type->active_drawable_root = drawable->next_active;
-   
+
    drawable->prev_freed = RNDR_INVALID_LIST_LINK;
    drawable->next_freed = drawable_type->freed_drawable_root;
 
@@ -799,7 +802,7 @@ void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_
    char* app_path = renderer->app_path;
 
    renderer->lightmanager_info = lightmanager_info;
-   
+
    if (lightmanager_info.lightman_init != NULL)
       lightmanager_info.lightman_init(renderer);
 
@@ -904,7 +907,7 @@ void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 i
 void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture)
 {
    Renderer_SetSurfaceMaterialTextureAdvanced(material, index, bind_slot, texture, (TextureInterpolation){ 0, GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS, GFX_TEXTUREWRAP_REPEAT });
-   
+
 }
 
 Geometry RNDR_CreateDefaultPlane(Graphics* graphics)
@@ -1052,7 +1055,7 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
 
    if (renderer->texture_slots[bind_slot] == INTERNAL_RNDR_SURF_TEXTURE_RESERVED)
       return;
-   
+
    if (texture_default == INTERNAL_RNDR_SURF_TEXTURE_USER_SET)
    {
       if (texture.id == INVALID_HANDLE_ID)
@@ -1062,7 +1065,7 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
       Graphics_BindTexture(renderer->graphics, texture, bind_slot);
 
    }
-   
+
    if (texture_default < RNDR_SURF_DEFAULT_TEXTURE_COUNT)
    {
       // if (renderer->texture_slots[bind_slot] == texture_default)
@@ -1085,7 +1088,7 @@ UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial mat
 
    SurfacePass pass = surface->passes[pass_id];
    UniformBlockList uniform_blocks = { .count = pass.uniform_block_count };
-   
+
    for (u32 block_i = 0; block_i < uniform_blocks.count; block_i++)
    {
       UniformBlock block = pass.uniform_blocks[block_i];
