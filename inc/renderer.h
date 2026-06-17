@@ -83,7 +83,7 @@ typedef struct SurfaceDesc_t
    SurfacePass passes[SURF_MAX_PASSES];
    u32 pass_count;
    u8 texture_defaults[SURF_MAX_TEXTURES];
-   
+
 } SurfaceDesc;
 
 typedef struct SurfaceTexture_t
@@ -134,7 +134,7 @@ typedef struct ShaderDefines_t
 {
    u32 define_count;
    char* defines[LIGHTMANAGER_MAX_DEFINES];
-   
+
 } ShaderDefines;
 
 struct LightManagerInfo_t;
@@ -165,7 +165,7 @@ typedef struct GeometryDrawable_t
    Geometry geometry;
    color8 color;
    Transform3D transform;
-   
+
 } GeometryDrawable;
 
 Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
@@ -240,7 +240,7 @@ Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, 
 Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute);
 Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path);
 
-void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings);
 void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture);
+void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings);
 
 #endif
