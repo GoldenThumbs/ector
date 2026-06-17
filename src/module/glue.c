@@ -1,10 +1,10 @@
-#include "renderer.h"
 #include "util/types.h"
 #include "engine.h"
 #include "graphics.h"
+#include "renderer.h"
+#include "scripting.h"
 
 #include "default_modules.h"
-
 #include "module/glue.h"
 
 #include <string.h>
@@ -31,12 +31,24 @@ Module Module_Renderer(void)
    return mod_renderer;
 }
 
+Module Module_Scripting(void)
+{
+   Module mod_scripting = {
+      .name = SCRIPTING_MODULE,
+      .mod_init = MOD_ScriptingInit,
+      .mod_free = MOD_ScriptingFree
+   };
+
+   return mod_scripting;
+}
+
 void Module_Defaults(Engine* engine, u32 exclude_count, char* module_excludes[])
 {
-   const u32 default_count = 2;
+   const u32 default_count = 3;
    const Module mod_defaults[] = {
       Module_Graphics(),
-      Module_Renderer()
+      Module_Renderer(),
+      Module_Scripting()
    };
 
    for (u32 i_default=0; i_default<default_count; i_default++)
@@ -103,6 +115,26 @@ error MOD_RendererInit(Module* self, Engine* engine)
 error MOD_RendererFree(Module* self, Engine* engine)
 {
    Renderer_Free((Renderer*)self->data);
+
+   return (error){ .general = ERR_OK };
+}
+
+error MOD_ScriptingInit(Module* self, Engine* engine)
+{
+   self->data = Scripting_InitHandler(engine);
+
+   if (self->data == NULL)
+   {
+      error res = { .general = ERR_FATAL };
+      res.flags = ERR_FLAG_SCRIPTING_FAILED;
+      return res;
+   }
+   return (error){ .general = ERR_OK };
+}
+
+error MOD_ScriptingFree(Module* self, Engine* engine)
+{
+   Scripting_FreeHandler((ScriptHandler*)self->data);
 
    return (error){ .general = ERR_OK };
 }
