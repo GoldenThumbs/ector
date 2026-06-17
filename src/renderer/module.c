@@ -101,7 +101,7 @@ void Renderer_Free(Renderer* renderer)
 
 }
 
-Graphics* Renderer_Graphics(Renderer* renderer)
+Graphics* Renderer_GetGraphics(Renderer* renderer)
 {
    if (renderer == NULL)
       return NULL;
@@ -334,7 +334,7 @@ f32 Renderer_GetFrameDelta(Renderer* renderer)
    return renderer->frame_delta;
 }
 
-Buffer Renderer_CameraBuffer(Renderer* renderer)
+Buffer Renderer_GetCameraBuffer(Renderer* renderer)
 {
    if (renderer == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
@@ -342,7 +342,7 @@ Buffer Renderer_CameraBuffer(Renderer* renderer)
    return renderer->ubo.camera_buffer;
 }
 
-Buffer Renderer_ModelBuffer(Renderer* renderer)
+Buffer Renderer_GetModelBuffer(Renderer* renderer)
 {
    if (renderer == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
@@ -438,20 +438,20 @@ Texture Renderer_NormalTexture(Renderer* renderer)
    return renderer->built_in.texture.normal;
 }
 
-void* Renderer_LightManager(Renderer* renderer)
-{
-   if (renderer == NULL)
-      return NULL;
-
-   return renderer->lightmanager_info.data;
-}
-
 LightManagerInfo* Renderer_LightManagerInfo(Renderer* renderer)
 {
    if (renderer == NULL)
       return NULL;
 
    return &renderer->lightmanager_info;
+}
+
+void* Renderer_GetLightManagerData(Renderer* renderer)
+{
+   if (renderer == NULL)
+      return NULL;
+
+   return renderer->lightmanager_info.data;
 }
 
 void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_info)

@@ -44,7 +44,7 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
 
    memset(lightmanager, 0, sizeof(DefaultLightManager) + define_size);
 
-   Graphics* graphics = Renderer_Graphics(renderer);
+   Graphics* graphics = Renderer_GetGraphics(renderer);
 
    snprintf(lightmanager->light_count_define, define_size, "LIGHTS_PER_CLUSTER %u", lights_per_cluster);
 
@@ -55,9 +55,9 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    lightmanager->cluster_dimensions[1] = cluster_y;
    lightmanager->cluster_dimensions[2] = cluster_z;
    lightmanager->total_clusters = cluster_x * cluster_y * cluster_z;
-   
+
    lightmanager->light_list = -1;
-   
+
    lightmanager->lights_per_cluster = lights_per_cluster;
 
    lightmanager->freed_light_root_idx = INVALID_HANDLE;
@@ -99,7 +99,7 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
       .texture_type = GFX_TEXTURETYPE_CUBEMAP_ARRAY,
       .texture_format = GFX_TEXTUREFORMAT_DEPTH_16
    };
-   
+
    lightmanager->shadow.pointlight = Graphics_CreateTexture(graphics, NULL, point_shadow_desc);
    Graphics_CheckErrors(graphics);
    Graphics_CreateFramebuffer(graphics, lightmanager->shadow.shadow_size, false);
@@ -126,7 +126,7 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
    if (lightmanager == NULL || renderer == NULL)
       return;
 
-   Graphics* graphics = Renderer_Graphics(renderer);
+   Graphics* graphics = Renderer_GetGraphics(renderer);
 
    u16 current_light_idx = lightmanager->active_light_root_idx;
    i32 num_shadow_casters = 0;
@@ -188,7 +188,7 @@ void DefaultLightManager_OnRender(DefaultLightManager* lightmanager, Renderer* r
    if (lightmanager == NULL || renderer == NULL)
       return;
 
-   Graphics* graphics = Renderer_Graphics(renderer);
+   Graphics* graphics = Renderer_GetGraphics(renderer);
 
    Graphics_UpdateBuffer(graphics, lightmanager->light_ssbo, &lightmanager->light_list, 1, sizeof(i32));
    Graphics_BindBuffer(graphics, lightmanager->cluster_ssbo, 1);
@@ -231,12 +231,12 @@ Drawable DefaultLightManager_CreateLight(Renderer* renderer)
 
    Drawable light_Drawable = Renderer_CreateDrawable(renderer, LIGHT_DRAWABLE_TYPE);
 
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_Drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_Drawable);
    if (light_data == NULL)
       return (Drawable){ .id = INVALID_HANDLE_ID };
 
-   Graphics* graphics = Renderer_Graphics(renderer);
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+   Graphics* graphics = Renderer_GetGraphics(renderer);
+   DefaultLightManager* lightmanager = Renderer_GetLightManagerData(renderer);
 
    light_data->origin = VEC3(0);
    light_data->radius = 5.0f;
@@ -252,7 +252,7 @@ Drawable DefaultLightManager_CreateLight(Renderer* renderer)
 
 void DefaultLightManager_SetLightOrigin(Renderer* renderer, Drawable light_drawable, vec3 origin)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -263,7 +263,7 @@ void DefaultLightManager_SetLightOrigin(Renderer* renderer, Drawable light_drawa
 
 void DefaultLightManager_SetLightRadius(Renderer* renderer, Drawable light_drawable, f32 radius)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -274,7 +274,7 @@ void DefaultLightManager_SetLightRadius(Renderer* renderer, Drawable light_drawa
 
 void DefaultLightManager_SetLightColor(Renderer* renderer, Drawable light_drawable, color8 color)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -285,7 +285,7 @@ void DefaultLightManager_SetLightColor(Renderer* renderer, Drawable light_drawab
 
 void DefaultLightManager_SetLightBrightness(Renderer* renderer, Drawable light_drawable, f32 brightness)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -296,7 +296,7 @@ void DefaultLightManager_SetLightBrightness(Renderer* renderer, Drawable light_d
 
 void DefaultLightManager_SetLightSpotlightAngle(Renderer* renderer, Drawable light_drawable, f32 spotlight_angle)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -307,7 +307,7 @@ void DefaultLightManager_SetLightSpotlightAngle(Renderer* renderer, Drawable lig
 
 void DefaultLightManager_SetLightSpotlightSoftness(Renderer* renderer, Drawable light_drawable, f32 spotlight_softness)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -318,7 +318,7 @@ void DefaultLightManager_SetLightSpotlightSoftness(Renderer* renderer, Drawable 
 
 void DefaultLightManager_SetLightAngles(Renderer* renderer, Drawable light_drawable, f32 azimuth_angle, f32 zenith_angle)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -330,7 +330,7 @@ void DefaultLightManager_SetLightAngles(Renderer* renderer, Drawable light_drawa
 
 void DefaultLightManager_SetLightShadowCasting(Renderer* renderer, Drawable light_drawable, bool casts_shadows)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_drawable);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_drawable);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
@@ -340,19 +340,19 @@ void DefaultLightManager_SetLightShadowCasting(Renderer* renderer, Drawable ligh
 
 void LIGHTMAN_AddLight(Renderer* renderer, Drawable light_obj)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_obj);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_obj);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
-   Graphics* graphics = Renderer_Graphics(renderer);
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+   Graphics* graphics = Renderer_GetGraphics(renderer);
+   DefaultLightManager* lightmanager = Renderer_GetLightManagerData(renderer);
 
    light_data->prev_idx = INVALID_HANDLE;
    light_data->prev_light_idx = 0;
 
    light_data->next_idx = lightmanager->active_light_root_idx;
    light_data->next_light_idx = 0;
-   
+
    lightmanager->active_light_root_idx = light_obj.id;
 
    u32 light_count = Util_ArrayLength(lightmanager->packed_lights);
@@ -417,13 +417,13 @@ void LIGHTMAN_AddLight(Renderer* renderer, Drawable light_obj)
 
 void LIGHTMAN_RemoveLight(Renderer* renderer, Drawable light_obj)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, light_obj);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, light_obj);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
-   Graphics* graphics = Renderer_Graphics(renderer);
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
-   
+   Graphics* graphics = Renderer_GetGraphics(renderer);
+   DefaultLightManager* lightmanager = Renderer_GetLightManagerData(renderer);
+
    lightman_LightDrawable* next_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, light_data->next_idx);
    lightman_LightDrawable* prev_light_data = Renderer_GetDrawableDataFromIndex(renderer, light_obj.drawable_type_idx, light_data->prev_idx);
 
@@ -457,7 +457,7 @@ void LIGHTMAN_RemoveLight(Renderer* renderer, Drawable light_obj)
 
    Drawable next_free_drawable = light_obj;
    next_free_drawable.id = light_data->next_idx;
-   lightman_LightDrawable* next_free_light_data = Renderer_DrawableData(renderer, next_free_drawable);
+   lightman_LightDrawable* next_free_light_data = Renderer_GetDrawableData(renderer, next_free_drawable);
 
    if (next_free_light_data != NULL)
    {
@@ -487,7 +487,7 @@ error LIGHTMAN_FreeFunc(Renderer* renderer)
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return (error){ .general = ERR_ERROR };
 
-   DefaultLightManager_Free(Renderer_LightManager(renderer));
+   DefaultLightManager_Free(Renderer_GetLightManagerData(renderer));
 
    return (error){ 0 };
 }
@@ -497,7 +497,7 @@ error LIGHTMAN_PreRenderFunc(Renderer* renderer, u32 pass_id)
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return (error){ .general = ERR_ERROR };
 
-   DefaultLightManager_PreRender(Renderer_LightManager(renderer), renderer);
+   DefaultLightManager_PreRender(Renderer_GetLightManagerData(renderer), renderer);
 
    return (error){ 0 };
 }
@@ -507,7 +507,7 @@ error LIGHTMAN_OnRenderFunc(Renderer* renderer, u32 pass_id)
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID) || pass_id == 1)
       return (error){ .general = ERR_ERROR };
 
-   DefaultLightManager_OnRender(Renderer_LightManager(renderer), renderer);
+   DefaultLightManager_OnRender(Renderer_GetLightManagerData(renderer), renderer);
 
    return (error){ 0 };
 }
@@ -517,7 +517,7 @@ ShaderDefines LIGHTMAN_Defines(Renderer* renderer)
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return (ShaderDefines){ 0 };
 
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+   DefaultLightManager* lightmanager = Renderer_GetLightManagerData(renderer);
 
    return (ShaderDefines){
       .define_count = 2,
@@ -533,10 +533,10 @@ void LIGHTMAN_UpdateLight(Renderer* renderer, u16 index)
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
       return;
 
-   DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+   DefaultLightManager* lightmanager = Renderer_GetLightManagerData(renderer);
 
    Graphics_UpdateBufferExplicit(
-      Renderer_Graphics(renderer),
+      Renderer_GetGraphics(renderer),
       lightmanager->light_ssbo,
       &lightmanager->packed_lights[index],
       sizeof(u32) * 4 + index * sizeof(lightman_PackedLight),
@@ -547,13 +547,13 @@ void LIGHTMAN_UpdateLight(Renderer* renderer, u16 index)
 
 void LIGHTMAN_LightRenderFunc(Renderer* renderer, Drawable self, u32 pass_id)
 {
-   lightman_LightDrawable* light_data = Renderer_DrawableData(renderer, self);
+   lightman_LightDrawable* light_data = Renderer_GetDrawableData(renderer, self);
    if (light_data == NULL || !Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID) || pass_id != 0)
       return;
 
    if (light_data->needs_update)
    {
-      DefaultLightManager* lightmanager = Renderer_LightManager(renderer);
+      DefaultLightManager* lightmanager = Renderer_GetLightManagerData(renderer);
 
       lightman_PackedLight packed_light = LIGHTMAN_CreatePackedLight(*light_data);
       lightmanager->packed_lights[light_data->light_idx] = packed_light;

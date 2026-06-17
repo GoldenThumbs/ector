@@ -158,8 +158,8 @@ int main(int argc, char* argv[])
    camera.move_fac = 5.0f;
 
    Drawable block_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* block_data = Renderer_DrawableData(renderer, block_object);
-   
+   GeometryDrawable* block_data = Renderer_GetDrawableData(renderer, block_object);
+
    block_data->geometry = Renderer_BoxGeometry(renderer);
    block_data->color = Util_IntToColor(0xFFE010FF);
    block_data->transform.scale = Util_FillVec3(0.5f);
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
    Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
 
    Drawable barrel_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* barrel_data = Renderer_DrawableData(renderer, barrel_object);
+   GeometryDrawable* barrel_data = Renderer_GetDrawableData(renderer, barrel_object);
 
    barrel_data->geometry = Graphics_CreateGeometry(graphics, barrel_model.meshes[0], GFX_DRAWMODE_STATIC);
    barrel_data->transform.origin.z -= 7.0f;
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
    Renderer_SetSurfaceMaterialTextureAdvanced(&barrel_data->material,-1, 3, barrel_metalness, texture_interp);
 
    Drawable ball_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-   GeometryDrawable* ball_data = Renderer_DrawableData(renderer, ball_object);
+   GeometryDrawable* ball_data = Renderer_GetDrawableData(renderer, ball_object);
 
    ball_data->geometry = Graphics_CreateGeometry(graphics, ball_model.meshes[0], GFX_DRAWMODE_STATIC);;
    ball_data->transform.scale = Util_FillVec3(0.5f);
@@ -255,7 +255,7 @@ int main(int argc, char* argv[])
       Graphics_Clear(graphics);
 
       Renderer_RenderPass(renderer, size, frame_delta, 0);
-      
+
       Engine_Present(engine);
 
       fps_timer += frame_delta;
@@ -301,7 +301,7 @@ void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
          move_vec,
          VEC3(-yaw_sin, 0,-yaw_cos)
       );
-      
+
    }
 
    if (Engine_CheckKey(engine, player->key_backward, KEY_IS_DOWN))
@@ -310,7 +310,7 @@ void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
          move_vec,
          VEC3( yaw_sin, 0, yaw_cos)
       );
-      
+
    }
 
    if (Engine_CheckKey(engine, player->key_left, KEY_IS_DOWN))
@@ -319,7 +319,7 @@ void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
          move_vec,
          VEC3(-yaw_cos, 0, yaw_sin)
       );
-      
+
    }
 
    if (Engine_CheckKey(engine, player->key_right, KEY_IS_DOWN))
@@ -328,7 +328,7 @@ void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
          move_vec,
          VEC3( yaw_cos, 0,-yaw_sin)
       );
-      
+
    }
 
    move_vec = Util_NormalizeVec3(move_vec);
@@ -338,7 +338,7 @@ void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
    f32 inv_friction = 1.0f - friction;
    player->velocity = Util_AddVec3(Util_ScaleVec3(player->velocity, inv_friction), Util_ScaleVec3(desired_velocity, friction));
    player->origin = Util_AddVec3(player->origin, player->velocity);
-   
+
    vec3 axis_vec = VEC3(-player->velocity.z, 0, player->velocity.x);
    quat frame_rotation = Util_MakeQuat(Util_NormalizeVec3(axis_vec), Util_MagVec3(axis_vec) * 50.0f);
    transform->rotation = Util_MulQuat(transform->rotation, frame_rotation);
@@ -378,12 +378,12 @@ void CreateScene(Renderer* renderer, Surface scene_surface)
    };
 
    Model scene_model = Renderer_LoadModel(renderer, "assets/models/rocks.ebmf");
-   Graphics* graphics = Renderer_Graphics(renderer);
+   Graphics* graphics = Renderer_GetGraphics(renderer);
 
    for (u32 mesh_i = 0; mesh_i < scene_model.mesh_count; mesh_i++)
    {
       Drawable mesh_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
-      GeometryDrawable* mesh_data = Renderer_DrawableData(renderer, mesh_object);
+      GeometryDrawable* mesh_data = Renderer_GetDrawableData(renderer, mesh_object);
 
       Mesh mesh = scene_model.meshes[mesh_i];
       mesh_data->geometry = Graphics_CreateGeometry(graphics, mesh, GFX_DRAWMODE_STATIC);
@@ -403,7 +403,7 @@ void CreateScene(Renderer* renderer, Surface scene_surface)
          mesh_data->transform = scene_model.nodes[mesh.node_id].transform;
       else
          mesh_data->transform = Util_IdentityTransform();
-      
+
       mesh_data->transform.origin.y -= 0.5f;
 
    }

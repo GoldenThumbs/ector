@@ -190,7 +190,7 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
    }
 }
 
-void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable)
+void* Renderer_GetDrawableData(Renderer* renderer, Drawable res_drawable)
 {
    if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
       return NULL;
