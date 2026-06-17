@@ -25,7 +25,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    if (renderer == NULL)
       return NULL;
 
-   renderer->app_path = (char*)app_path;
+   renderer->app_path = app_path;
    renderer->graphics = graphics;
 
    renderer->surfaces = NEW_ARRAY_N(rndr_Surface, 16);
@@ -444,9 +444,6 @@ void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_
 {
    if (renderer == NULL)
       return;
-
-   Graphics* graphics = renderer->graphics;
-   char* app_path = renderer->app_path;
 
    renderer->lightmanager_info = lightmanager_info;
 

@@ -50,12 +50,14 @@ typedef struct rndr_Drawable_t
    u16 next_freed;
 
    struct {
-      u16 enabled: 1;
-      u16 culled: 1;
+      u8 enabled: 1;
+      u8 culled: 1;
 
    };
 
    handle compare;
+
+   u8 mem_unused_[4];
 
    u8 data[];
 
@@ -77,7 +79,7 @@ typedef struct rndr_Surface_t
 
 struct Renderer_t
 {
-   char* app_path;
+   const char* app_path;
 
    Graphics* graphics;
 

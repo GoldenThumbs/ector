@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
       res2D size = Engine_GetFrameSize(engine);
       Graphics_Viewport(graphics, size);
       Graphics_Clear(graphics);
-      
+
       Engine_Present(engine);
    }
 
