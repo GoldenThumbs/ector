@@ -33,6 +33,7 @@ typedef union Drawable_t
 {
    u64 total_bits;
    u32 id;
+   handle res;
 
    struct {
       u16 handle;
@@ -210,6 +211,8 @@ u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawab
 
 Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name);
 void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable);
+void Renderer_EnableDrawable(Renderer* renderer, Drawable res_drawable);
+void Renderer_DisableDrawable(Renderer* renderer, Drawable res_drawable);
 
 void* Renderer_GetDrawableData(Renderer* renderer, Drawable res_drawable);
 void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx);

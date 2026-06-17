@@ -1,3 +1,4 @@
+#include "util/resource.h"
 #include "util/types.h"
 #include "util/array.h"
 
@@ -39,29 +40,21 @@ void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const D
       return;
 
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
-
-   uS name_mem_bytes = (name_length + 1) * sizeof(char);
-   uS mem_bytes = sizeof(rndr_Drawable) + data_size;
+   uS mem_bytes = Util_ArrayNeededMemory(sizeof(rndr_Drawable) + data_size);
 
    SET_ARRAY_LENGTH(renderer->drawable_types, drawable_type_count + 1);
 
-   renderer->drawable_types[drawable_type_count].render = render_func;
-   renderer->drawable_types[drawable_type_count].on_create = on_create_func;
-   renderer->drawable_types[drawable_type_count].on_remove = on_remove_func;
-   renderer->drawable_types[drawable_type_count].on_enable = on_enable_func;
-   renderer->drawable_types[drawable_type_count].on_disable = on_disable_func;
-
-   renderer->drawable_types[drawable_type_count].visible_drawable_root = RNDR_INVALID_LIST_LINK;
-   renderer->drawable_types[drawable_type_count].freed_drawable_root = RNDR_INVALID_LIST_LINK;
-   renderer->drawable_types[drawable_type_count].active_drawable_root = RNDR_INVALID_LIST_LINK;
-   renderer->drawable_types[drawable_type_count].culled_drawable_count = 0;
-
-   renderer->drawable_types[drawable_type_count].type_size = (u32)mem_bytes;
-
-   renderer->drawable_types[drawable_type_count].name = malloc(name_mem_bytes);
-   memcpy(renderer->drawable_types[drawable_type_count].name, name, name_mem_bytes);
-
-   renderer->drawable_types[drawable_type_count].drawable_buffer = Util_CreateArrayOfLength(4, mem_bytes);
+   rndr_DrawableType* drawable_type = &renderer->drawable_types[drawable_type_count];
+   drawable_type->name = name;
+   drawable_type->type_size = (u32)mem_bytes;
+   drawable_type->render = render_func;
+   drawable_type->on_create = on_create_func;
+   drawable_type->on_remove = on_remove_func;
+   drawable_type->on_enable = on_enable_func;
+   drawable_type->on_disable = on_disable_func;
+   drawable_type->freed_drawable_root = RNDR_INVALID_LIST_LINK;
+   drawable_type->culled_drawable_count = 0;
+   drawable_type->drawable_buffer = Util_CreateArrayOfLength(4, mem_bytes);
 
    for (u32 slot_i = 0; slot_i < SURF_MAX_TEXTURES; slot_i++)
       Graphics_BindTexture(renderer->graphics, renderer->built_in.texture.white, slot_i);
@@ -87,51 +80,33 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    if (drawable_type == NULL)
       return drawable_handle;
 
-   u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
-   u16 drawable_idx = (u16)drawable_count;
+   u8* drawable_buffer = drawable_type->drawable_buffer;
+   handle compare = { .id = INVALID_HANDLE_ID };
 
-   if (drawable_type->freed_drawable_root == RNDR_INVALID_LIST_LINK)
+   if (drawable_type->freed_drawable_root == INVALID_HANDLE)
    {
-      SET_ARRAY_LENGTH(drawable_type->drawable_buffer, drawable_count + 1);
+      u16 next_idx = INVALID_HANDLE;
+      (void)Util_AddNewResource(REF(drawable_buffer), NULL, &compare, &next_idx);
+
+      u32 length = Util_ArrayLength(drawable_buffer);
 
    } else {
-      drawable_idx = drawable_type->freed_drawable_root;
-
-      rndr_Drawable* free_drawable = RNDR_DrawableAtIndex(drawable_type, drawable_idx);
-      drawable_type->freed_drawable_root = free_drawable->next_freed;
-
-      if (free_drawable->next_freed != RNDR_INVALID_LIST_LINK)
-      {
-         rndr_Drawable* next_free_drawable = RNDR_DrawableAtIndex(drawable_type, free_drawable->next_freed);
-         next_free_drawable->prev_freed = RNDR_INVALID_LIST_LINK;
-
-      }
-
-      free_drawable->compare.ref++;
+      rndr_Drawable* root_drawable = (rndr_Drawable*)(drawable_buffer + drawable_type->freed_drawable_root * drawable_type->type_size);
+      (void)Util_ReuseResource(REF(drawable_buffer), NULL, &compare, &root_drawable->compare, &drawable_type->freed_drawable_root, root_drawable->next_freed);
 
    }
 
-   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, drawable_idx);
-   u16 ref = drawable->compare.ref;
+   drawable_type->drawable_buffer = drawable_buffer;
 
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, compare.handle);
+   if (drawable == NULL)
+      return drawable_handle;
+
+   drawable_handle.res = compare;
    memset(drawable, 0, (uS)drawable_type->type_size);
-   drawable->compare.handle = drawable_idx;
-   drawable->compare.ref = ref;
-   drawable->drawable_type_idx = drawable_type_idx;
-   drawable->enabled = true;
-   drawable->prev_active = RNDR_INVALID_LIST_LINK;
 
-   drawable->next_active = drawable_type->active_drawable_root;
-   drawable_type->active_drawable_root = drawable_idx;
-
-   if (drawable->next_active != RNDR_INVALID_LIST_LINK)
-   {
-      rndr_Drawable* next_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_active);
-      next_drawable->prev_active = drawable_idx;
-
-   }
-
-   drawable_handle.id = drawable->compare.id;
+   drawable->next_freed = INVALID_HANDLE;
+   drawable->compare = drawable_handle.res;
    drawable_handle.drawable_type_idx = drawable_type_idx;
 
    if (drawable_type->on_create != NULL)
@@ -145,7 +120,7 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
 
 void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
 {
-   if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
+   if (renderer == NULL)
       return;
 
    rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, res_drawable.drawable_type_idx);
@@ -153,7 +128,7 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
       return;
 
    rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, res_drawable.handle);
-   if (drawable == NULL || drawable->enabled == false)
+   if (drawable == NULL)
       return;
 
    if (drawable_type->on_disable != NULL)
@@ -164,35 +139,54 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable)
 
    drawable->enabled = false;
 
-   if (drawable->next_active != RNDR_INVALID_LIST_LINK)
-   {
-      rndr_Drawable* next_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_active);
-      next_drawable->prev_active = drawable->prev_active;
-
-   }
-
-   if (drawable->prev_active != RNDR_INVALID_LIST_LINK)
-   {
-      rndr_Drawable* last_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->prev_active);
-      last_drawable->next_active = drawable->next_active;
-
-   } else
-      drawable_type->active_drawable_root = drawable->next_active;
-
-   drawable->prev_freed = RNDR_INVALID_LIST_LINK;
    drawable->next_freed = drawable_type->freed_drawable_root;
+   drawable_type->freed_drawable_root = res_drawable.handle;
 
-   if (drawable->next_freed != RNDR_INVALID_LIST_LINK)
-   {
-      rndr_Drawable* next_free_drawable = RNDR_DrawableAtIndex(drawable_type, drawable->next_freed);
-      next_free_drawable->prev_freed = res_drawable.handle;
+}
 
-   }
+void Renderer_EnableDrawable(Renderer* renderer, Drawable res_drawable)
+{
+   if (renderer == NULL)
+      return;
+
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, res_drawable.drawable_type_idx);
+   if (drawable_type == NULL)
+      return;
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, res_drawable.handle);
+   if (drawable == NULL)
+      return;
+
+   if (drawable_type->on_enable != NULL)
+      drawable_type->on_enable(renderer, res_drawable);
+
+   drawable->enabled = true;
+
+}
+
+void Renderer_DisableDrawable(Renderer* renderer, Drawable res_drawable)
+{
+   if (renderer == NULL)
+      return;
+
+   rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, res_drawable.drawable_type_idx);
+   if (drawable_type == NULL)
+      return;
+
+   rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, res_drawable.handle);
+   if (drawable == NULL)
+      return;
+
+   if (drawable_type->on_disable != NULL)
+      drawable_type->on_disable(renderer, res_drawable);
+
+   drawable->enabled = false;
+
 }
 
 void* Renderer_GetDrawableData(Renderer* renderer, Drawable res_drawable)
 {
-   if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
+   if (renderer == NULL)
       return NULL;
 
    rndr_Drawable* drawable = RNDR_GetDrawable(renderer, res_drawable);
@@ -248,21 +242,14 @@ rndr_DrawableType* RNDR_GetDrawableType(Renderer* renderer, u16 drawable_type_id
 
 rndr_Drawable* RNDR_GetDrawable(Renderer* renderer, Drawable res_drawable)
 {
-   if (renderer == NULL || res_drawable.id == INVALID_HANDLE_ID)
+   if (renderer == NULL)
       return NULL;
 
    rndr_DrawableType* drawable_type = RNDR_GetDrawableType(renderer, res_drawable.drawable_type_idx);
    if (drawable_type == NULL)
       return NULL;
 
-   u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
-   if (drawable_count <= (u32)res_drawable.handle)
-      return NULL;
-
    rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, res_drawable.handle);
-   if (drawable->compare.id != res_drawable.id)
-      return NULL;
-
    return drawable;
 }
 

@@ -3,6 +3,7 @@
 
 #include "util/types.h"
 #include "util/extra_types.h"
+#include "util/resource.h"
 #include "graphics.h"
 
 #include "renderer.h"
@@ -19,73 +20,57 @@
 enum {
    INTERNAL_RNDR_SURF_TEXTURE_RESERVED = 15,
    INTERNAL_RNDR_SURF_TEXTURE_USER_SET = 16
-   
+
 };
 
 typedef struct rndr_DrawableType_t
 {
-   char* name;
-   
+   const char* name;
+
    u8* drawable_buffer;
-   
+
    DrawableRenderFunc render;
    DrawableFunc on_create;
    DrawableFunc on_remove;
    DrawableFunc on_enable;
    DrawableFunc on_disable;
-   
+
    u32 type_size;
-   
-   u16 visible_drawable_root;
+
    u16 freed_drawable_root;
-   u16 active_drawable_root;
-   
    u16 culled_drawable_count;
-   
+
 } rndr_DrawableType;
 
 typedef struct rndr_Drawable_t
 {
    BBox bounds;
-   
+
    u16 drawable_type_idx;
-   u16 next_visible;
-   u16 prev_visible;
-   
-   union {
-      u16 next_freed;
-      u16 next_active;
-
-   };
-   
-   union {
-      u16 prev_freed;
-      u16 prev_active;
-
-   };
+   u16 next_freed;
 
    struct {
       u16 enabled: 1;
       u16 culled: 1;
 
    };
-   
+
    handle compare;
-   
+
    u8 data[];
 
 } rndr_Drawable;
 
 typedef struct rndr_Surface_t
 {
-   char* name;
+   const char* name;
 
    SurfacePass passes[SURF_MAX_PASSES];
    u8 textures[SURF_MAX_TEXTURES];
-   
-   handle compare;
-   u16 next_freed;
 
+   handle compare;
+
+   u16 next_freed;
    u16 pass_count;
 
 } rndr_Surface;
@@ -93,9 +78,9 @@ typedef struct rndr_Surface_t
 struct Renderer_t
 {
    char* app_path;
-   
+
    Graphics* graphics;
-   
+
    rndr_Surface* surfaces;
    rndr_DrawableType* drawable_types;
 
@@ -106,7 +91,7 @@ struct Renderer_t
       Buffer model_buffer;
 
    } ubo;
-   
+
    struct {
       union {
          Texture textures[RNDR_SURF_DEFAULT_TEXTURE_COUNT];
@@ -118,21 +103,21 @@ struct Renderer_t
             Texture normal;
 
          } texture;
-         
+
       };
-      
+
       struct {
          Geometry plane;
          Geometry box;
-         
+
       } geometry;
-      
+
       struct {
          Shader unlit;
          Shader basic;
-         
+
       } shader;
-      
+
    } built_in;
 
    f32 near_clip;
@@ -161,7 +146,7 @@ struct Renderer_t
    };
 
    u8 texture_slots[SURF_MAX_TEXTURES];
-   
+
 };
 
 static inline u16 RNDR_U16Norm(f32 value)
@@ -174,9 +159,9 @@ static inline u16 RNDR_U16Norm(f32 value)
 
 static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_type, u16 drawable_idx)
 {
-   if (drawable_idx == INVALID_HANDLE)
+   if (!Util_IsHandleValid(drawable_type->drawable_buffer, (handle){ .handle = drawable_idx, .ref = INVALID_HANDLE_REF }))
       return NULL;
-   
+
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
 }
 

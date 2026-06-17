@@ -35,9 +35,7 @@ Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceD
    for (u32 tex_i = 0; tex_i < SURF_MAX_TEXTURES; tex_i++)
       surface.textures[tex_i] = desc->texture_defaults[tex_i];
 
-   uS name_mem_bytes = (name_length + 1) * sizeof(char);
-   surface.name = malloc(name_mem_bytes);
-   memcpy(surface.name, name, name_mem_bytes);
+   surface.name = name;
 
    if (renderer->freed_surface_root == INVALID_HANDLE)
       return ADD_RESOURCE(renderer->surfaces, surface);
@@ -47,7 +45,7 @@ Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceD
 
 void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface)
 {
-   if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
+   if (renderer == NULL || !Util_IsHandleValid(renderer->surfaces, res_surface))
       return;
 
    rndr_Surface surface = renderer->surfaces[res_surface.handle];
@@ -56,11 +54,6 @@ void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface)
 
    surface.next_freed = renderer->freed_surface_root;
    renderer->freed_surface_root = (u32)res_surface.handle;
-
-   if (surface.name != NULL)
-      free(surface.name);
-
-   surface.name = NULL;
 
 }
 
@@ -78,7 +71,7 @@ Surface Renderer_GetSurface(Renderer* renderer, const char* name)
 
 SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32 pass_id)
 {
-   if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
+   if (renderer == NULL || !Util_IsHandleValid(renderer->surfaces, res_surface))
       return (SurfacePass){ .shader.id = INVALID_HANDLE_ID };
 
    rndr_Surface* surface = RNDR_GetSurface(renderer, res_surface);
@@ -121,7 +114,7 @@ void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 i
 
 void Renderer_UseMaterialTextures(Renderer* renderer, SurfaceMaterial material)
 {
-   if (renderer == NULL || material.surface.id >= INVALID_HANDLE_ID)
+   if (renderer == NULL)
       return;
 
    rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
@@ -178,7 +171,7 @@ u16 RNDR_GetSurfaceIndex(Renderer* renderer, const char* surface_name)
 
 rndr_Surface* RNDR_GetSurface(Renderer* renderer, Surface res_surface)
 {
-   if (renderer == NULL || res_surface.id == INVALID_HANDLE_ID)
+   if (renderer == NULL || !Util_IsHandleValid(renderer->surfaces, res_surface))
       return NULL;
 
    rndr_Surface* surface = &renderer->surfaces[res_surface.handle];
@@ -219,7 +212,7 @@ void RNDR_BindTextureAtSlot(Renderer* renderer, u32 bind_slot, u8 texture_defaul
 
 UniformBlockList RNDR_UpdateMaterialUBOs(Renderer* renderer, SurfaceMaterial material, u32 pass_id)
 {
-   if (renderer == NULL || material.surface.id >= INVALID_HANDLE_ID)
+   if (renderer == NULL)
       return (UniformBlockList){ 0 };
 
    rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);

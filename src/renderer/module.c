@@ -77,22 +77,9 @@ void Renderer_Free(Renderer* renderer)
    if (renderer->lightmanager_info.lightman_free != NULL)
       renderer->lightmanager_info.lightman_free(renderer);
 
-   u32 surface_count = Util_ArrayLength(renderer->surfaces);
-   for (u32 surf_i = 0; surf_i < surface_count; surf_i++)
-   {
-      if (renderer->surfaces[surf_i].name != NULL)
-         free(renderer->surfaces[surf_i].name);
-   }
-
    u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
    for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
-   {
-      if (renderer->drawable_types[type_i].name != NULL)
-         free(renderer->drawable_types[type_i].name);
-
       FREE_ARRAY(renderer->drawable_types[type_i].drawable_buffer);
-
-   }
 
    FREE_ARRAY(renderer->surfaces);
    FREE_ARRAY(renderer->drawable_types);
@@ -151,14 +138,13 @@ void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta,
       if (drawable_type->render == NULL)
          continue;
 
-      u16 current_idx = drawable_type->active_drawable_root;
-      while (current_idx != RNDR_INVALID_LIST_LINK)
-      {
-         rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, current_idx);
-         if (drawable == NULL)
-            break;
+      u32 drawable_count = Util_ArrayLength(drawable_type->drawable_buffer);
 
-         current_idx = drawable->next_active;
+      for (u32 drawable_i = 0; drawable_i < drawable_count; drawable_i++)
+      {
+         rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, drawable_i);
+         if (drawable == NULL || drawable->next_freed != INVALID_HANDLE)
+            break;
 
          Drawable drawable_handle = { 0 };
          drawable_handle.id = drawable->compare.id;
