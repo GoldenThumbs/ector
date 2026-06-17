@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 
    Engine_RegisterModule(engine, Module_Graphics());
 
-   Graphics* graphics = Engine_FetchModule(engine, "graphics");
+   Graphics* graphics = Engine_FetchModule(engine, GRAPHICS_MODULE);
    Graphics_SetClearColor(graphics, (color8){ 15, 15, 15, 255 });
 
    while(!Engine_CheckExitConditions(engine))
