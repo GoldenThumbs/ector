@@ -49,12 +49,9 @@ struct Engine_t
 {
    Module* modules;
 
-   uS engine_string_size;
-   char* engine_strings;
-
-   u32 window_title_ofs;
-   u32 app_name_ofs;
-   u32 app_path_ofs;
+   const char* app_name;
+   const char* app_path;
+   const char* window_title;
 
    union {
       u32 state;

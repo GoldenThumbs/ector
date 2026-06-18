@@ -1,6 +1,7 @@
 #ifndef WEB_SCRIPTING_ENGINEMODULE
 #define WEB_SCRIPTING_ENGINEMODULE
 
+#include "scripting.h"
 #include "util/types.h"
 #include "engine.h"
 
@@ -48,6 +49,17 @@ static inline int SCRP_GetFrameDelta(lua_State* script_state)
    return 1;
 }
 
+static inline int SCRP_GetAppName(lua_State* script_state)
+{
+   lua_pushstring(script_state, ENGINE_DATA);
+   lua_gettable(script_state, LUA_REGISTRYINDEX);
+   Engine* engine = lua_touserdata(script_state, -1);
+
+   lua_pushstring(script_state, Engine_GetAppName(engine));
+
+   return 1;
+}
+
 static inline int SCRP_GetAppPath(lua_State* script_state)
 {
    lua_pushstring(script_state, ENGINE_DATA);
@@ -57,6 +69,41 @@ static inline int SCRP_GetAppPath(lua_State* script_state)
    lua_pushstring(script_state, Engine_GetAppPath(engine));
 
    return 1;
+}
+
+static inline int SCRP_GetWindowTitle(lua_State* script_state)
+{
+   lua_pushstring(script_state, ENGINE_DATA);
+   lua_gettable(script_state, LUA_REGISTRYINDEX);
+   Engine* engine = lua_touserdata(script_state, -1);
+
+   lua_pushstring(script_state, Engine_GetWindowTitle(engine));
+
+   return 1;
+}
+
+static inline int SCRP_SetAppName(lua_State* script_state)
+{
+   lua_pushstring(script_state, ENGINE_DATA);
+   lua_gettable(script_state, LUA_REGISTRYINDEX);
+   Engine* engine = lua_touserdata(script_state, -1);
+
+   const char* app_name = Scripting_GetString(script_state, 1);
+   Engine_SetAppName(engine, app_name);
+
+   return 0;
+}
+
+static inline int SCRP_SetWindowTitle(lua_State* script_state)
+{
+   lua_pushstring(script_state, ENGINE_DATA);
+   lua_gettable(script_state, LUA_REGISTRYINDEX);
+   Engine* engine = lua_touserdata(script_state, -1);
+
+   const char* window_title = Scripting_GetString(script_state, 1);
+   Engine_SetWindowTitle(engine, window_title);
+
+   return 0;
 }
 
 error SCRP_RegisterEngine(lua_State* script_state, Engine* engine);

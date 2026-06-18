@@ -80,23 +80,18 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    if (drawable_type == NULL)
       return drawable_handle;
 
-   u8* drawable_buffer = drawable_type->drawable_buffer;
    handle compare = { .id = INVALID_HANDLE_ID };
 
    if (drawable_type->freed_drawable_root == INVALID_HANDLE)
    {
       u16 next_idx = INVALID_HANDLE;
-      (void)Util_AddNewResource(REF(drawable_buffer), NULL, &compare, &next_idx);
-
-      u32 length = Util_ArrayLength(drawable_buffer);
+      compare = Util_AddNewResource(REF(drawable_type->drawable_buffer), NULL, &compare, &next_idx);
 
    } else {
-      rndr_Drawable* root_drawable = (rndr_Drawable*)(drawable_buffer + drawable_type->freed_drawable_root * drawable_type->type_size);
-      (void)Util_ReuseResource(REF(drawable_buffer), NULL, &compare, &root_drawable->compare, &drawable_type->freed_drawable_root, root_drawable->next_freed);
+      rndr_Drawable* root_drawable = (rndr_Drawable*)(drawable_type->drawable_buffer + drawable_type->freed_drawable_root * drawable_type->type_size);
+      compare = Util_ReuseResource(REF(drawable_type->drawable_buffer), NULL, &compare, &root_drawable->compare, &drawable_type->freed_drawable_root, root_drawable->next_freed);
 
    }
-
-   drawable_type->drawable_buffer = drawable_buffer;
 
    rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, compare.handle);
    if (drawable == NULL)
@@ -108,6 +103,8 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    drawable->next_freed = INVALID_HANDLE;
    drawable->compare = drawable_handle.res;
    drawable_handle.drawable_type_idx = drawable_type_idx;
+
+   drawable->enabled = true;
 
    if (drawable_type->on_create != NULL)
       drawable_type->on_create(renderer, drawable_handle);

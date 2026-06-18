@@ -42,7 +42,11 @@ error SCRP_RegisterEngine(lua_State* script_state, Engine* engine)
       { "RequestExit", SCRP_RequestExit },
       { "GetFrameSize", SCRP_GetFrameSize },
       { "GetFrameDelta", SCRP_GetFrameDelta },
+      { "GetAppName", SCRP_GetAppName },
       { "GetAppPath", SCRP_GetAppPath },
+      { "GetWindowTitle", SCRP_GetWindowTitle },
+      { "SetAppName", SCRP_SetAppName },
+      { "SetWindowTitle", SCRP_SetWindowTitle },
       { NULL, NULL }
    };
 

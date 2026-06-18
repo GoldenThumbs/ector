@@ -24,10 +24,10 @@ typedef enum MouseMode_t
 
 typedef struct EngineDesc_t
 {
-   char* app_name;
+   const char* app_name;
 
    struct {
-      char* title;
+      const char* title;
       res2D size;
       bool hidden;
 
@@ -84,6 +84,11 @@ bool Engine_CheckMouseButton(Engine* engine, MouseButton button, KeyAction butto
 bool Engine_CheckMouseButtonAdvanced(Engine* engine, MouseButton button, KeyAction button_action, KeyModifiers modifiers);
 KeyState Engine_GetMouseButtonState(Engine* engine, MouseButton button);
 
+const char* Engine_GetAppName(Engine* engine);
 const char* Engine_GetAppPath(Engine* engine);
+const char* Engine_GetWindowTitle(Engine* engine);
+
+void Engine_SetAppName(Engine* engine, const char* app_name);
+void Engine_SetWindowTitle(Engine* engine, const char* window_title);
 
 #endif

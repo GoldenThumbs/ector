@@ -40,8 +40,6 @@ handle Util_ReuseResource(void** array_ptr, const void* item_ptr, handle* inout_
 
    if (item_ptr != NULL)
       memcpy(ptr, item_ptr, size);
-   else
-      memset(ptr, 0, size);
 
    return (*inout_compare);
 }

@@ -25,6 +25,15 @@ enum {
 #define ERR_FLAG_TOO_MANY_INPUTS (1u << 3)
 #define ERR_FLAG_INVALID_USER_DATA (1u << 4)
 
+enum {
+   SCRP_VARIABLE_I32 = 0,
+   SCRP_VARIABLE_F32,
+   SCRP_VARIABLE_VEC4,
+   SCRP_VARIABLE_STRING,
+   SCRP_VARIABLE_USERDATA
+
+};
+
 typedef handle Script;
 typedef int ReturnCount;
 typedef int LuaIndex;
@@ -67,11 +76,12 @@ error Scripting_RunScript(ScriptHandler* script_handler, Script res_script);
 
 bool Scripting_FieldExists(void* script_state, const char* name);
 
+void Scripting_AddGlobalVariable(ScriptHandler* script_handler, const char* name, memblob value, u8 variable_type);
+void Scripting_AddGlobalFunction(ScriptHandler* script_handler, const char* name, LuaCFunc function);
 void Scripting_AddModule(ScriptHandler* script_handler, ScriptModuleDesc desc);
+
 void Scripting_AddFunctionsToTable(void* script_state, NamedScriptFunction named_functions[], u32 function_count);
 void Scripting_AddEnumToTable(void* script_state, const char* enum_name, EnumPair enum_pairs[], u32 enum_count);
-void Scripting_AddModuleData(ScriptHandler* script_handler, void* module_data, const char* module_name);
-void Scripting_AddFunction(ScriptHandler* script_handler, const char* name, LuaCFunc function);
 
 Engine* Scripting_GetEngine(void* script_state);
 void* Scripting_GetModuleData(void* script_state, const char* module_name);

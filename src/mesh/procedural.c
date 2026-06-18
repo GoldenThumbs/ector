@@ -190,7 +190,7 @@ MeshInterface Mesh_ReallocVertices(u32 new_vertex_count, bool use_normal, bool u
 
 MeshInterface Mesh_AddQuad(u32 faces_x, u32 faces_y, mat4x4 transform, MeshInterface mesh_interface)
 {
-   return Mesh_AddQuadAdvanced(faces_x, faces_y, transform, VEC4(0, 0, 1, 1), mesh_interface);
+   return Mesh_AddQuadAdvanced(faces_x, faces_y, transform, VEC4(0, 1, 1, 0), mesh_interface);
 }
 
 MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, vec4 texture_coords, MeshInterface mesh_interface)

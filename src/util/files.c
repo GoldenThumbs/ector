@@ -7,6 +7,29 @@
 #include <stdlib.h>
 #include <string.h>
 
+char* Util_MakeFilePath(const char* base_path, const char* file_name)
+{
+   if (base_path == NULL || file_name == NULL)
+      return NULL;
+
+   i32 directory_length = (i32)strnlen(base_path, PATH_CHARACTER_LIMIT);
+   while (directory_length > 0)
+   {
+      char directory_char = base_path[--directory_length];
+      if (directory_char == '/' || directory_char == '\\')
+         break;
+   }
+
+   i32 full_path_length = snprintf(NULL, 0, "%.*s/%s", directory_length, base_path, file_name) + 1;
+   char* file_path = malloc(full_path_length * sizeof(char));
+   if (file_path == NULL)
+      return NULL;
+
+   snprintf(file_path, full_path_length, "%.*s/%s", directory_length, base_path, file_name);
+
+   return file_path;
+}
+
 memblob Util_LoadFileIntoMemory(const char* file_path, bool read_as_binary)
 {
    memblob memory = { .size = 0, .data = NULL };
@@ -43,27 +66,19 @@ memblob Util_LoadFileIntoMemory(const char* file_path, bool read_as_binary)
    return memory;
 }
 
-char* Util_MakeFilePath(const char* base_path, const char* file_name)
+memblob Util_LoadFileFromBasePath(const char* base_path, const char* file_name, bool read_as_binary)
 {
+   memblob memory = { .size = 0, .data = NULL };
+
    if (base_path == NULL || file_name == NULL)
-      return NULL;
+      return memory;
 
-   i32 directory_length = (i32)strnlen(base_path, PATH_CHARACTER_LIMIT);
-   while (directory_length > 0)
-   {
-      char directory_char = base_path[--directory_length];
-      if (directory_char == '/' || directory_char == '\\')
-         break;
-   }
+   char* file_path = Util_MakeFilePath(base_path, file_name);
+   memory = Util_LoadFileIntoMemory(file_path, read_as_binary);
+   if (file_path != NULL)
+      free(file_path);
 
-   i32 full_path_length = snprintf(NULL, 0, "%.*s/%s", directory_length, base_path, file_name) + 1;
-   char* file_path = malloc(full_path_length * sizeof(char));
-   if (file_path == NULL)
-      return NULL;
-
-   snprintf(file_path, full_path_length, "%.*s/%s", directory_length, base_path, file_name);
-
-   return file_path;
+   return memory;
 }
 
 
@@ -132,7 +147,7 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
          case ERR_FATAL:
          {
             stream_out = stderr;
-            
+
          } break;
 
       }
@@ -151,19 +166,19 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
       case ERR_WARN:
       {
          fprintf(stream_out, "WARNING [%s]: ", module_name);
-         
+
       } break;
 
       case ERR_ERROR:
       {
          fprintf(stream_out, "ERROR [%s]: ", module_name);
-         
+
       } break;
 
       case ERR_FATAL:
       {
          fprintf(stream_out, "FATAL ERROR [%s]: ", module_name);
-         
+
       } break;
 
    }

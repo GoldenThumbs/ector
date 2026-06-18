@@ -6,6 +6,7 @@
 
 #include "engine.h"
 #include "engine/internal.h"
+#include "engine/ector_icon.h"
 
 #include <GLFW/glfw3.h>
 
@@ -17,8 +18,8 @@ static eng_EngineGlobal* ENGINE_G;
 
 Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
 {
-   char* app_name = "Ector App";
-   char* window_title = app_name;
+   const char* app_name = "Ector App";
+   const char* window_title = app_name;
    i32 width = 1920;
    i32 height = 1080;
 
@@ -84,37 +85,9 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
 
    }
 
-   char* app_path = (argc >= 1) ? argv[0] : "";
-   uS app_path_size = strnlen(app_path, ECT_PATH_MAX) + 1;
-   uS app_name_size = strnlen(app_name, ECT_NAME_MAX) + 1;
-   uS window_title_size = strnlen(window_title, ECT_NAME_MAX) + 1;
-   window_title_size = (strncmp(window_title, app_name, ECT_NAME_MAX) == 0) ? 0 : window_title_size;
-
-   engine->app_path_ofs = 0;
-   engine->app_name_ofs = engine->app_path_ofs + app_path_size;
-   engine->window_title_ofs = engine->app_name_ofs + ((window_title_size > 0) ? app_name_size : 0);
-   engine->exit_requested = false;
-
-   engine->engine_string_size = app_path_size + app_name_size + window_title_size;
-   engine->engine_strings = malloc(engine->engine_string_size);
-   if (engine->engine_strings != NULL)
-   {
-      char* engine_app_path = engine->engine_strings + engine->app_path_ofs;
-      char* engine_app_name = engine->engine_strings + engine->app_name_ofs;
-      char* engine_window_title = engine->engine_strings + engine->window_title_ofs;
-
-      strncpy(engine_app_path, app_path, app_path_size);
-      strncpy(engine_app_name, app_name, app_name_size);
-      if (window_title_size != 0)
-         strncpy(engine_window_title, window_title, window_title_size);
-
-   } else {
-      engine->engine_string_size = 0;
-      engine->app_path_ofs = 0;
-      engine->app_name_ofs = 0;
-      engine->window_title_ofs = 0;
-
-   }
+   engine->app_name = app_name;
+   engine->app_path = (argc >= 1) ? argv[0] : "";
+   engine->window_title = window_title;
 
    engine->modules = NEW_ARRAY_N(Module, 2);
 
@@ -134,6 +107,14 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
    glfwSetKeyCallback(window, ENG_KeyCallback);
    glfwSetMouseButtonCallback(window, ENG_ButtonCallback);
 
+   GLFWimage glfw_img = {
+     .width = ECTOR_ICON_SIZE.width,
+     .height = ECTOR_ICON_SIZE.height,
+     .pixels = (u8*)ECTOR_ICON_DATA
+   };
+
+   glfwSetWindowIcon(window, 1, (GLFWimage[]){ glfw_img });
+
    return engine;
 }
 
@@ -141,9 +122,6 @@ void Engine_Free(Engine* engine)
 {
    if (engine == NULL)
       return;
-
-   if (engine->engine_strings != NULL)
-      free(engine->engine_strings);
 
    u32 module_count = Util_ArrayLength(engine->modules);
    for (u32 i = 0; i < module_count; i++)
@@ -158,7 +136,7 @@ void Engine_Free(Engine* engine)
          abort();
 
    }
-   
+
    FREE_ARRAY(engine->modules);
 
    glfwTerminate();
@@ -237,15 +215,52 @@ void Engine_RegisterModule(Engine* engine, Module module)
 
    if (err.general != ERR_OK)
       abort();
-   
+
+}
+
+const char* Engine_GetAppName(Engine* engine)
+{
+   if (engine == NULL)
+      return NULL;
+
+   return engine->app_name;
 }
 
 const char* Engine_GetAppPath(Engine* engine)
 {
-   if (engine == NULL || engine->engine_strings == NULL)
+   if (engine == NULL)
       return NULL;
 
-   return engine->engine_strings + engine->app_path_ofs;
+   return engine->app_path;
+}
+
+const char* Engine_GetWindowTitle(Engine* engine)
+{
+   if (engine == NULL)
+      return NULL;
+
+   return engine->window_title;
+}
+
+void Engine_SetAppName(Engine* engine, const char* app_name)
+{
+   if (engine == NULL || app_name == NULL)
+      return;
+
+   engine->app_name = app_name;
+
+}
+
+void Engine_SetWindowTitle(Engine* engine, const char* window_title)
+{
+   if (engine == NULL || window_title == NULL)
+      return;
+
+   eng_EngineGlobal eng_glb = engine->internal;
+
+   engine->window_title = window_title;
+   glfwSetWindowTitle(eng_glb.window, engine->window_title);
+
 }
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height)

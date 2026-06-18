@@ -143,8 +143,8 @@ void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta,
       for (u32 drawable_i = 0; drawable_i < drawable_count; drawable_i++)
       {
          rndr_Drawable* drawable = RNDR_DrawableAtIndex(drawable_type, drawable_i);
-         if (drawable == NULL || drawable->next_freed != INVALID_HANDLE)
-            break;
+         if (drawable == NULL || !drawable->enabled || drawable->next_freed != INVALID_HANDLE)
+            continue;
 
          Drawable drawable_handle = { 0 };
          drawable_handle.id = drawable->compare.id;

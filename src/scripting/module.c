@@ -174,6 +174,76 @@ bool Scripting_FieldExists(void* script_state, const char* name)
    return result;
 }
 
+void Scripting_AddGlobalVariable(ScriptHandler* script_handler, const char* name, memblob value, u8 variable_type)
+{
+   if (script_handler == NULL || name == NULL || value.data == NULL)
+      return;
+
+   switch (variable_type)
+   {
+      case SCRP_VARIABLE_I32: {
+         if (value.size != sizeof(i32))
+            return;
+
+         i32* ptr = (i32*)value.data;
+         lua_pushinteger(script_handler->script_state, (lua_Integer)(*ptr));
+
+      } break;
+
+      case SCRP_VARIABLE_F32: {
+         if (value.size != sizeof(f32))
+            return;
+
+         f32* ptr = (f32*)value.data;
+         lua_pushnumber(script_handler->script_state, (lua_Number)(*ptr));
+
+      } break;
+
+      case SCRP_VARIABLE_VEC4: {
+         if (value.size != sizeof(vec4))
+            return;
+
+         vec4* ptr = (vec4*)value.data;
+         SCRP_PushVector(script_handler->script_state, *ptr);
+
+      } break;
+
+      case SCRP_VARIABLE_STRING: {
+         if (value.size == 0)
+            return;
+
+         char* ptr = (char*)value.data;
+         lua_pushstring(script_handler->script_state, ptr);
+
+      } break;
+
+      case SCRP_VARIABLE_USERDATA: {
+         if (value.size == 0)
+            return;
+
+         void* ptr = lua_newuserdatauv(script_handler->script_state, value.size, 0);
+         memcpy(ptr, value.data, value.size);
+
+      } break;
+
+      default:
+         return;
+   }
+
+   lua_setglobal(script_handler->script_state, name);
+
+}
+
+void Scripting_AddGlobalFunction(ScriptHandler* script_handler, const char* name, LuaCFunc function)
+{
+   if (script_handler == NULL || name == NULL || function == NULL)
+      return;
+
+   lua_pushcfunction(script_handler->script_state, (lua_CFunction)function);
+   lua_setglobal(script_handler->script_state, name);
+
+}
+
 void Scripting_AddModule(ScriptHandler* script_handler, ScriptModuleDesc desc)
 {
    if (script_handler == NULL || desc.name == NULL)
@@ -244,27 +314,6 @@ void Scripting_AddEnumToTable(void* script_state, const char* enum_name, EnumPai
    }
 
    lua_rawset(script_state, -3);
-
-}
-
-void Scripting_AddModuleData(ScriptHandler* script_handler, void* module_data, const char* module_name)
-{
-   if (script_handler == NULL || module_data == NULL || module_name == NULL)
-      return;
-
-   lua_pushstring(script_handler->script_state, module_name);
-   lua_pushlightuserdata(script_handler->script_state, module_data);
-   lua_settable(script_handler->script_state, LUA_REGISTRYINDEX);
-
-}
-
-void Scripting_AddFunction(ScriptHandler* script_handler, const char* name, LuaCFunc function)
-{
-   if (script_handler == NULL || name == NULL || function == NULL)
-      return;
-
-   lua_pushcfunction(script_handler->script_state, (lua_CFunction)function);
-   lua_setglobal(script_handler->script_state, name);
 
 }
 
