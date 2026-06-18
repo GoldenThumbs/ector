@@ -71,7 +71,6 @@ int main(int argc, char* argv[])
       }
 
    }
-
    Model_Free(&model);
 
    vec3 camera_euler = { 0, 0, 0 };
@@ -98,8 +97,7 @@ int main(int argc, char* argv[])
          camera_euler.x -= mouse_delta.y * 0.05f;
          camera_euler.y -= mouse_delta.x * 0.05f;
 
-         camera_rot = Util_MulQuat(Util_MakeQuat(VEC3(0, 1, 0), camera_euler.y), Util_MakeQuat(VEC3(1, 0, 0), camera_euler.x));
-         camera_rot.w = -camera_rot.w;
+         camera_rot = Util_MakeQuatEuler(camera_euler);
 
       } else {
          if (mouse_is_locked)

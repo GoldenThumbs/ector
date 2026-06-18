@@ -19,7 +19,7 @@ static inline quat Util_MakeQuat(vec3 axis, f32 angle)
 
    quat res = { 0 };
    res.xyz = Util_ScaleVec3(axis, b);
-   res.w = c;
+   res.w = -c;
    return res;
 }
 
