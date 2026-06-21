@@ -24,6 +24,7 @@ int main(int argc, char* argv[])
    Engine_RegisterModule(engine, Module_Scripting());
 
    mat4x4 m = Util_RotationMatrix(VEC3(1, 0, 0), -50.0f);
+   m = Util_MulMat4(Util_TranslationMatrix(VEC3(0, 0, -1)), m);
 
    Graphics* graphics = Engine_FetchModule(engine, GRAPHICS_MODULE);
    Graphics_SetClearColor(graphics, (color8){ 25, 25, 25, 255 });
@@ -58,10 +59,10 @@ int main(int argc, char* argv[])
       Graphics_Viewport(graphics, size);
       Graphics_Clear(graphics);
 
-      mat4x4 m2 = Util_IdentityMat4();
       f32 aspect = (f32)size.height / (f32)size.width;
-      m2.m[0][0] = aspect;
-      m2 = Util_MulMat4(m, m2);
+      mat4x4 m2 = Util_PerspectiveMatrix(50, aspect, 0.05f, 10.0f);
+      // m2.m[0][0] = aspect;
+      m2 = Util_MulMat4(m2, m);
       Graphics_UpdateBufferExplicit(graphics, buffer, m2.arr, 0, sizeof(mat4x4));
 
       Graphics_BindTexture(graphics, texture, 0);

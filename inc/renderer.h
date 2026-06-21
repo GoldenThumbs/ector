@@ -134,7 +134,7 @@ typedef struct DrawableTypeDesc_t
 typedef struct ShaderDefines_t
 {
    u32 define_count;
-   char* defines[LIGHTMANAGER_MAX_DEFINES];
+   const char* defines[LIGHTMANAGER_MAX_DEFINES];
 
 } ShaderDefines;
 
@@ -214,6 +214,8 @@ void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable);
 void Renderer_EnableDrawable(Renderer* renderer, Drawable res_drawable);
 void Renderer_DisableDrawable(Renderer* renderer, Drawable res_drawable);
 
+// pointer to drawable data can be invalid when the drawable array gets reallocated!
+// best practice is to call one of these functions whenever you need to set or get drawable data.
 void* Renderer_GetDrawableData(Renderer* renderer, Drawable res_drawable);
 void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx);
 

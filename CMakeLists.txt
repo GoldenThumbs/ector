@@ -11,6 +11,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ECTOR_BUILD_EXAMPLES "Build the provided engine example applications." true)
+option(ECTOR_SANITIZE_BUILD "Build with address sanitizer and undefined behavior sanitizer enabled for debug." true)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(append_source)
@@ -32,6 +33,11 @@ if(NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
    target_compile_features(Ector PRIVATE c_std_23)
 else()
    target_compile_features(Ector PRIVATE c_std_11)
+endif()
+
+if(${ECTOR_SANITIZE_BUILD})
+   add_compile_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
+   add_link_options($<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 endif()
 
 if(${ECTOR_BUILD_EXAMPLES})

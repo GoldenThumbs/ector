@@ -167,6 +167,7 @@ int main(int argc, char* argv[])
 
    block_data->material.surface = basic_surf;
    Renderer_SetSurfaceMaterialTextureAdvanced(&block_data->material,-1, 1, toybox_normal, texture_interp);
+   Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 2, Renderer_LoadTexture(renderer, "assets/textures/smooth.png", (res2D){ 0 }, true, false));
    Renderer_SetSurfaceMaterialTexture(&block_data->material,-1, 3, Renderer_WhiteTexture(renderer));
 
    Drawable barrel_object = Renderer_CreateDrawable(renderer, GEOMETRY_DRAWABLE_TYPE);
@@ -205,6 +206,10 @@ int main(int argc, char* argv[])
 
    camera.origin = player.origin;
    camera.origin.y += 0.25f;
+
+   block_data = Renderer_GetDrawableData(renderer, block_object);
+   barrel_data = Renderer_GetDrawableData(renderer, barrel_object);
+   ball_data = Renderer_GetDrawableData(renderer, ball_object);
 
    Renderer_SetFieldOfView(renderer, camera.fov);
    Renderer_SetClippingPlanes(renderer, camera.near_clip, camera.far_clip);
@@ -340,7 +345,7 @@ void MovePlayer(Engine* engine, DemoPlayer* player, Transform3D* transform)
    player->origin = Util_AddVec3(player->origin, player->velocity);
 
    vec3 axis_vec = VEC3(-player->velocity.z, 0, player->velocity.x);
-   quat frame_rotation = Util_MakeQuat(Util_NormalizeVec3(axis_vec), Util_MagVec3(axis_vec) * 50.0f);
+   quat frame_rotation = Util_MakeQuat(Util_NormalizeVec3(axis_vec), -Util_MagVec3(axis_vec) * 50.0f);
    transform->rotation = Util_MulQuat(transform->rotation, frame_rotation);
    transform->origin = player->origin;
 
@@ -440,10 +445,10 @@ void CreateLampGrid(Renderer* renderer)
       AddLamp(renderer, VEC3(-x_f, 2.0f,-y_f), 1.0f, Util_IntToColor(0xFFFFFFFF), 2.0f);
       AddLamp(renderer, VEC3( x_f, 2.0f,-y_f), 1.0f, Util_IntToColor(0xFFFFFFFF), 2.0f);
 
-      AddLamp(renderer, VEC3( x_f + 3.0f, 2.2f, y_f + 3.0f), 1.6f, Util_IntToColor(0x8080FFFF), 3.0f);
-      AddLamp(renderer, VEC3(-x_f + 3.0f, 2.2f, y_f + 3.0f), 1.6f, Util_IntToColor(0x80FFFFFF), 3.0f);
-      AddLamp(renderer, VEC3(-x_f + 3.0f, 2.2f,-y_f + 3.0f), 1.6f, Util_IntToColor(0xFF80FFFF), 3.0f);
-      AddLamp(renderer, VEC3( x_f + 3.0f, 2.2f,-y_f + 3.0f), 1.6f, Util_IntToColor(0xFFFF80FF), 3.0f);
+      AddLamp(renderer, VEC3( x_f + 3.0f, 2.2f, y_f + 3.0f), 2.6f, Util_IntToColor(0x8080FFFF), 3.0f);
+      AddLamp(renderer, VEC3(-x_f + 3.0f, 2.2f, y_f + 3.0f), 2.6f, Util_IntToColor(0x80FFFFFF), 3.0f);
+      AddLamp(renderer, VEC3(-x_f + 3.0f, 2.2f,-y_f + 3.0f), 2.6f, Util_IntToColor(0xFF80FFFF), 3.0f);
+      AddLamp(renderer, VEC3( x_f + 3.0f, 2.2f,-y_f + 3.0f), 2.6f, Util_IntToColor(0xFFFF80FF), 3.0f);
 
    }
 

@@ -47,7 +47,7 @@ Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bo
 
    mat4x4 s = Util_ScalingMatrix(size);
    mat4x4 t = Util_TranslationMatrix(VEC3(0, 0.5f, 0));
-   mat4x4 r = Util_RotationMatrix(VEC3(1, 0, 0), 50);
+   mat4x4 r = Util_RotationMatrix(VEC3(1, 0, 0), -50);
    mat4x4 t0 = Util_MulMat4(s, t);
    mat4x4 t1 = Util_MulMat4(s, Util_MulMat4(r, t));
    mat4x4 t2 = Util_MulMat4(s, Util_MulMat4(Util_MulMat4(Util_RotationMatrix(VEC3(0, 1, 0), 50), r), t));
@@ -81,7 +81,7 @@ Mesh Mesh_CreateSphere(u32 faces, f32 size)
 
    mat4x4 s = Util_ScalingMatrix(Util_FillVec3(size));
    mat4x4 t = Util_TranslationMatrix(VEC3(0, 0.5f, 0));
-   mat4x4 r = Util_RotationMatrix(VEC3(1, 0, 0), 50);
+   mat4x4 r = Util_RotationMatrix(VEC3(1, 0, 0), -50);
    mat4x4 t0 = Util_MulMat4(s, t);
    mat4x4 t1 = Util_MulMat4(s, Util_MulMat4(r, t));
    mat4x4 t2 = Util_MulMat4(s, Util_MulMat4(Util_MulMat4(Util_RotationMatrix(VEC3(0, 1, 0), 50), r), t));
@@ -230,7 +230,7 @@ MeshInterface Mesh_AddQuadAdvanced(u32 faces_x, u32 faces_y, mat4x4 transform, v
 
    vec4 plane_tangent = Util_MulMat4Vec4(normal_transform, VEC4(1, 0, 0, 0));
    plane_tangent.xyz = Util_NormalizeVec3(plane_tangent.xyz);
-   plane_tangent.w = -1.0f;
+   plane_tangent.w = 1.0f;
 
    u32 vert_idx = 0;
    for (u32 i = 0; i < (faces_y + 1); i++)

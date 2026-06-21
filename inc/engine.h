@@ -48,7 +48,7 @@ typedef error (*ModuleFunc)(struct Module_t* self, Engine* engine);
 
 typedef struct Module_t
 {
-   char* name;
+   const char* name;
    ModuleFunc mod_init;
    ModuleFunc mod_free;
    void* data;

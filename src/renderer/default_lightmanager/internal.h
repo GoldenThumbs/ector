@@ -20,7 +20,7 @@ struct lightman_Cluster_t
    u32 frustum_idx[3];
    u32 light_count;
    u32 indices[];
-   
+
 };
 
 typedef struct lightman_PackedLight_t
@@ -42,7 +42,7 @@ typedef struct lightman_PackedLight_t
    i16 shadow_id; // id of shadow map. 0 is no shadows, negative sign is for cubemap shadows. when shadow_id != 0 the index is abs(shadow_id) - 1
    i16 next_light; // index of next light. if value == UINT16_MAX then this is the last light in the list
    // >- 16 bytes
-   
+
 } lightman_PackedLight;
 
 typedef struct lightman_PackedSunLight_t
@@ -117,6 +117,8 @@ struct DefaultLightManager_t
 
    u16 light_drawable_type_idx;
 
+   char shaderdef_light_count[30];
+
    Framebuffer cascade_fbo;
    Framebuffer shadow_fbo;
 
@@ -137,8 +139,6 @@ struct DefaultLightManager_t
       res2D shadow_size;
 
    } shadow;
-
-   char light_count_define[];
 
 };
 
@@ -172,19 +172,19 @@ static inline mat4x4 LIGHTMAN_CubemapViewMatrix(vec3 origin, u8 cubemap_face)
    {
       case GFX_CUBEMAPFACE_POSITIVE_X:
          return Util_LookAtMatrix(origin, Util_AddVec3(origin, s[1]), u[1]);
-      
+
       case GFX_CUBEMAPFACE_NEGATIVE_X:
          return Util_LookAtMatrix(origin, Util_AddVec3(origin, s[0]), u[1]);
 
       case GFX_CUBEMAPFACE_POSITIVE_Y:
          Util_ViewMatrix(origin, VEC3(50, 0, 0), 0);
-      
+
       case GFX_CUBEMAPFACE_NEGATIVE_Y:
          return Util_ViewMatrix(origin, VEC3(150, 0, 0), 0);
 
       case GFX_CUBEMAPFACE_POSITIVE_Z:
          return Util_LookAtMatrix(origin, Util_AddVec3(origin, f[1]), u[1]);
-      
+
       case GFX_CUBEMAPFACE_NEGATIVE_Z:
          return Util_LookAtMatrix(origin, Util_AddVec3(origin, f[0]), u[1]);
 

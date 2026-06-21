@@ -36,17 +36,15 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    u32 cluster_z = 32;
    u32 lights_per_cluster = 200;
 
-   i32 define_size = snprintf(NULL, 0, "LIGHTS_PER_CLUSTER %u", lights_per_cluster) + 1;
-
-   DefaultLightManager* lightmanager = malloc(sizeof(DefaultLightManager) + define_size);
+   DefaultLightManager* lightmanager = malloc(sizeof(DefaultLightManager));
    if (lightmanager == NULL)
       return NULL;
 
-   memset(lightmanager, 0, sizeof(DefaultLightManager) + define_size);
+   memset(lightmanager, 0, sizeof(DefaultLightManager));
 
    Graphics* graphics = Renderer_GetGraphics(renderer);
 
-   snprintf(lightmanager->light_count_define, define_size, "LIGHTS_PER_CLUSTER %u", lights_per_cluster);
+   snprintf(lightmanager->shaderdef_light_count, sizeof(lightmanager->shaderdef_light_count), "LIGHTS_PER_CLUSTER %u", lights_per_cluster);
 
    lightmanager->packed_lights = NEW_ARRAY_N(lightman_PackedLight, 16);
    lightmanager->packed_sun_lights = NEW_ARRAY_N(lightman_PackedSunLight, 1);
@@ -63,13 +61,13 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    lightmanager->freed_light_root_idx = INVALID_HANDLE;
    lightmanager->active_light_root_idx = INVALID_HANDLE;
 
-   const char* defs[] = {
-      lightmanager->light_count_define,
+   const char* shaderdefs[] = {
+      lightmanager->shaderdef_light_count,
       "USE_LIGHTING"
    };
 
    lightmanager->build_clusters_cs = Renderer_LoadShader(renderer, "assets/core/shaders/cs_build_clusters.glsl", NULL, 0, true);
-   lightmanager->fill_clusters_cs = Renderer_LoadShader(renderer, "assets/core/shaders/cs_cull_lights.glsl", defs, 1, true);
+   lightmanager->fill_clusters_cs = Renderer_LoadShader(renderer, "assets/core/shaders/cs_cull_lights.glsl", shaderdefs, 1, true);
 
    lightmanager->cluster_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_ClustersSize(lightmanager), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_STORAGE);
    lightmanager->light_ssbo = Graphics_CreateBufferExplicit(graphics, NULL, LIGHTMAN_LightBufferSize(lightmanager), GFX_DRAWMODE_STATIC, GFX_BUFFERTYPE_STORAGE);
@@ -87,7 +85,7 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    lightmanager->light_drawable_type_idx = Renderer_GetDrawableTypeIndexFromName(renderer, LIGHT_DRAWABLE_TYPE);
 
    Renderer_SetUnlitShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", NULL, 0, false));
-   Renderer_SetBasicShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", defs, 2, false));
+   Renderer_SetBasicShader(renderer, Renderer_LoadShader(renderer, "assets/core/shaders/builtin.glsl", shaderdefs, 2, false));
 
    lightmanager->shadow.shadow_size = (res2D){ 256, 256 };
    lightmanager->shadow.num_shadows = 32;
@@ -129,12 +127,15 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
    Graphics* graphics = Renderer_GetGraphics(renderer);
 
    u16 current_light_idx = lightmanager->active_light_root_idx;
-   i32 num_shadow_casters = 0;
+   i16 num_shadow_casters = 0;
 
    mat4x4 mat_view = Renderer_GetViewMatrix(renderer);
 
    f32 near_clip = Renderer_GetNearClippingPlane(renderer);
    f32 far_clip = Renderer_GetFarClippingPlane(renderer);
+
+   Graphics_BindFramebuffer(graphics, lightmanager->shadow_fbo);
+   Graphics_Viewport(graphics, lightmanager->shadow.shadow_size);
 
    while (current_light_idx != INVALID_HANDLE)
    {
@@ -155,7 +156,6 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
          );
 
          Graphics_BindFramebuffer(graphics, lightmanager->shadow_fbo);
-         Graphics_Viewport(graphics, lightmanager->shadow.shadow_size);
          Graphics_Clear(graphics);
 
          Renderer_SetViewMatrix(renderer, LIGHTMAN_CubemapViewMatrix(light_data->origin, face_i));
@@ -164,16 +164,15 @@ void DefaultLightManager_PreRender(DefaultLightManager* lightmanager, Renderer* 
 
       }
 
-      lightmanager->packed_lights[light_data->light_idx].shadow_id = ((i16)(num_shadow_casters + 1));
+      num_shadow_casters++;
+
+      lightmanager->packed_lights[light_data->light_idx].shadow_id = num_shadow_casters;
       LIGHTMAN_UpdateLight(renderer, light_data->light_idx);
 
-      num_shadow_casters++;
       if (num_shadow_casters >= lightmanager->shadow.num_shadows)
          break;
 
       current_light_idx = light_data->next_idx;
-
-      Graphics_UnbindFramebuffers(graphics);
 
    }
 
@@ -522,8 +521,8 @@ ShaderDefines LIGHTMAN_Defines(Renderer* renderer)
    return (ShaderDefines){
       .define_count = 2,
       .defines = {
-         [0] = "USE_LIGHTING",
-         [1] = lightmanager->light_count_define
+         [0] = lightmanager->shaderdef_light_count,
+         [1] = "USE_LIGHTING"
       }
    };
 }

@@ -38,7 +38,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    renderer->built_in.texture.white = Renderer_CreateColorTexture(renderer, Util_IntToColor(0XFFFFFFFF), GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.black = Renderer_CreateColorTexture(renderer, Util_IntToColor(0x000000FF), GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.gray = Renderer_CreateColorTexture(renderer, (color8){ 128, 128, 128, 255 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.normal = Renderer_CreateColorTexture(renderer, (color8){ 128, 128, 255, 255 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.normal = Renderer_CreateColorTexture(renderer, (color8){ 127, 127, 255, 255 }, GFX_TEXTURETYPE_2D);
 
    renderer->built_in.geometry.plane = RNDR_CreateDefaultPlane(graphics);
    renderer->built_in.geometry.box = RNDR_CreateDefaultBox(graphics);

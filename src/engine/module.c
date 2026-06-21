@@ -126,14 +126,21 @@ void Engine_Free(Engine* engine)
    u32 module_count = Util_ArrayLength(engine->modules);
    for (u32 i = 0; i < module_count; i++)
    {
-      Module* m = engine->modules + (uS)(module_count - i - 1);
+      Module* module = &engine->modules[module_count - i - 1];
 
-      if (m == NULL)
+      if (module == NULL)
          break;
 
-      error err = m->mod_free(m, engine);
+      error err = module->mod_free(module, engine);
       if (err.general != ERR_OK)
-         abort();
+      {
+         bool is_fatal = (err.general == ERR_FATAL);
+         Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on free!%s", module->name, (is_fatal) ? "Error is fatal, engine aborting..." : "");
+
+         if (is_fatal)
+            abort();
+
+      }
 
    }
 
@@ -206,7 +213,7 @@ void* Engine_FetchModule(Engine* engine, const char* name)
 
 void Engine_RegisterModule(Engine* engine, Module module)
 {
-   if (engine == NULL)
+   if (engine == NULL || module.name == NULL)
       return;
 
    ADD_BACK_ARRAY(engine->modules, module);
@@ -214,7 +221,14 @@ void Engine_RegisterModule(Engine* engine, Module module)
    error err = module.mod_init(m, engine);
 
    if (err.general != ERR_OK)
-      abort();
+   {
+      bool is_fatal = (err.general == ERR_FATAL);
+      Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on init!%s", module.name, (is_fatal) ? "Error is fatal, engine aborting..." : "");
+
+      if (is_fatal)
+         abort();
+
+   }
 
 }
 

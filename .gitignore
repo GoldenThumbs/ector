@@ -59,6 +59,6 @@ build/
 .cache/
 .vscode/
 compile_commands.json
-
+CMakeFiles/
 .gram/
 .clangd
