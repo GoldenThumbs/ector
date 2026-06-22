@@ -14,7 +14,7 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
 {
    if (graphics == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
-   
+
    gfx_Shader shader = { 0 };
    shader.is_compute = false;
 
@@ -50,7 +50,7 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
 
    glDeleteShader(shd_vrt);
    glDeleteShader(shd_frg);
-   
+
    shader.id.program = shd_id;
 
    if (graphics->freed_shader_root == INVALID_HANDLE)
@@ -63,7 +63,7 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
 {
    if (graphics == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
-   
+
    gfx_Shader shader = { 0 };
    shader.is_compute = true;
 
@@ -81,7 +81,7 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
    {
       char shd_log[1024] = { 0 };
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
-      
+
       error err = { 0 };
       err.general = ERR_ERROR;
       err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
@@ -123,11 +123,11 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
 
       if (res_shader.id == INVALID_HANDLE_ID)
       {
-         
+
          err.general = ERR_WARN;
          err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
          err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE;
-         
+
       }
 
       free(compute_shader_code.data);
@@ -161,7 +161,7 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
 
 void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 {
-   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->shaders, res_shader))
       return;
 
    gfx_Shader* shader = &graphics->shaders[res_shader.handle];
@@ -176,7 +176,7 @@ void Graphics_FreeShader(Graphics* graphics, Shader res_shader)
 
 void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 size_y, u32 size_z, UniformBlockList uniform_blocks)
 {
-   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->shaders, res_shader))
       return;
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];
@@ -196,7 +196,7 @@ void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 si
    }
 
    glUseProgram(shader.id.program);
-   
+
    GFX_BindUniformBlocks(graphics, uniform_blocks);
 
    glDispatchCompute(size_x, size_y, size_z);

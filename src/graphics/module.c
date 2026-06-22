@@ -1,6 +1,7 @@
 #include "util/types.h"
 #include "util/array.h"
 #include "util/files.h"
+#include "util/resource.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -310,7 +311,7 @@ void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry,
 
 void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniforms)
 {
-   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID || res_geometry.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->shaders, res_shader) || !Util_IsHandleValid(graphics->geometries, res_geometry))
       return;
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];

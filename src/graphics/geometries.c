@@ -29,7 +29,7 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
 
 void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry)
 {
-   if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->geometries, res_geometry))
       return;
 
    gfx_Geometry geometry = graphics->geometries[res_geometry.handle];
@@ -49,12 +49,12 @@ void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometr
    geometry.element_count = ((mesh.index_count > 0) && (geometry.primitive == GFX_PRIMITIVE_TRIANGLE)) ? mesh.index_count : mesh.vertex_count;
 
    GFX_CreateGeometry(&geometry, mesh);
-   
+
 }
 
 void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
 {
-   if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->geometries, res_geometry))
       return;
 
    gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
@@ -75,7 +75,7 @@ void Graphics_FreeGeometry(Graphics* graphics, Geometry res_geometry)
 
 void Graphics_SetGeometryFaceCullMode(Graphics* graphics, Geometry res_geometry, u8 face_cull_mode)
 {
-   if (graphics == NULL || res_geometry.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->geometries, res_geometry))
       return;
 
    gfx_Geometry* geometry = &graphics->geometries[res_geometry.handle];
@@ -106,10 +106,10 @@ u8 GFX_MeshAttribute(u8 mesh_attribute)
 
       case MESH_ATTRIBUTE_3_CHANNEL:
          return GFX_ATTRIBUTE_F32_3X;
-      
+
       case MESH_ATTRIBUTE_4_CHANNEL:
          return GFX_ATTRIBUTE_F32_4X;
-      
+
       case MESH_ATTRIBUTE_COLOR:
          return GFX_ATTRIBUTE_U8_4X_NORM;
 
@@ -154,7 +154,7 @@ i32 GFX_AttributeTypeCount(u8 attribute)
       case GFX_ATTRIBUTE_F32_4X:
       case GFX_ATTRIBUTE_U8_4X_NORM:
          return 4;
-      
+
       default:
          return 0;
    }
@@ -167,7 +167,7 @@ bool GFX_AttributeTypeNormalized(u8 attribute)
       {
          case GFX_ATTRIBUTE_U8_4X_NORM:
             return true;
-         
+
          default:
             return false;
       }
@@ -185,10 +185,10 @@ uS GFX_AttributeTypeSize(u8 attribute)
       case GFX_ATTRIBUTE_F32_3X:
       case GFX_ATTRIBUTE_F32_4X:
          return sizeof(f32);
-      
+
       case GFX_ATTRIBUTE_U8_4X_NORM:
          return sizeof(u8);
-      
+
       default:
          return 0;
    }
@@ -233,7 +233,7 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
 
       if (a == GFX_ATTRIBUTE_NULL)
          break;
-      
+
       u32 a_type = GFX_AttributeType(a);
       i32 a_count = GFX_AttributeTypeCount(a);
       bool a_normalized = GFX_AttributeTypeNormalized(a);
@@ -266,7 +266,7 @@ void GFX_CreateGeometry(gfx_Geometry* geometry, Mesh mesh)
          GFX_DrawMode(geometry->draw_mode)
 
       );
-      
+
    }
 
 }
