@@ -107,6 +107,7 @@ void SCRP_RegisterMetaVector(lua_State* script_state)
       { "__sub", SCRP_SubVector },
       { "__mul", SCRP_MulVector },
       { "__div", SCRP_DivVector },
+      { "__len", SCRP_LengthOfVector },
       { NULL, NULL }
    };
 

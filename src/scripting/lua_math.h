@@ -181,6 +181,16 @@ static inline int SCRP_DivVector(lua_State* script_state)
    return 1;
 }
 
+static inline int SCRP_LengthOfVector(lua_State* script_state)
+{
+   vec4 vector = SCRP_Util_GetVector(script_state, 1);
+   f32 result = Util_MagVec4(vector);
+
+   lua_pushnumber(script_state, (lua_Number)result);
+
+   return 1;
+}
+
 static inline int SCRP_IndexVector(lua_State* script_state)
 {
    vec4 vector = SCRP_Util_GetVector(script_state, 1);
