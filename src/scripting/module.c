@@ -452,7 +452,7 @@ int SCRP_LuaWriter(lua_State* script_state, const void* buffer, size_t size, voi
       return LUA_ERRMEM;
 
    data_blob->data = tmp_ptr;
-   tmp_ptr = data_blob->data + data_blob->size;
+   tmp_ptr = (u8*)(data_blob->data) + data_blob->size;
    memmove(tmp_ptr, buffer, size);
    data_blob->size += size;
 
