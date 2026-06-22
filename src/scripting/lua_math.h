@@ -3,6 +3,7 @@
 
 #include "util/types.h"
 #include "util/math.h"
+#include "util/vec3.h"
 #include "util/vec4.h"
 #include "util/quaternion.h"
 #include "util/files.h"
@@ -248,8 +249,17 @@ static inline int SCRP_DotVector(lua_State* script_state)
 
 static inline int SCRP_NewQuatVector(lua_State* script_state)
 {
-   vec3 euler = SCRP_Util_GetVector(script_state, 1).xyz;
-   quat result = Util_MakeQuatEuler(euler);
+   vec3 vector = SCRP_Util_GetVector(script_state, 1).xyz;
+   quat result = { 0 };
+
+   i32 inputs = (i32)lua_gettop(script_state);
+   if (inputs > 1 && lua_isnumber(script_state, 2))
+   {
+      f32 angle = (f32)lua_tonumber(script_state, 2);
+      result = Util_MakeQuat(vector, angle);
+
+   } else
+      result = Util_MakeQuatEuler(vector);
 
    SCRP_Util_PushVector(script_state, result);
 
