@@ -3,6 +3,7 @@ add_subdirectory("mesh")
 add_subdirectory("image")
 add_subdirectory("graphics")
 add_subdirectory("renderer")
+add_subdirectory("scripting")
 add_subdirectory("module")
 add_subdirectory("engine")
 

@@ -5,6 +5,7 @@
 
 Module Module_Graphics(void);
 Module Module_Renderer(void);
+Module Module_Scripting(void);
 
 void Module_Defaults(Engine* engine, u32 exclude_count, char* module_excludes[]);
 

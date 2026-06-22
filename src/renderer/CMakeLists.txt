@@ -1,5 +1,7 @@
 add_module(
    ector_src
-   "module.c"
+   "surfaces.c"
+   "drawables.c"
    "default_lightmanager/lightmanager.c"
+   "module.c"
 )

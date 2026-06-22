@@ -27,7 +27,7 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
    texture.format = desc.texture_format;
 
    glGenTextures(1, &texture.id.tex);
-   
+
    u32 gl_target = GFX_TextureType(texture.type);
    glTexParameteri(gl_target, GL_TEXTURE_WRAP_R, GL_REPEAT);
    glTexParameteri(gl_target, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -48,7 +48,7 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
 {
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
       return;
 
    gfx_Texture* texture = &graphics->textures[res_texture.handle];
@@ -64,7 +64,7 @@ void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
 
 void Graphics_UpdateTexture(Graphics* graphics, u8* data, Texture res_texture)
 {
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
       return;
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
@@ -77,7 +77,7 @@ void Graphics_UpdateTexture(Graphics* graphics, u8* data, Texture res_texture)
 
 void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot)
 {
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
       return;
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
@@ -93,7 +93,7 @@ void Graphics_BindTexture(Graphics *graphics, Texture res_texture, u32 bind_slot
 
 void Graphics_BindTextureView(Graphics* graphics, Texture res_texture, u32 bind_slot, const AdvancedBindOptions* bind_options)
 {
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
       return;
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
@@ -134,7 +134,7 @@ void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type)
 
 void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings)
 {
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
       return;
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
@@ -160,7 +160,7 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
 Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 mip_level, u8 cubemap_face)
 {
-   if (graphics == NULL || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
       return (Image){ NULL };
 
    gfx_Texture texture = graphics->textures[res_texture.handle];
@@ -180,7 +180,7 @@ Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 
 
    u32 gl_type = GFX_TextureFormatType(texture.format);
    gl_type = (gl_type == GL_HALF_FLOAT) ? GL_FLOAT : ((gl_type != GL_FLOAT) ? GL_UNSIGNED_BYTE : GL_FLOAT);
-   
+
    u32 gl_format = GFX_TexturePixelFormat(texture.format);
    gl_format = (gl_format == GL_DEPTH_COMPONENT) ? GL_RED : ((gl_format == GL_DEPTH_STENCIL) ? GL_RG : gl_format);
 
@@ -201,7 +201,7 @@ Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 
       default:
       case GL_RED:
          image.channel_count = 1;
-      
+
    }
 
    image.image_format = (gl_type == GL_FLOAT) ? IMG_FORMAT_F32 : IMG_FORMAT_U8;
@@ -212,7 +212,7 @@ Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 
 
    uS pixel_size = ((gl_type == GL_FLOAT) ? 4 : 1) * image.channel_count;
    uS num_bytes = image.size.width * image.size.height * pixel_size;
-   
+
    f32* image_data = malloc(num_bytes);
    assert(image_data != NULL);
 
@@ -234,7 +234,7 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, res2D size, bool dept
    gfx_Framebuffer framebuffer = { 0 };
 
    glGenFramebuffers(1, &framebuffer.id.fbo);
-   
+
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
    glGenRenderbuffers(1, &framebuffer.id.rbo);
 
@@ -250,7 +250,7 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, res2D size, bool dept
    // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
    // {
    //    error err = { 0 };
-   //    err.general = ERR_ERROR;
+   //    err.general = ERR_LEVEL_ERROR;
    //    err.extra = ERR_GFX_FRAMEBUFFER_IS_INCOMPLETE;
 
    //    Util_Log(NULL, GRAPHICS_MODULE, err, "Framebuffer is incomplete!");
@@ -276,7 +276,7 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, res2D size, bool depthstencil
    if (framebuffer.compare.ref != res_framebuffer.ref)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_FRAMEBUFFER_INVALID_HANDLE;
 
       Util_Log(NULL, GRAPHICS_MODULE, err, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
@@ -292,7 +292,7 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, res2D size, bool depthstencil
    framebuffer.id.rbo = 0;
 
    glGenFramebuffers(1, &framebuffer.id.fbo);
-   
+
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
    glGenRenderbuffers(1, &framebuffer.id.rbo);
 
@@ -322,7 +322,7 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, res2D size, bool depthstencil
 
 void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 {
-   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->framebuffers, res_framebuffer))
       return;
 
    gfx_Framebuffer* framebuffer = &graphics->framebuffers[res_framebuffer.handle];
@@ -340,7 +340,7 @@ void Graphics_FreeFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 
 void Graphics_DrawToFramebufferTargets(Graphics* graphics, Framebuffer res_framebuffer, u32 target_count, u8 target_ids[])
 {
-   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID || target_ids == NULL || target_count > 8)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->framebuffers, res_framebuffer) || target_ids == NULL || target_count > 8)
       return;
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
@@ -354,12 +354,12 @@ void Graphics_DrawToFramebufferTargets(Graphics* graphics, Framebuffer res_frame
    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.id.fbo);
 
    glDrawBuffers(target_count, targets);
-   
+
 }
 
 void Graphics_BindFramebuffer(Graphics* graphics, Framebuffer res_framebuffer)
 {
-   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->framebuffers, res_framebuffer))
       return;
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
@@ -383,7 +383,7 @@ void Graphics_UnbindFramebuffers(Graphics *graphics)
 
 void Graphics_AttachMultipleTexturesToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, u32 texture_count, Texture res_textures[])
 {
-   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID || res_textures == NULL)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->framebuffers, res_framebuffer) || res_textures == NULL)
       return;
 
    for (u32 texture_i = 0; texture_i < texture_count; texture_i++)
@@ -393,7 +393,7 @@ void Graphics_AttachMultipleTexturesToFramebuffer(Graphics* graphics, Framebuffe
 
 void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_framebuffer, Texture res_texture, const AdvancedBindOptions* bind_options, u8 attachment_slot)
 {
-   if (graphics == NULL || res_framebuffer.id == INVALID_HANDLE_ID || res_texture.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->framebuffers, res_framebuffer) || !Util_IsHandleValid(graphics->textures, res_texture))
       return;
 
    gfx_Framebuffer framebuffer = graphics->framebuffers[res_framebuffer.handle];
@@ -420,10 +420,10 @@ void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_fra
 
    if (is_layered)
    {
-      error err = { .general = ERR_ERROR };
+      error err = { .general = ERR_LEVEL_ERROR };
       err.extra = ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED;
       err.flags |= ERR_FLAG_ATTEMPTED_LAYERED_ATTACHMENT;
-      
+
       Util_Log(NULL, GRAPHICS_MODULE, err, "Invalid framebuffer attachment! Framebuffer attachments cannot be layered.");
 
       return;
@@ -457,7 +457,7 @@ void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_fra
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
    {
-      error err = { .general = ERR_ERROR };
+      error err = { .general = ERR_LEVEL_ERROR };
       err.extra = ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED;
 
       Util_Log(NULL, GRAPHICS_MODULE, err, "Texture failed to attach to framebuffer! Intended attachment slot: %u", attachment_slot);
@@ -486,7 +486,7 @@ uS GFX_PixelSize(u8 format)
       case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
       case GFX_TEXTUREFORMAT_SRGB_ALPHA:
          return 4;
-      
+
       case GFX_TEXTUREFORMAT_R_U16_NORM:
          return 2;
       case GFX_TEXTUREFORMAT_RG_U16_NORM:
@@ -495,7 +495,7 @@ uS GFX_PixelSize(u8 format)
          return 6;
       case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
          return 8;
-      
+
       case GFX_TEXTUREFORMAT_R_F16:
          return 2;
       case GFX_TEXTUREFORMAT_RG_F16:
@@ -504,7 +504,7 @@ uS GFX_PixelSize(u8 format)
          return 6;
       case GFX_TEXTUREFORMAT_RGBA_F16:
          return 8;
-      
+
       case GFX_TEXTUREFORMAT_R_F32:
          return 4;
       case GFX_TEXTUREFORMAT_RG_F32:
@@ -513,10 +513,10 @@ uS GFX_PixelSize(u8 format)
          return 12;
       case GFX_TEXTUREFORMAT_RGBA_F32:
          return 16;
-      
+
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
          return 4;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_16:
          return 2;
 
@@ -528,12 +528,12 @@ uS GFX_PixelSize(u8 format)
 
       case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
          return 4;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
          return 5;
-      
+
       // TODO: compressed formats
-      
+
       default:
          return 4;
    }
@@ -560,7 +560,7 @@ i32 GFX_TextureInternalFormat(u8 format)
          return GL_RG16;
       case GFX_TEXTUREFORMAT_RG_F32:
          return GL_RG32F;
-      
+
       case GFX_TEXTUREFORMAT_RGB_U8_NORM:
          return GL_RGB8;
       case GFX_TEXTUREFORMAT_RGB_U16_NORM:
@@ -569,7 +569,7 @@ i32 GFX_TextureInternalFormat(u8 format)
          return GL_RGB16;
       case GFX_TEXTUREFORMAT_RGB_F32:
          return GL_RGB32F;
-      
+
       case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
          return GL_RGBA8;
       case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
@@ -578,31 +578,31 @@ i32 GFX_TextureInternalFormat(u8 format)
          return GL_RGBA16;
       case GFX_TEXTUREFORMAT_RGBA_F32:
          return GL_RGBA32F;
-      
+
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
          return GL_R11F_G11F_B10F;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_16:
          return GL_DEPTH_COMPONENT16;
       case GFX_TEXTUREFORMAT_DEPTH_24:
          return GL_DEPTH_COMPONENT24;
       case GFX_TEXTUREFORMAT_DEPTH_F32:
          return GL_DEPTH_COMPONENT32F;
-         
+
 
       case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
          return GL_DEPTH24_STENCIL8;
       case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
          return GL_DEPTH32F_STENCIL8;
-      
+
       case GFX_TEXTUREFORMAT_SRGB:
          return GL_SRGB8;
-      
+
       case GFX_TEXTUREFORMAT_SRGB_ALPHA:
          return GL_SRGB8_ALPHA8;
 
       // TODO: compressed formats
-      
+
       default:
          return GL_RGBA8;
    }
@@ -623,7 +623,7 @@ u32 GFX_TexturePixelFormat(u8 format)
       case GFX_TEXTUREFORMAT_RG_F16:
       case GFX_TEXTUREFORMAT_RG_F32:
          return GL_RG;
-      
+
       case GFX_TEXTUREFORMAT_RGB_U8_NORM:
       case GFX_TEXTUREFORMAT_RGB_U16_NORM:
       case GFX_TEXTUREFORMAT_RGB_F16:
@@ -631,14 +631,14 @@ u32 GFX_TexturePixelFormat(u8 format)
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
       case GFX_TEXTUREFORMAT_SRGB:
          return GL_RGB;
-      
+
       case GFX_TEXTUREFORMAT_RGBA_U8_NORM:
       case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
       case GFX_TEXTUREFORMAT_RGBA_F16:
       case GFX_TEXTUREFORMAT_RGBA_F32:
       case GFX_TEXTUREFORMAT_SRGB_ALPHA:
          return GL_RGBA;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_16:
       case GFX_TEXTUREFORMAT_DEPTH_24:
       case GFX_TEXTUREFORMAT_DEPTH_F32:
@@ -649,7 +649,7 @@ u32 GFX_TexturePixelFormat(u8 format)
          return GL_DEPTH_STENCIL;
 
       // TODO: compressed formats
-      
+
       default:
          return GL_RGBA;
    }
@@ -666,28 +666,28 @@ u32 GFX_TextureFormatType(u8 format)
       case GFX_TEXTUREFORMAT_SRGB:
       case GFX_TEXTUREFORMAT_SRGB_ALPHA:
          return  GL_UNSIGNED_BYTE;
-      
+
       case GFX_TEXTUREFORMAT_R_U16_NORM:
       case GFX_TEXTUREFORMAT_RG_U16_NORM:
       case GFX_TEXTUREFORMAT_RGB_U16_NORM:
       case GFX_TEXTUREFORMAT_RGBA_U16_NORM:
          return GL_UNSIGNED_SHORT;
-      
+
       case GFX_TEXTUREFORMAT_R_F16:
       case GFX_TEXTUREFORMAT_RG_F16:
       case GFX_TEXTUREFORMAT_RGB_F16:
       case GFX_TEXTUREFORMAT_RGBA_F16:
          return GL_HALF_FLOAT;
-      
+
       case GFX_TEXTUREFORMAT_R_F32:
       case GFX_TEXTUREFORMAT_RG_F32:
       case GFX_TEXTUREFORMAT_RGB_F32:
       case GFX_TEXTUREFORMAT_RGBA_F32:
          return GL_FLOAT;
-      
+
       case GFX_TEXTUREFORMAT_R11F_G11F_B10F:
          return GL_UNSIGNED_INT;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_16:
          return GL_UNSIGNED_SHORT;
 
@@ -699,12 +699,12 @@ u32 GFX_TextureFormatType(u8 format)
 
       case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
          return GL_UNSIGNED_INT;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
          return GL_FLOAT;
-      
+
       // TODO: compressed formats
-      
+
       default:
          return GL_UNSIGNED_BYTE;
    }
@@ -716,16 +716,16 @@ u32 GFX_TextureType(u8 type)
    {
       case GFX_TEXTURETYPE_2D:
          return GL_TEXTURE_2D;
-      
+
       case GFX_TEXTURETYPE_3D:
          return GL_TEXTURE_3D;
-      
+
       case GFX_TEXTURETYPE_CUBEMAP:
          return GL_TEXTURE_CUBE_MAP;
-      
+
       case GFX_TEXTURETYPE_2D_ARRAY:
          return GL_TEXTURE_2D_ARRAY;
-      
+
       case GFX_TEXTURETYPE_CUBEMAP_ARRAY:
          return GL_TEXTURE_CUBE_MAP_ARRAY;
 
@@ -740,13 +740,13 @@ u32 GFX_TextureWrap(u8 wrap)
    {
       case GFX_TEXTUREWRAP_REPEAT:
          return GL_REPEAT;
-      
+
       case GFX_TEXTUREWRAP_REPEAT_MIRRORED:
          return  GL_MIRRORED_REPEAT;
-      
+
       case GFX_TEXTUREWRAP_CLAMP:
          return GL_CLAMP_TO_EDGE;
-      
+
       default:
          return GL_REPEAT;
    }
@@ -758,22 +758,22 @@ gfx_Filtering GFX_TextureFilter(u8 filter)
    {
       case GFX_TEXTUREFILTER_POINT_NO_MIPMAPS:
          return (gfx_Filtering){ GL_NEAREST, GL_NEAREST };
-      
+
       case GFX_TEXTUREFILTER_POINT_NEAREST_MIPMAPS:
          return (gfx_Filtering){ GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST };
-      
+
       case GFX_TEXTUREFILTER_POINT_LINEAR_MIPMAPS:
          return (gfx_Filtering){ GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST };
-      
+
       case GFX_TEXTUREFILTER_BILINEAR_NO_MIPMAPS:
          return (gfx_Filtering){ GL_LINEAR, GL_LINEAR };
-      
+
       case GFX_TEXTUREFILTER_BILINEAR_NEAREST_MIPMAPS:
          return (gfx_Filtering){ GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR };
-      
+
       case GFX_TEXTUREFILTER_BILINEAR_LINEAR_MIPMAPS:
          return (gfx_Filtering){ GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR };
-      
+
       case GFX_TEXTUREFILTER_POINT_MAX_BILINEAR_MIN:
          return (gfx_Filtering){ GL_LINEAR, GL_NEAREST };
 
@@ -786,7 +786,7 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update)
 {
    if (texture == NULL)
       return;
-   
+
    u32 gl_target = GFX_TextureType(texture->type);
    glBindTexture(gl_target, texture->id.tex);
 
@@ -811,12 +811,12 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update)
             glTexStorage3D(gl_target, (i32)texture->mipmap_count, internal_format, width, height, depth);
             GFX_CheckOpenGLError();
             break;
-         
+
          default:
             glTexStorage2D(gl_target, (i32)texture->mipmap_count, internal_format, width, height);
-         
+
       }
-      
+
    } else {
       bool is_cubemap = ((texture->type == GFX_TEXTURETYPE_CUBEMAP) || (texture->type == GFX_TEXTURETYPE_CUBEMAP_ARRAY));
       u32 face_count = is_cubemap ? 6 : 1;
@@ -842,14 +842,14 @@ void GFX_CreateTexture(gfx_Texture* texture, u8* data, bool is_update)
                   else
                      glTexSubImage3D(gl_face + face_i, mip_i, 0, 0, 0, mip_width, mip_height, mip_depth, pixel_format, format_type, data + offset);
                   break;
-               
+
                default:
                case GFX_TEXTURETYPE_2D:
                   if(!is_update)
                      glTexImage2D(gl_face + face_i, mip_i, internal_format, mip_width, mip_height, 0, pixel_format, format_type, data + offset);
                   else
                      glTexSubImage2D(gl_face + face_i, mip_i, 0, 0, mip_width, mip_height, pixel_format, format_type, data + offset);
-               
+
             }
 
             offset += pixel_size * (uS)(mip_width * mip_height * mip_depth);

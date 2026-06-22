@@ -63,7 +63,7 @@ void main()
 
 #ifdef SHADOW_CASTER
    vs_position *= 1.0 / u_near_far.y;
-   v2f_depth = dot(vs_position, vs_position);
+   v2f_depth = -vs_position.z;
 #endif
 
 }
@@ -104,7 +104,7 @@ struct Cluster
    vec4 extents;
    uvec4 light_count;
    uint indices[LIGHTS_PER_CLUSTER];
-   
+
 };
 
 struct PackedLight
@@ -138,6 +138,8 @@ struct SurfaceData
    vec3 surf_normal;
    float surf_roughness;
    float surf_metallic;
+
+   vec3 vertex_normal;
 
    vec3 position_vs;
    vec3 view;
@@ -217,7 +219,7 @@ LightData DecodeLightData(PackedLight packed_light)
    return light;
 }
 
-SurfaceData FillSurfaceData(vec2 screen_coord, vec3 surf_color, vec3 surf_normal, float surf_roughness, float surf_metallic, vec3 position_vs)
+SurfaceData FillSurfaceData(vec2 screen_coord, vec3 surf_color, vec3 surf_normal, vec3 vertex_normal, float surf_roughness, float surf_metallic, vec3 position_vs)
 {
    SurfaceData surf_data;
 
@@ -225,6 +227,8 @@ SurfaceData FillSurfaceData(vec2 screen_coord, vec3 surf_color, vec3 surf_normal
    surf_data.surf_normal = surf_normal;
    surf_data.surf_roughness = surf_roughness;
    surf_data.surf_metallic = surf_metallic;
+
+   surf_data.vertex_normal = vertex_normal;
 
    surf_data.position_vs = position_vs;
    surf_data.view = normalize(-position_vs);
@@ -255,7 +259,7 @@ float SpotAttenuation(vec3 light_dir, LightData light)
 
    float spot_dist = dot(light_dir, spot_dir) * 0.5 + 0.5;
    float softness = (1.0 - cos_half_angle) * light.spot_softness;
-   
+
    return smoothstep(cos_half_angle, cos_half_angle + softness, spot_dist);
 }
 
@@ -309,8 +313,8 @@ vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
    float attenuation = PointAttenution(light_position);
    attenuation *= SpotAttenuation(light_dir, light);
 
-   float shadow_spread = 0.2 / float(textureSize(tex_pointlight_shadows, 0).x);
-   float noise_spread = 1.5 * shadow_spread;
+   float shadow_spread = 1.0 / float(textureSize(tex_pointlight_shadows, 0).x);
+   float noise_spread = 0.8 * shadow_spread;
    if (light.shadow_id > -1)
    {
       vec3 surf_to_light = -(mat3(mat_invview) * light_position);
@@ -320,9 +324,9 @@ vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
 
       float ign = InterleavedGradientNoise(surf_data.screen_coord);
       vec3 ign_p = 0.5 + ign * 15.0 * p_3d;
-      
-      float bias = mix(0.16, 0.1, nDl * nDl);
-      float surf_depth = dot(surf_to_light, surf_to_light) - bias * bias;
+
+      surf_to_light += mat3(mat_invview) * surf_data.vertex_normal * 0.02;
+      float surf_depth = max(abs(surf_to_light.x), max(abs(surf_to_light.y), abs(surf_to_light.z)));
 
       const vec3 shadow_offsets[8] = vec3[](
          vec3( -1.0, -1.0, -1.0 ),
@@ -373,6 +377,7 @@ void main()
       gl_FragCoord.xy,
       color.rgb,
       NormalMapped(tex_normal, v2f_texcoord, v2f_tangent, v2f_bitangent, v2f_normal),
+      v2f_normal,
       texture(tex_roughness, v2f_texcoord).r,
       texture(tex_metallic, v2f_texcoord).r,
       v2f_position
@@ -380,8 +385,8 @@ void main()
 
    vec3 final_color = surf_data.surf_color * 0.0001;
 
-   vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy); 
-   uint z_id = uint((log(abs(surf_data.position_vs.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));   
+   vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy);
+   uint z_id = uint((log(abs(surf_data.position_vs.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));
    uvec3 tile = uvec3(gl_FragCoord.xy / tile_size, z_id);
    uint tile_id = (tile.y * u_cluster_dimensions.x) + (tile.z * u_cluster_dimensions.x * u_cluster_dimensions.y) + tile.x;
 
@@ -419,7 +424,7 @@ void main()
 #ifdef SHADOW_CASTER
    gl_FragDepth = v2f_depth;
 #endif
-   
+
 }
 
 #endif

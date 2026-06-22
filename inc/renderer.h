@@ -33,6 +33,7 @@ typedef union Drawable_t
 {
    u64 total_bits;
    u32 id;
+   handle res;
 
    struct {
       u16 handle;
@@ -83,7 +84,7 @@ typedef struct SurfaceDesc_t
    SurfacePass passes[SURF_MAX_PASSES];
    u32 pass_count;
    u8 texture_defaults[SURF_MAX_TEXTURES];
-   
+
 } SurfaceDesc;
 
 typedef struct SurfaceTexture_t
@@ -133,8 +134,8 @@ typedef struct DrawableTypeDesc_t
 typedef struct ShaderDefines_t
 {
    u32 define_count;
-   char* defines[LIGHTMANAGER_MAX_DEFINES];
-   
+   const char* defines[LIGHTMANAGER_MAX_DEFINES];
+
 } ShaderDefines;
 
 struct LightManagerInfo_t;
@@ -165,13 +166,13 @@ typedef struct GeometryDrawable_t
    Geometry geometry;
    color8 color;
    Transform3D transform;
-   
+
 } GeometryDrawable;
 
 Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
 
-Graphics* Renderer_Graphics(Renderer* renderer);
+Graphics* Renderer_GetGraphics(Renderer* renderer);
 void Renderer_PreRender(Renderer* renderer);
 void Renderer_RenderPass(Renderer* renderer, res2D size, f64 engine_frame_delta, u32 pass_id);
 
@@ -210,12 +211,16 @@ u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawab
 
 Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_name);
 void Renderer_RemoveDrawable(Renderer* renderer, Drawable res_drawable);
+void Renderer_EnableDrawable(Renderer* renderer, Drawable res_drawable);
+void Renderer_DisableDrawable(Renderer* renderer, Drawable res_drawable);
 
-void* Renderer_DrawableData(Renderer* renderer, Drawable res_drawable);
+// pointer to drawable data can be invalid when the drawable array gets reallocated!
+// best practice is to call one of these functions whenever you need to set or get drawable data.
+void* Renderer_GetDrawableData(Renderer* renderer, Drawable res_drawable);
 void* Renderer_GetDrawableDataFromIndex(Renderer* renderer, u16 drawable_type_idx, u16 drawable_idx);
 
-Buffer Renderer_CameraBuffer(Renderer* renderer);
-Buffer Renderer_ModelBuffer(Renderer* renderer);
+Buffer Renderer_GetCameraBuffer(Renderer* renderer);
+Buffer Renderer_GetModelBuffer(Renderer* renderer);
 
 void Renderer_SetUnlitShader(Renderer* renderer, Shader shader);
 void Renderer_SetBasicShader(Renderer* renderer, Shader shader);
@@ -230,8 +235,8 @@ Texture Renderer_GrayTexture(Renderer* renderer);
 Texture Renderer_BlackTexture(Renderer* renderer);
 Texture Renderer_NormalTexture(Renderer* renderer);
 
-void* Renderer_LightManager(Renderer* renderer);
 LightManagerInfo* Renderer_LightManagerInfo(Renderer* renderer);
+void* Renderer_GetLightManagerData(Renderer* renderer);
 void Renderer_SetLightManager(Renderer* renderer, LightManagerInfo lightmanager_info);
 bool Renderer_IsLightManagerValid(Renderer* renderer, const u64 desired_id);
 
@@ -240,7 +245,7 @@ Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, 
 Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute);
 Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path);
 
-void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings);
 void Renderer_SetSurfaceMaterialTexture(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture);
+void Renderer_SetSurfaceMaterialTextureAdvanced(SurfaceMaterial* material, i32 index, i32 bind_slot, Texture texture, TextureInterpolation interpolation_settings);
 
 #endif

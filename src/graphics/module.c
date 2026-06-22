@@ -1,6 +1,7 @@
 #include "util/types.h"
 #include "util/array.h"
 #include "util/files.h"
+#include "util/resource.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -33,6 +34,8 @@ Graphics* Graphics_Init(void)
    graphics->state.enable_color_clear = true;
    graphics->state.enable_depth_clear = true;
    graphics->state.enable_stencil_clear = false;
+   graphics->state.blend_mode = 7;
+   graphics->state.depth_mode = 7;
    graphics->clear_color.hex = 0;
 
    Graphics_SetClearColor(graphics, (color8){ 127, 127, 127, 255 });
@@ -51,7 +54,7 @@ void Graphics_Free(Graphics* graphics)
 {
    if (graphics == NULL)
       return;
-   
+
    for (u32 i=0; i<Util_ArrayLength(graphics->shaders); i++)
       Graphics_FreeShader(graphics, graphics->shaders[i].compare);
 
@@ -74,14 +77,14 @@ void Graphics_Free(Graphics* graphics)
    FREE_ARRAY(graphics->framebuffers);
 
    free(graphics);
-   
+
 }
 
 void Graphics_CheckErrors(Graphics* graphics)
 {
    if (graphics == NULL)
    {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_FATAL }, "Graphics module was never created or creation failed!");
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_LEVEL_FATAL }, "Graphics module was never created or creation failed!");
 
       return;
    }
@@ -121,7 +124,7 @@ void Graphics_EnableColorClear(Graphics* graphics, bool enable_color_clear)
       return;
 
    graphics->state.enable_color_clear = enable_color_clear;
-   
+
 }
 
 void Graphics_EnableDepthClear(Graphics* graphics, bool enable_depth_clear)
@@ -295,7 +298,7 @@ void Graphics_SetDepthMask(Graphics* graphics, bool depth_mask)
 
    if ((bool)graphics->state.depthmask_enable != depth_mask)
       glDepthMask((GLboolean)depth_mask);
-   
+
    graphics->state.depthmask_enable = depth_mask;
 
 }
@@ -308,7 +311,7 @@ void Graphics_Draw(Graphics* graphics, Shader res_shader, Geometry res_geometry,
 
 void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_geometry, u32 instance_count, UniformBlockList uniforms)
 {
-   if (graphics == NULL || res_shader.id == INVALID_HANDLE_ID || res_geometry.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->shaders, res_shader) || !Util_IsHandleValid(graphics->geometries, res_geometry))
       return;
 
    gfx_Shader shader = graphics->shaders[res_shader.handle];
@@ -318,7 +321,7 @@ void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_
    if (shader.is_compute)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_SHADER_WRONG_TYPE;
       err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE;
 
@@ -373,17 +376,17 @@ void GFX_CheckOpenGLError(void)
          case GL_STACK_UNDERFLOW:
             error_name = "STACK UNDERFLOW";
             break;
-         
+
          case GL_STACK_OVERFLOW:
             error_name = "STACK OVERFLOW";
             break;
-         
+
          default:
             error_name = "UNKNOWN ERROR";
 
       }
 
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_WARN }, "OpenGL Error [%s]", error_name);
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_LEVEL_WARN }, "OpenGL Error [%s]", error_name);
 
    }
 
@@ -395,13 +398,13 @@ u32 GFX_Primitive(u8 primitive_type)
    {
       case GFX_PRIMITIVE_POINT:
          return GL_POINTS;
-      
+
       case GFX_PRIMITIVE_LINE:
          return GL_LINES;
-      
+
       case GFX_PRIMITIVE_TRIANGLE:
          return GL_TRIANGLES;
-      
+
       default:
          return GL_TRIANGLES;
    }
@@ -429,7 +432,7 @@ u32 GFX_DrawMode(u8 draw_mode)
          return GL_STREAM_READ;
       case GFX_DRAWMODE_STREAM_COPY:
          return GL_STREAM_COPY;
-      
+
       default:
          return GL_DYNAMIC_DRAW;
    }

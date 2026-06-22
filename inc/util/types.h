@@ -65,14 +65,14 @@ typedef union color8_t
 } color8;
 
 enum {
-   ERR_OK = 0,
-   ERR_WARN,
-   ERR_ERROR,
-   ERR_FATAL
+   ERR_LEVEL_OK = 0,
+   ERR_LEVEL_WARN,
+   ERR_LEVEL_ERROR,
+   ERR_LEVEL_FATAL
 
 };
 
-#define ERR_EXTRA_NONE ERR_OK
+#define ERR_EXTRA_NONE ERR_LEVEL_OK
 
 typedef union error_t
 {
@@ -111,7 +111,7 @@ typedef union res2D_t
       i32 width, height;
 
    };
-   
+
    i32 arr[2];
 
 } res2D;

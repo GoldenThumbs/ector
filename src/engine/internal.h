@@ -35,6 +35,7 @@ typedef struct eng_EngineGlobal_t
       struct {
          u32 text_buffer[MAX_TEXTBUF];
          KeyState key_state[MAX_KEYS];
+
       } keyboard;
 
    } input;
@@ -43,24 +44,23 @@ typedef struct eng_EngineGlobal_t
    f64 up_time;
    f64 frame_delta;
    res2D frame_size;
+
 } eng_EngineGlobal;
 
 struct Engine_t
 {
    Module* modules;
 
-   uS engine_string_size;
-   char* engine_strings;
-
-   u32 window_title_ofs;
-   u32 app_name_ofs;
-   u32 app_path_ofs;
+   const char* app_name;
+   const char* app_path;
+   const char* window_title;
 
    union {
       u32 state;
 
       struct {
          u32 exit_requested: 1;
+         u32 is_fullscreen: 1;
 
       };
 

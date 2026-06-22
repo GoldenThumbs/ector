@@ -8,12 +8,12 @@ int main(int argc, char* argv[])
 {
    Engine* engine = Engine_Init(
       argc, argv,
-      &(EngineDesc){ .app_name = "Game", .window.title = "Game Window" }
+      &(EngineDesc){ .app_name = "Sample App", .window.title = "Ector Sample - Sample App" }
    );
 
    Engine_RegisterModule(engine, Module_Graphics());
 
-   Graphics* graphics = Engine_FetchModule(engine, "graphics");
+   Graphics* graphics = Engine_FetchModule(engine, GRAPHICS_MODULE);
    Graphics_SetClearColor(graphics, (color8){ 15, 15, 15, 255 });
 
    while(!Engine_CheckExitConditions(engine))
@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
       res2D size = Engine_GetFrameSize(engine);
       Graphics_Viewport(graphics, size);
       Graphics_Clear(graphics);
-      
+
       Engine_Present(engine);
    }
 

@@ -43,7 +43,7 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
 
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)
 {
-   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->buffers, res_buffer))
       return;
 
    gfx_Buffer* buffer = &graphics->buffers[res_buffer.handle];
@@ -66,12 +66,12 @@ void Graphics_UpdateBuffer(Graphics* graphics, Buffer res_buffer, void* data, u3
 void Graphics_UpdateBufferRange(Graphics* graphics, Buffer res_buffer, void* data, u32 offset, u32 length, uS type_size)
 {
    Graphics_UpdateBufferExplicit(graphics, res_buffer, data, (uS)offset * type_size, (uS)length * type_size);
-   
+
 }
 
 void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* data, uS offset_bytes, uS total_size)
 {
-   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->buffers, res_buffer))
       return;
 
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
@@ -79,15 +79,15 @@ void Graphics_UpdateBufferExplicit(Graphics* graphics, Buffer res_buffer, void* 
       return;
 
    u32 gl_target = GFX_BufferType(buffer.type);
-   
+
    glBindBuffer(gl_target, buffer.id.buf);
    glBufferSubData(gl_target, offset_bytes, total_size, data);
-   
+
 }
 
 void Graphics_BindBuffer(Graphics* graphics, Buffer res_buffer, u32 slot)
 {
-   if (graphics == NULL || res_buffer.id == INVALID_HANDLE_ID)
+   if (graphics == NULL || !Util_IsHandleValid(graphics->buffers, res_buffer))
       return;
 
    gfx_Buffer buffer = graphics->buffers[res_buffer.handle];
@@ -108,7 +108,7 @@ u32 GFX_BufferType(u8 buffer_type)
          return GL_UNIFORM_BUFFER;
       case GFX_BUFFERTYPE_STORAGE:
          return GL_SHADER_STORAGE_BUFFER;
-      
+
       default:
          return GL_UNIFORM_BUFFER;
    }
