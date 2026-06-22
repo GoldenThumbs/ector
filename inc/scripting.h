@@ -13,6 +13,7 @@ enum {
    ERR_SCRIPT_INVALID_HANDLE,
    ERR_SCRIPT_INVALID_FUNCTION_INPUT,
    ERR_SCRIPT_RUNTIME_ERROR
+
 };
 
 // script compile error flags
@@ -24,6 +25,7 @@ enum {
 #define ERR_FLAG_INPUT_NOT_VECTOR (1u << 2)
 #define ERR_FLAG_TOO_MANY_INPUTS (1u << 3)
 #define ERR_FLAG_INVALID_USER_DATA (1u << 4)
+#define ERR_FLAG_INDEX_WRONG_RANGE (1u << 5)
 
 enum {
    SCRP_VARIABLE_I32 = 0,

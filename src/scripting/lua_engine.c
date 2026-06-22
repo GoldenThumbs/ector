@@ -121,6 +121,7 @@ void SCRP_SetVectorFuncs(lua_State* script_state)
 {
    const struct luaL_Reg vector_funcs[] = {
       { "New", SCRP_NewVector },
+      { "Index", SCRP_IndexVector },
       { "Normalize", SCRP_NormalizeVector },
       { "Dot", SCRP_DotVector },
       { "NewQuat", SCRP_NewQuatVector },

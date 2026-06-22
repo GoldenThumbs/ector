@@ -21,7 +21,7 @@ static inline int SCRP_GetMousePosition(lua_State* script_state)
    vec4 result = { 0 };
    result.xy = Engine_GetMousePos(engine);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
@@ -35,7 +35,7 @@ static inline int SCRP_GetMouseDelta(lua_State* script_state)
    vec4 result = { 0 };
    result.xy = Engine_GetMouseDelta(engine);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }

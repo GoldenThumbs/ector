@@ -110,7 +110,7 @@ Script Scripting_LoadScriptFromFile(ScriptHandler* script_handler, const char* l
 
 void Scripting_FreeScript(ScriptHandler* script_handler, Script res_script)
 {
-   if (script_handler == NULL)
+   if (script_handler == NULL || !Util_IsHandleValid(script_handler->scripts, res_script))
       return;
 
    scrp_Script* script = &script_handler->scripts[res_script.handle];
@@ -127,7 +127,7 @@ void Scripting_FreeScript(ScriptHandler* script_handler, Script res_script)
 
 error Scripting_RunScript(ScriptHandler* script_handler, Script res_script)
 {
-   if (script_handler == NULL)
+   if (script_handler == NULL || !Util_IsHandleValid(script_handler->scripts, res_script))
       return (error){ .general = ERR_ERROR };
 
    scrp_Script script = script_handler->scripts[res_script.handle];
@@ -204,7 +204,7 @@ void Scripting_AddGlobalVariable(ScriptHandler* script_handler, const char* name
             return;
 
          vec4* ptr = (vec4*)value.data;
-         SCRP_PushVector(script_handler->script_state, *ptr);
+         SCRP_Util_PushVector(script_handler->script_state, *ptr);
 
       } break;
 
@@ -374,7 +374,7 @@ vec4 Scripting_GetVec4(void* script_state, LuaIndex index)
    if (script_state == NULL || lua_isnil(script_state, index))
       return (vec4){ 0 };
 
-   return SCRP_GetVector(script_state, index);
+   return SCRP_Util_GetVector(script_state, index);
 }
 
 const char* Scripting_GetString(void* script_state, LuaIndex index)
@@ -417,7 +417,7 @@ void Scripting_PushVec4(void* script_state, vec4 value)
    if (script_state == NULL)
       return;
 
-   SCRP_PushVector(script_state, value);
+   SCRP_Util_PushVector(script_state, value);
 
 }
 

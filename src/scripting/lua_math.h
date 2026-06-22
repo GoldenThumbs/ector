@@ -2,6 +2,7 @@
 #define WEB_LUA_MATH_H
 
 #include "util/types.h"
+#include "util/math.h"
 #include "util/vec4.h"
 #include "util/quaternion.h"
 #include "util/files.h"
@@ -15,7 +16,7 @@
 
 #define META_VECTOR_DATA "ECT_META_VECTOR"
 
-static inline bool SCRP_IsInputVector(lua_State* script_state, int index)
+static inline bool SCRP_Util_IsInputVector(lua_State* script_state, int index)
 {
    if (!lua_istable(script_state, index))
    {
@@ -32,7 +33,7 @@ static inline bool SCRP_IsInputVector(lua_State* script_state, int index)
    return true;
 }
 
-static inline void SCRP_PushVector(lua_State* script_state, vec4 vector)
+static inline void SCRP_Util_PushVector(lua_State* script_state, vec4 vector)
 {
    lua_newtable(script_state);
    lua_pushstring(script_state, META_VECTOR_DATA);
@@ -57,10 +58,10 @@ static inline void SCRP_PushVector(lua_State* script_state, vec4 vector)
 
 }
 
-static inline vec4 SCRP_GetVector(lua_State* script_state, int index)
+static inline vec4 SCRP_Util_GetVector(lua_State* script_state, int index)
 {
    vec4 result = { 0 };
-   if (!SCRP_IsInputVector(script_state, index))
+   if (!SCRP_Util_IsInputVector(script_state, index))
       return result;
 
    lua_getfield(script_state, index, "x");
@@ -102,7 +103,7 @@ static inline int SCRP_NewVector(lua_State* script_state)
 
    }
 
-   SCRP_PushVector(script_state, vector);
+   SCRP_Util_PushVector(script_state, vector);
 
    return 1;
 }
@@ -138,62 +139,84 @@ static inline int SCRP_AddVector(lua_State* script_state)
 {
    // Util_Log(NULL, SCRIPTING_MODULE, (error){ 0 }, "adding vectors");
 
-   vec4 a = SCRP_GetVector(script_state, 1);
-   vec4 b = SCRP_GetVector(script_state, 2);
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
    vec4 result = Util_AddVec4(a, b);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
 
 static inline int SCRP_SubVector(lua_State* script_state)
 {
-   vec4 a = SCRP_GetVector(script_state, 1);
-   vec4 b = SCRP_GetVector(script_state, 2);
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
    vec4 result = Util_SubVec4(a, b);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
 
 static inline int SCRP_MulVector(lua_State* script_state)
 {
-   vec4 a = SCRP_GetVector(script_state, 1);
-   vec4 b = SCRP_GetVector(script_state, 2);
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
    vec4 result = Util_MulVec4(a, b);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
 
 static inline int SCRP_DivVector(lua_State* script_state)
 {
-   vec4 a = SCRP_GetVector(script_state, 1);
-   vec4 b = SCRP_GetVector(script_state, 2);
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
    vec4 result = Util_DivVec4(a, b);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
+static inline int SCRP_IndexVector(lua_State* script_state)
+{
+   vec4 vector = SCRP_Util_GetVector(script_state, 1);
+   i32 index = (i32)luaL_checkinteger(script_state, 2);
+
+   if (index < 1 || index > 4)
+   {
+      error err = { 0 };
+      err.general = ERR_WARN;
+      err.extra = ERR_SCRIPT_INVALID_FUNCTION_INPUT;
+      err.flags |= ERR_FLAG_INDEX_WRONG_RANGE;
+
+      Util_Log(NULL, SCRIPTING_MODULE, err, "Index \"%i\" is out of range! Vector index range is 1 to 4. Clamping index to range...", index);
+      index = M_CLAMP(index, 1, 4);
+
+   }
+
+   lua_pushnumber(script_state, (lua_Number)vector.arr[index - 1]);
 
    return 1;
 }
 
 static inline int SCRP_NormalizeVector(lua_State* script_state)
 {
-   vec4 vector = SCRP_GetVector(script_state, 1);
+   vec4 vector = SCRP_Util_GetVector(script_state, 1);
    vec4 result = Util_NormalizeVec4(vector);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
 
 static inline int SCRP_DotVector(lua_State* script_state)
 {
-   vec4 a = SCRP_GetVector(script_state, 1);
-   vec4 b = SCRP_GetVector(script_state, 2);
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
    f32 result = Util_DotVec4(a, b);
 
    lua_pushnumber(script_state, (lua_Number)result);
@@ -203,33 +226,33 @@ static inline int SCRP_DotVector(lua_State* script_state)
 
 static inline int SCRP_NewQuatVector(lua_State* script_state)
 {
-   vec3 euler = SCRP_GetVector(script_state, 1).xyz;
+   vec3 euler = SCRP_Util_GetVector(script_state, 1).xyz;
    quat result = Util_MakeQuatEuler(euler);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
 
 static inline int SCRP_MulQuatVector(lua_State* script_state)
 {
-   vec4 a = SCRP_GetVector(script_state, 1);
-   vec4 b = SCRP_GetVector(script_state, 2);
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
    quat result = Util_MulQuat(a, b);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
 
 static inline int SCRP_RotateVector(lua_State* script_state)
 {
-   vec3 vector = SCRP_GetVector(script_state, 1).xyz;
-   quat rotation = SCRP_GetVector(script_state, 2);
+   vec3 vector = SCRP_Util_GetVector(script_state, 1).xyz;
+   quat rotation = SCRP_Util_GetVector(script_state, 2);
    vec4 result = { 0 };
    result.xyz = Util_RotatePoint(rotation, vector);
 
-   SCRP_PushVector(script_state, result);
+   SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
