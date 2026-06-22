@@ -24,7 +24,7 @@ ScriptHandler* Scripting_InitHandler(Engine* engine)
       return NULL;
 
    lua_State* script_state = luaL_newstate();
-   if (SCRP_RegisterEngine(script_state, engine).general != ERR_OK)
+   if (SCRP_RegisterEngine(script_state, engine).general != ERR_LEVEL_OK)
       return NULL;
 
    luaL_openlibs(script_state);
@@ -74,7 +74,7 @@ Script Scripting_CreateScriptFromCode(ScriptHandler* script_handler, const char*
    if (lua_err != 0)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_SCRIPT_LUA_COMPILE_FAILURE;
       err.flags |= (lua_err == LUA_ERRSYNTAX) ? ERR_FLAG_INVALID_SYNTAX : 0;
 
@@ -128,11 +128,11 @@ void Scripting_FreeScript(ScriptHandler* script_handler, Script res_script)
 error Scripting_RunScript(ScriptHandler* script_handler, Script res_script)
 {
    if (script_handler == NULL || !Util_IsHandleValid(script_handler->scripts, res_script))
-      return (error){ .general = ERR_ERROR };
+      return (error){ .general = ERR_LEVEL_ERROR };
 
    scrp_Script script = script_handler->scripts[res_script.handle];
    if (!SCRP_IsScriptValid(script, res_script))
-      return (error){ .general = ERR_ERROR };
+      return (error){ .general = ERR_LEVEL_ERROR };
 
    luaL_loadbuffer(
       script_handler->script_state,
@@ -145,7 +145,7 @@ error Scripting_RunScript(ScriptHandler* script_handler, Script res_script)
    if (lua_err != 0)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_SCRIPT_RUNTIME_ERROR;
 
       const char* err_string = lua_tostring(script_handler->script_state, -1);

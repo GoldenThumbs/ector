@@ -136,15 +136,15 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
       switch (err.general)
       {
          default:
-         case ERR_OK:
+         case ERR_LEVEL_OK:
          {
             stream_out = stdout;
 
          } break;
 
-         case ERR_WARN:
-         case ERR_ERROR:
-         case ERR_FATAL:
+         case ERR_LEVEL_WARN:
+         case ERR_LEVEL_ERROR:
+         case ERR_LEVEL_FATAL:
          {
             stream_out = stderr;
 
@@ -157,25 +157,25 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
    switch (err.general)
    {
       default:
-      case ERR_OK:
+      case ERR_LEVEL_OK:
       {
          fprintf(stream_out, "INFO [%s]: ", module_name);
 
       } break;
 
-      case ERR_WARN:
+      case ERR_LEVEL_WARN:
       {
          fprintf(stream_out, "WARNING [%s]: ", module_name);
 
       } break;
 
-      case ERR_ERROR:
+      case ERR_LEVEL_ERROR:
       {
          fprintf(stream_out, "ERROR [%s]: ", module_name);
 
       } break;
 
-      case ERR_FATAL:
+      case ERR_LEVEL_FATAL:
       {
          fprintf(stream_out, "FATAL ERROR [%s]: ", module_name);
 

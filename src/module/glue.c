@@ -75,18 +75,18 @@ error MOD_GraphicsInit(Module* self, Engine* engine)
 
    if (self->data == NULL)
    {
-      error res = { .general = ERR_FATAL };
+      error res = { .general = ERR_LEVEL_FATAL };
       res.flags = ERR_FLAG_GRAPHICS_FAILED;
       return res;
    }
-   return (error){ .general = ERR_OK };
+   return (error){ .general = ERR_LEVEL_OK };
 }
 
 error MOD_GraphicsFree(Module* self, Engine* engine)
 {
    Graphics_Free((Graphics*)self->data);
 
-   return (error){ .general = ERR_OK };
+   return (error){ .general = ERR_LEVEL_OK };
 }
 
 error MOD_RendererInit(Module* self, Engine* engine)
@@ -95,7 +95,7 @@ error MOD_RendererInit(Module* self, Engine* engine)
 
    if (graphics == NULL)
    {
-      error res = { .general = ERR_FATAL };
+      error res = { .general = ERR_LEVEL_FATAL };
       res.flags = ERR_FLAG_GRAPHICS_FAILED & ERR_FLAG_RENDERER_FAILED;
       return res;
    }
@@ -104,19 +104,19 @@ error MOD_RendererInit(Module* self, Engine* engine)
 
    if (self->data == NULL)
    {
-      error res = { .general = ERR_FATAL };
+      error res = { .general = ERR_LEVEL_FATAL };
       res.flags = ERR_FLAG_RENDERER_FAILED;
       return res;
    }
 
-   return (error){ .general = ERR_OK };
+   return (error){ .general = ERR_LEVEL_OK };
 }
 
 error MOD_RendererFree(Module* self, Engine* engine)
 {
    Renderer_Free((Renderer*)self->data);
 
-   return (error){ .general = ERR_OK };
+   return (error){ .general = ERR_LEVEL_OK };
 }
 
 error MOD_ScriptingInit(Module* self, Engine* engine)
@@ -125,16 +125,16 @@ error MOD_ScriptingInit(Module* self, Engine* engine)
 
    if (self->data == NULL)
    {
-      error res = { .general = ERR_FATAL };
+      error res = { .general = ERR_LEVEL_FATAL };
       res.flags = ERR_FLAG_SCRIPTING_FAILED;
       return res;
    }
-   return (error){ .general = ERR_OK };
+   return (error){ .general = ERR_LEVEL_OK };
 }
 
 error MOD_ScriptingFree(Module* self, Engine* engine)
 {
    Scripting_FreeHandler((ScriptHandler*)self->data);
 
-   return (error){ .general = ERR_OK };
+   return (error){ .general = ERR_LEVEL_OK };
 }

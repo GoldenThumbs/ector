@@ -21,7 +21,7 @@ static inline bool SCRP_Util_IsInputVector(lua_State* script_state, int index)
    if (!lua_istable(script_state, index))
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_SCRIPT_INVALID_FUNCTION_INPUT;
       err.flags |= ERR_FLAG_INPUT_NOT_VECTOR;
 
@@ -95,7 +95,7 @@ static inline int SCRP_NewVector(lua_State* script_state)
    if (inputs > 4)
    {
       error err = { 0 };
-      err.general = ERR_WARN;
+      err.general = ERR_LEVEL_WARN;
       err.extra = ERR_SCRIPT_INVALID_FUNCTION_INPUT;
       err.flags |= ERR_FLAG_TOO_MANY_INPUTS;
 
@@ -117,7 +117,7 @@ static inline int SCRP_NewVectorIndex(lua_State* script_state)
    if (string_size != 1 || !(key[0] == 'x' || key[0] == 'y' || key[0] == 'z' || key[0] == 'w'))
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_SCRIPT_INVALID_FUNCTION_INPUT;
       err.flags |= ERR_FLAG_INVALID_VECTOR_KEY;
 
@@ -189,7 +189,7 @@ static inline int SCRP_IndexVector(lua_State* script_state)
    if (index < 1 || index > 4)
    {
       error err = { 0 };
-      err.general = ERR_WARN;
+      err.general = ERR_LEVEL_WARN;
       err.extra = ERR_SCRIPT_INVALID_FUNCTION_INPUT;
       err.flags |= ERR_FLAG_INDEX_WRONG_RANGE;
 

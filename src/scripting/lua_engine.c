@@ -19,7 +19,7 @@ error SCRP_RegisterEngine(lua_State* script_state, Engine* engine)
 
    if (script_state == NULL)
    {
-      err.general = ERR_FATAL;
+      err.general = ERR_LEVEL_FATAL;
       err.extra = ERR_SCRIPT_LUA_INIT_FAILURE;
 
       Util_Log(NULL, SCRIPTING_MODULE, err, "Lua failed to initialize!");
@@ -29,7 +29,7 @@ error SCRP_RegisterEngine(lua_State* script_state, Engine* engine)
 
    if (engine == NULL)
    {
-      err.general = ERR_FATAL;
+      err.general = ERR_LEVEL_FATAL;
       err.extra = ERR_SCRIPT_NO_ENGINE;
 
       Util_Log(NULL, SCRIPTING_MODULE, err, "No Engine provided!");

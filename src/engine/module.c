@@ -35,7 +35,7 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
    if (!glfwInit())
    {
       error err = { 0 };
-      err.general = ERR_FATAL;
+      err.general = ERR_LEVEL_FATAL;
       err.extra = ERR_ENG_INIT_FAILED;
       err.flags |= ERR_FLAG_WINDOW_INIT_FAILED | ERR_FLAG_WINDOW_CREATION_FAILED;
 
@@ -57,7 +57,7 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
    if (window == NULL)
    {
       error err = { 0 };
-      err.general = ERR_FATAL;
+      err.general = ERR_LEVEL_FATAL;
       err.extra = ERR_ENG_INIT_FAILED;
       err.flags |= ERR_FLAG_WINDOW_CREATION_FAILED;
 
@@ -74,7 +74,7 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
    if (engine == NULL)
    {
       error err = { 0 };
-      err.general = ERR_FATAL;
+      err.general = ERR_LEVEL_FATAL;
       err.extra = ERR_ENG_INIT_FAILED;
       err.flags |= ERR_FLAG_ENGINE_ALLOC_FAILED;
 
@@ -132,9 +132,9 @@ void Engine_Free(Engine* engine)
          break;
 
       error err = module->mod_free(module, engine);
-      if (err.general != ERR_OK)
+      if (err.general != ERR_LEVEL_OK)
       {
-         bool is_fatal = (err.general == ERR_FATAL);
+         bool is_fatal = (err.general == ERR_LEVEL_FATAL);
          Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on free!%s", module->name, (is_fatal) ? "Error is fatal, engine aborting..." : "");
 
          if (is_fatal)
@@ -220,9 +220,9 @@ void Engine_RegisterModule(Engine* engine, Module module)
    Module* m = engine->modules + (uS)(Util_ArrayLength(engine->modules) - 1);
    error err = module.mod_init(m, engine);
 
-   if (err.general != ERR_OK)
+   if (err.general != ERR_LEVEL_OK)
    {
-      bool is_fatal = (err.general == ERR_FATAL);
+      bool is_fatal = (err.general == ERR_LEVEL_FATAL);
       Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on init!%s", module.name, (is_fatal) ? "Error is fatal, engine aborting..." : "");
 
       if (is_fatal)
