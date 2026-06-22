@@ -84,7 +84,7 @@ void Graphics_CheckErrors(Graphics* graphics)
 {
    if (graphics == NULL)
    {
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_FATAL }, "Graphics module was never created or creation failed!");
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_LEVEL_FATAL }, "Graphics module was never created or creation failed!");
 
       return;
    }
@@ -321,7 +321,7 @@ void Graphics_DrawInstanced(Graphics* graphics, Shader res_shader, Geometry res_
    if (shader.is_compute)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_SHADER_WRONG_TYPE;
       err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE;
 
@@ -386,7 +386,7 @@ void GFX_CheckOpenGLError(void)
 
       }
 
-      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_WARN }, "OpenGL Error [%s]", error_name);
+      Util_Log(NULL, GRAPHICS_MODULE, (error){ .general = ERR_LEVEL_WARN }, "OpenGL Error [%s]", error_name);
 
    }
 

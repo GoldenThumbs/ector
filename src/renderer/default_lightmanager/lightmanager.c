@@ -473,7 +473,7 @@ void LIGHTMAN_RemoveLight(Renderer* renderer, Drawable light_obj)
 error LIGHTMAN_InitFunc(Renderer* renderer)
 {
    if (renderer == NULL || Renderer_LightManagerInfo(renderer)->id != DEFAULTLIGHTMANAGER_ID)
-      return (error){ .general = ERR_ERROR };
+      return (error){ .general = ERR_LEVEL_ERROR };
 
    LightManagerInfo* lightmanager_info = Renderer_LightManagerInfo(renderer);
    lightmanager_info->data = DefaultLightManager_Init(renderer);
@@ -484,7 +484,7 @@ error LIGHTMAN_InitFunc(Renderer* renderer)
 error LIGHTMAN_FreeFunc(Renderer* renderer)
 {
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
-      return (error){ .general = ERR_ERROR };
+      return (error){ .general = ERR_LEVEL_ERROR };
 
    DefaultLightManager_Free(Renderer_GetLightManagerData(renderer));
 
@@ -494,7 +494,7 @@ error LIGHTMAN_FreeFunc(Renderer* renderer)
 error LIGHTMAN_PreRenderFunc(Renderer* renderer, u32 pass_id)
 {
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID))
-      return (error){ .general = ERR_ERROR };
+      return (error){ .general = ERR_LEVEL_ERROR };
 
    DefaultLightManager_PreRender(Renderer_GetLightManagerData(renderer), renderer);
 
@@ -504,7 +504,7 @@ error LIGHTMAN_PreRenderFunc(Renderer* renderer, u32 pass_id)
 error LIGHTMAN_OnRenderFunc(Renderer* renderer, u32 pass_id)
 {
    if (!Renderer_IsLightManagerValid(renderer, DEFAULTLIGHTMANAGER_ID) || pass_id == 1)
-      return (error){ .general = ERR_ERROR };
+      return (error){ .general = ERR_LEVEL_ERROR };
 
    DefaultLightManager_OnRender(Renderer_GetLightManagerData(renderer), renderer);
 

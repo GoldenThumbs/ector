@@ -15,7 +15,7 @@ typedef struct gfx_Shader_t
    struct {
       u16 is_compute: 1;
    };
-   
+
    u16 next_freed;
    handle compare;
 
@@ -31,7 +31,7 @@ typedef struct gfx_Buffer_t
       u32 type: 8;
       u32 draw_mode: 8;
    };
-   
+
    handle compare;
    u16 next_freed;
 
@@ -51,8 +51,8 @@ typedef struct gfx_Geometry_t
    u8 face_cull_mode: 4;
    u8 primitive: 7;
    u8 index_type: 1;
-   
-   
+
+
    u16 next_freed;
    handle compare;
 
@@ -70,7 +70,7 @@ typedef struct gfx_Texture_t
    u16 mipmap_count;
    u8 type;
    u8 format;
-   
+
    handle compare;
    u16 next_freed;
 
@@ -143,7 +143,7 @@ static inline bool GFX_IsDepthFormat(u8 texture_format)
    {
       default:
          break;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_16:
       case GFX_TEXTUREFORMAT_DEPTH_24:
       case GFX_TEXTUREFORMAT_DEPTH_F32:
@@ -162,7 +162,7 @@ static inline bool GFX_IsStencilFormat(u8 texture_format)
    {
       default:
          break;
-      
+
       case GFX_TEXTUREFORMAT_DEPTH_24_STENCIL_8:
       case GFX_TEXTUREFORMAT_DEPTH_F32_STENCIL_8:
          return true;
@@ -178,7 +178,7 @@ static inline bool GFX_CheckHandleIsValid(handle compare_handle, handle res_hand
       return true;
 
    error err = { 0 };
-   err.general = ERR_ERROR;
+   err.general = ERR_LEVEL_ERROR;
    err.extra = invalid_handle_error_code;
 
    Util_Log(NULL, GRAPHICS_MODULE, err, "Invalid handle! Handle ID: %u (%s)", res_handle.id, resource_type_name);

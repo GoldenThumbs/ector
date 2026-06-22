@@ -82,7 +82,7 @@ void* Util_CreateArrayOfLength(u32 length, uS type_size)
    Array* array = malloc(num_bytes);
    if (array == NULL)
       return NULL;
-   
+
    memset(array, 0, num_bytes);
 
    array->size = type_size;
@@ -110,7 +110,7 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
    if (tmp == NULL)
    {
-      array->err.general = ERR_ERROR;
+      array->err.general = ERR_LEVEL_ERROR;
       array->err.extra = ERR_ARRAY_REALLOC_FAILED;
 
       Util_Log(NULL, ARRAY_MODULE, array->err, "Realloc Failed!");
@@ -127,7 +127,7 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
    u8* ptr_end = (u8*)(*array_ptr) + offset;
    memset(ptr_end, 0, diff);
-   
+
 }
 
 void Util_InsertArrayIndex(void** array_ptr, u32 index)
@@ -145,7 +145,7 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
       Util_ReallocArray(array_ptr, length + 1u);
       array = ARRAY_HEADER(*array_ptr);
 
-      if (array->err.general == ERR_ERROR)
+      if (array->err.general == ERR_LEVEL_ERROR)
          return;
 
    }
@@ -178,7 +178,7 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 
    if (index >= length)
    {
-      array->err.general = ERR_WARN;
+      array->err.general = ERR_LEVEL_WARN;
       array->err.flags |= WARN_ARRAY_INDEX_OVER;
       index = length - 1u;
 
@@ -213,7 +213,7 @@ void Util_JoinArrays(void** array_ptr_a, void* ptr_b)
 
    if (array_a->size != array_b->size)
    {
-      array_a->err.general = ERR_WARN;
+      array_a->err.general = ERR_LEVEL_WARN;
       array_a->err.flags |= WARN_ARRAY_JOIN_SIZE_MISMATCH;
 
       Util_Log(NULL, ARRAY_MODULE, array_a->err, "Cannot Join Different Sized Arrays!\nThis Join Is Ignored.");
@@ -227,14 +227,14 @@ void Util_JoinArrays(void** array_ptr_a, void* ptr_b)
 
    array_a = ARRAY_HEADER(*array_ptr_a);
 
-   if (array_a->err.general == ERR_ERROR)
+   if (array_a->err.general == ERR_LEVEL_ERROR)
       return;
 
    u8* ptr_a = (u8*)(*array_ptr_a) + length_a;
 
    uS num_bytes = array_a->size * array_b->length;
    memcpy(ptr_a, ptr_b, num_bytes);
-   
+
 }
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index)
@@ -244,7 +244,7 @@ u32 Util_UsableArrayIndex(void* ptr, u32 index)
 
    Array* array = ARRAY_HEADER(ptr);
 
-   if (array->err.general == ERR_ERROR)
+   if (array->err.general == ERR_LEVEL_ERROR)
       return array->length;
 
    return ((index >= array->length) ? (array->length - 1u) : index);

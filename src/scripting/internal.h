@@ -39,7 +39,7 @@ static inline bool SCRP_IsScriptValid(scrp_Script script, Script res_script)
    if (script.compare.id != res_script.id)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_SCRIPT_INVALID_HANDLE;
 
       Util_Log(NULL, SCRIPTING_MODULE, err, "Invalid handle! Handle ID: %u", res_script.id);

@@ -72,7 +72,7 @@ enum {
 
 };
 
-#define ERR_EXTRA_NONE ERR_OK
+#define ERR_EXTRA_NONE ERR_LEVEL_OK
 
 typedef union error_t
 {

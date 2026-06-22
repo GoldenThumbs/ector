@@ -250,7 +250,7 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, res2D size, bool dept
    // if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
    // {
    //    error err = { 0 };
-   //    err.general = ERR_ERROR;
+   //    err.general = ERR_LEVEL_ERROR;
    //    err.extra = ERR_GFX_FRAMEBUFFER_IS_INCOMPLETE;
 
    //    Util_Log(NULL, GRAPHICS_MODULE, err, "Framebuffer is incomplete!");
@@ -276,7 +276,7 @@ void Graphics_ReuseFramebuffer(Graphics* graphics, res2D size, bool depthstencil
    if (framebuffer.compare.ref != res_framebuffer.ref)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_FRAMEBUFFER_INVALID_HANDLE;
 
       Util_Log(NULL, GRAPHICS_MODULE, err, "Invalid handle! Handle ID: %u (Framebuffer)", res_framebuffer.id);
@@ -420,7 +420,7 @@ void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_fra
 
    if (is_layered)
    {
-      error err = { .general = ERR_ERROR };
+      error err = { .general = ERR_LEVEL_ERROR };
       err.extra = ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED;
       err.flags |= ERR_FLAG_ATTEMPTED_LAYERED_ATTACHMENT;
 
@@ -457,7 +457,7 @@ void Graphics_AttachTextureToFramebuffer(Graphics* graphics, Framebuffer res_fra
 
    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
    {
-      error err = { .general = ERR_ERROR };
+      error err = { .general = ERR_LEVEL_ERROR };
       err.extra = ERR_GFX_FRAMEBUFFER_ATTACHMENT_FAILED;
 
       Util_Log(NULL, GRAPHICS_MODULE, err, "Texture failed to attach to framebuffer! Intended attachment slot: %u", attachment_slot);

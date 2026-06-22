@@ -39,7 +39,7 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
 
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
       err.flags |= ERR_FLAG_SHADER_WAS_NOT_COMPUTE | ERR_FLAG_BAD_SHADER_CODE;
 
@@ -83,7 +83,7 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
       glGetProgramInfoLog(shd_id, sizeof(shd_log), NULL, shd_log);
 
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
       err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE | ERR_FLAG_BAD_SHADER_CODE;
 
@@ -124,7 +124,7 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
       if (res_shader.id == INVALID_HANDLE_ID)
       {
 
-         err.general = ERR_WARN;
+         err.general = ERR_LEVEL_WARN;
          err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
          err.flags |= ERR_FLAG_SHADER_WAS_COMPUTE;
 
@@ -140,7 +140,7 @@ Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, co
 
       if (res_shader.id == INVALID_HANDLE_ID)
       {
-         err.general = ERR_WARN;
+         err.general = ERR_LEVEL_WARN;
          err.extra = ERR_GFX_SHADER_COMPILATION_FAILED;
          err.flags |= ERR_FLAG_SHADER_WAS_NOT_COMPUTE;
 
@@ -186,7 +186,7 @@ void Graphics_Dispatch(Graphics* graphics, Shader res_shader, u32 size_x, u32 si
    if (!shader.is_compute)
    {
       error err = { 0 };
-      err.general = ERR_ERROR;
+      err.general = ERR_LEVEL_ERROR;
       err.extra = ERR_GFX_SHADER_WRONG_TYPE;
       err.flags |= ERR_FLAG_SHADER_WAS_NOT_COMPUTE;
 
