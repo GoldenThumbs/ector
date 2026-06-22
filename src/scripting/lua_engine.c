@@ -124,6 +124,7 @@ void SCRP_SetVectorFuncs(lua_State* script_state)
       { "New", SCRP_NewVector },
       { "Index", SCRP_IndexVector },
       { "Normalize", SCRP_NormalizeVector },
+      { "Cross", SCRP_CrossVector },
       { "Dot", SCRP_DotVector },
       { "NewQuat", SCRP_NewQuatVector },
       { "Rotate", SCRP_RotateVector },

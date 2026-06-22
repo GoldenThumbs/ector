@@ -223,6 +223,18 @@ static inline int SCRP_NormalizeVector(lua_State* script_state)
    return 1;
 }
 
+static inline int SCRP_CrossVector(lua_State* script_state)
+{
+   vec3 a = SCRP_Util_GetVector(script_state, 1).xyz;
+   vec3 b = SCRP_Util_GetVector(script_state, 2).xyz;
+   vec4 result = { 0 };
+   result.xyz = Util_CrossVec3(a, b);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
 static inline int SCRP_DotVector(lua_State* script_state)
 {
    vec4 a = SCRP_Util_GetVector(script_state, 1);
