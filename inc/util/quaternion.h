@@ -113,7 +113,7 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
 static inline vec3 Util_RotatePoint(quat rotation, vec3 point)
 {
    quat p = Util_FillVec4_XYZ_W(point, 0);
-   quat inv_rot = Util_FillVec4_XYZ_W(rotation.xyz, -rotation.w);
+   quat inv_rot = Util_FillVec4_XYZ_W(Util_ScaleVec3(rotation.xyz, -1), rotation.w);
 
    return Util_MulQuat(inv_rot, Util_MulQuat(p, rotation)).xyz;
 }
