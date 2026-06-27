@@ -54,11 +54,11 @@ error SCRP_RegisterEngine(lua_State* script_state, Engine* engine)
    lua_pushlightuserdata(script_state, engine);
    lua_settable(script_state, LUA_REGISTRYINDEX);
 
-   SCRP_RegisterMetaVector(script_state);
+   // SCRP_RegisterMetaVector(script_state);
 
    lua_newtable(script_state);
 
-   SCRP_SetVectorFuncs(script_state);
+   SCRP_AddVectorClass(script_state);
    SCRP_SetInput(script_state);
    luaL_setfuncs(script_state, engine_funcs, 0);
 
@@ -99,28 +99,15 @@ void SCRP_SetInput(lua_State* script_state)
 
 }
 
-void SCRP_RegisterMetaVector(lua_State* script_state)
+void SCRP_AddVectorClass(lua_State* script_state)
 {
-   const struct luaL_Reg vector_meta_funcs[] = {
+   const struct luaL_Reg vector_funcs[] = {
       { "__newindex", SCRP_NewVectorIndex },
       { "__add", SCRP_AddVector },
       { "__sub", SCRP_SubVector },
       { "__mul", SCRP_MulVector },
       { "__div", SCRP_DivVector },
       { "__len", SCRP_LengthOfVector },
-      { NULL, NULL }
-   };
-
-   lua_pushstring(script_state, META_VECTOR_DATA);
-   lua_newtable(script_state);
-   luaL_setfuncs(script_state, vector_meta_funcs, 0);
-   lua_settable(script_state, LUA_REGISTRYINDEX);
-
-}
-
-void SCRP_SetVectorFuncs(lua_State* script_state)
-{
-   const struct luaL_Reg vector_funcs[] = {
       { "New", SCRP_NewVector },
       { "Index", SCRP_IndexVector },
       { "Normalize", SCRP_NormalizeVector },
@@ -134,6 +121,9 @@ void SCRP_SetVectorFuncs(lua_State* script_state)
 
    lua_pushstring(script_state, "Vector");
    lua_newtable(script_state);
+   lua_pushnil(script_state);
+   lua_copy(script_state, -2, -1);
+   lua_setfield(script_state, -2, "__index");
    luaL_setfuncs(script_state, vector_funcs, 0);
    lua_rawset(script_state, -3);
 

@@ -36,26 +36,17 @@ static inline bool SCRP_Util_IsInputVector(lua_State* script_state, int index)
 
 static inline void SCRP_Util_PushVector(lua_State* script_state, vec4 vector)
 {
-   lua_newtable(script_state);
-   lua_pushstring(script_state, META_VECTOR_DATA);
-   lua_gettable(script_state, LUA_REGISTRYINDEX);
-   lua_setmetatable(script_state, -2);
+   lua_getglobal(script_state, "Ector");
+   lua_getfield(script_state, -1, "Vector");
+   lua_getfield(script_state, -1, "New");
 
-   lua_pushstring(script_state, "x");
+   lua_getfield(script_state, -3, "Vector");
    lua_pushnumber(script_state, (lua_Number)vector.x);
-   lua_rawset(script_state, -3);
-
-   lua_pushstring(script_state, "y");
    lua_pushnumber(script_state, (lua_Number)vector.y);
-   lua_rawset(script_state, -3);
-
-   lua_pushstring(script_state, "z");
    lua_pushnumber(script_state, (lua_Number)vector.z);
-   lua_rawset(script_state, -3);
-
-   lua_pushstring(script_state, "w");
    lua_pushnumber(script_state, (lua_Number)vector.w);
-   lua_rawset(script_state, -3);
+
+   lua_pcall(script_state, 5, 1, 0);
 
 }
 
@@ -84,16 +75,39 @@ static inline vec4 SCRP_Util_GetVector(lua_State* script_state, int index)
    return result;
 }
 
+
+static inline void SCRP_Util_SetVectorComponents(lua_State* script_state, vec4 vector)
+{
+   lua_newtable(script_state);
+
+   lua_pushstring(script_state, "x");
+   lua_pushnumber(script_state, (lua_Number)vector.x);
+   lua_rawset(script_state, -3);
+
+   lua_pushstring(script_state, "y");
+   lua_pushnumber(script_state, (lua_Number)vector.y);
+   lua_rawset(script_state, -3);
+
+   lua_pushstring(script_state, "z");
+   lua_pushnumber(script_state, (lua_Number)vector.z);
+   lua_rawset(script_state, -3);
+
+   lua_pushstring(script_state, "w");
+   lua_pushnumber(script_state, (lua_Number)vector.w);
+   lua_rawset(script_state, -3);
+
+}
+
 static inline int SCRP_NewVector(lua_State* script_state)
 {
    vec4 vector = { 0 };
-   vector.x = (f32)luaL_optnumber(script_state, 1, 0.0);
-   vector.y = (f32)luaL_optnumber(script_state, 2, 0.0);
-   vector.z = (f32)luaL_optnumber(script_state, 3, 0.0);
-   vector.w = (f32)luaL_optnumber(script_state, 4, 0.0);
+   vector.x = (f32)luaL_optnumber(script_state, 2, 0.0);
+   vector.y = (f32)luaL_optnumber(script_state, 3, 0.0);
+   vector.z = (f32)luaL_optnumber(script_state, 4, 0.0);
+   vector.w = (f32)luaL_optnumber(script_state, 5, 0.0);
 
    i32 inputs = (i32)lua_gettop(script_state);
-   if (inputs > 4)
+   if (inputs > 5)
    {
       error err = { 0 };
       err.general = ERR_LEVEL_WARN;
@@ -104,7 +118,11 @@ static inline int SCRP_NewVector(lua_State* script_state)
 
    }
 
-   SCRP_Util_PushVector(script_state, vector);
+   SCRP_Util_SetVectorComponents(script_state, vector);
+
+   lua_pushnil(script_state);
+   lua_copy(script_state, 1, -1);
+   lua_setmetatable(script_state, -2);
 
    return 1;
 }
@@ -136,12 +154,26 @@ static inline int SCRP_NewVectorIndex(lua_State* script_state)
    return 0;
 }
 
+static inline vec4 SCRP_VectorOrScalar(lua_State* script_state, int index)
+{
+   vec4 result = { 0 };
+   if (lua_isnumber(script_state, index))
+   {
+      f32 value = lua_tonumber(script_state, index);
+      result = Util_FillVec4(value);
+
+   } else {
+      result = SCRP_Util_GetVector(script_state, index);
+
+   }
+
+   return result;
+}
+
 static inline int SCRP_AddVector(lua_State* script_state)
 {
-   // Util_Log(NULL, SCRIPTING_MODULE, (error){ 0 }, "adding vectors");
-
    vec4 a = SCRP_Util_GetVector(script_state, 1);
-   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   vec4 b = SCRP_VectorOrScalar(script_state, 2);
    vec4 result = Util_AddVec4(a, b);
 
    SCRP_Util_PushVector(script_state, result);
@@ -152,7 +184,7 @@ static inline int SCRP_AddVector(lua_State* script_state)
 static inline int SCRP_SubVector(lua_State* script_state)
 {
    vec4 a = SCRP_Util_GetVector(script_state, 1);
-   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   vec4 b = SCRP_VectorOrScalar(script_state, 2);
    vec4 result = Util_SubVec4(a, b);
 
    SCRP_Util_PushVector(script_state, result);
@@ -163,7 +195,7 @@ static inline int SCRP_SubVector(lua_State* script_state)
 static inline int SCRP_MulVector(lua_State* script_state)
 {
    vec4 a = SCRP_Util_GetVector(script_state, 1);
-   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   vec4 b = SCRP_VectorOrScalar(script_state, 2);
    vec4 result = Util_MulVec4(a, b);
 
    SCRP_Util_PushVector(script_state, result);
@@ -174,7 +206,7 @@ static inline int SCRP_MulVector(lua_State* script_state)
 static inline int SCRP_DivVector(lua_State* script_state)
 {
    vec4 a = SCRP_Util_GetVector(script_state, 1);
-   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   vec4 b = SCRP_VectorOrScalar(script_state, 2);
    vec4 result = Util_DivVec4(a, b);
 
    SCRP_Util_PushVector(script_state, result);
@@ -249,28 +281,17 @@ static inline int SCRP_DotVector(lua_State* script_state)
 
 static inline int SCRP_NewQuatVector(lua_State* script_state)
 {
-   vec3 vector = SCRP_Util_GetVector(script_state, 1).xyz;
+   vec3 vector = SCRP_Util_GetVector(script_state, 2).xyz;
    quat result = { 0 };
 
    i32 inputs = (i32)lua_gettop(script_state);
-   if (inputs > 1 && lua_isnumber(script_state, 2))
+   if (inputs > 2 && lua_isnumber(script_state, 3))
    {
-      f32 angle = (f32)lua_tonumber(script_state, 2);
+      f32 angle = (f32)lua_tonumber(script_state, 3);
       result = Util_MakeQuat(vector, angle);
 
    } else
       result = Util_MakeQuatEuler(vector);
-
-   SCRP_Util_PushVector(script_state, result);
-
-   return 1;
-}
-
-static inline int SCRP_MulQuatVector(lua_State* script_state)
-{
-   vec4 a = SCRP_Util_GetVector(script_state, 1);
-   vec4 b = SCRP_Util_GetVector(script_state, 2);
-   quat result = Util_MulQuat(a, b);
 
    SCRP_Util_PushVector(script_state, result);
 
@@ -289,7 +310,17 @@ static inline int SCRP_RotateVector(lua_State* script_state)
    return 1;
 }
 
-void SCRP_RegisterMetaVector(lua_State* script_state);
-void SCRP_SetVectorFuncs(lua_State* script_state);
+static inline int SCRP_MulQuatVector(lua_State* script_state)
+{
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   quat result = Util_MulQuat(a, b);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
+void SCRP_AddVectorClass(lua_State* script_state);
 
 #endif
