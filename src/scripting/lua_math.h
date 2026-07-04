@@ -39,8 +39,8 @@ static inline void SCRP_Util_PushVector(lua_State* script_state, vec4 vector)
    lua_getglobal(script_state, "Ector");
    lua_getfield(script_state, -1, "Vector");
    lua_getfield(script_state, -1, "New");
+   lua_replace(script_state, -3);
 
-   lua_getfield(script_state, -3, "Vector");
    lua_pushnumber(script_state, (lua_Number)vector.x);
    lua_pushnumber(script_state, (lua_Number)vector.y);
    lua_pushnumber(script_state, (lua_Number)vector.z);
