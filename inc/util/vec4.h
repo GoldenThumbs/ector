@@ -8,7 +8,7 @@
 
 static inline vec4 Util_FillVec4(f32 scalar)
 {
-   return VEC4(scalar, scalar);
+   return VEC4(scalar, scalar, scalar, scalar);
 }
 
 static inline f32 Util_MinElmVec4(vec4 vector)
