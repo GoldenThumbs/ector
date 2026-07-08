@@ -522,15 +522,24 @@ Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path)
       return (Model){ 0 };
 
    char* file_path = Util_MakeFilePath(renderer->app_path, model_file_path);
+   char* mat_path = Util_ReplaceFileExtension(file_path, ".mat");
    memblob file_data = Util_LoadFileIntoMemory(file_path, true);
+   memblob mat_data = Util_LoadFileIntoMemory(mat_path, false);
 
    Model model = Mesh_LoadEctorModel(file_data);
+   Mesh_ParseEctorMaterials(mat_data, &model);
 
    if (file_data.data != NULL)
       free(file_data.data);
 
    if (file_path != NULL)
       free(file_path);
+
+   if (mat_path != NULL)
+      free(mat_path);
+
+   if (mat_data.data != NULL)
+      free(mat_data.data);
 
    return model;
 }

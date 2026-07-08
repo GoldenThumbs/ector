@@ -1,3 +1,5 @@
+#include "util/array.h"
+#include "util/files.h"
 #include "util/types.h"
 #include "util/extra_types.h"
 
@@ -6,6 +8,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 void Model_Free(Model* model)
 {
@@ -31,6 +34,31 @@ void Model_Free(Model* model)
 
    if (model->materials != NULL)
    {
+      for (u32 material_i = 0; material_i < model->material_count; material_i++)
+      {
+         Material material = model->materials[material_i];
+         if (material.name != NULL)
+            free((char*)material.name);
+
+         if (material.surface_name != NULL)
+            free((char*)material.surface_name);
+
+         for (u32 tex_i = 0; tex_i < MATERIAL_MAX_TEXTURES; tex_i++)
+         {
+            if (material.texture_strings[tex_i] != NULL)
+               free((char*)material.texture_strings[tex_i]);
+
+         }
+
+         for (u32 param_i = 0; param_i < MATERIAL_MAX_PARAMS; param_i++)
+         {
+            if (material.parameter[param_i].key != NULL)
+               free((char*)material.parameter[param_i].key);
+
+         }
+
+      }
+
       free(model->materials);
       model->materials = NULL;
 
@@ -154,6 +182,299 @@ Model Mesh_LoadEctorModel(memblob memory)
    }
 
    return model;
+}
+
+void Mesh_ParseEctorMaterials(memblob memory, Model* inout_model)
+{
+   if (memory.data == NULL || memory.size == 0 || inout_model == NULL)
+      return;
+
+   uS char_offset = 0;
+   u32 material_count = 0;
+   while (true)
+   {
+      Material material = MSH_ParseNextMaterial(memory, &char_offset);
+      if (material.name == NULL)
+         break;
+
+      u32 index = material_count;
+      material_count++;
+      Material* tmp = realloc(inout_model->materials, material_count * sizeof(Material));
+      if (tmp == NULL)
+         break;
+
+      inout_model->materials = tmp;
+      inout_model->materials[index] = material;
+
+   }
+
+}
+
+Material MSH_ParseNextMaterial(memblob memory, uS* char_offset)
+{
+   if (memory.data == NULL || memory.size == 0 || char_offset == NULL)
+      return (Material){ .name = NULL };
+
+   char* read_head = (char*)memory.data + (*char_offset);
+   uS read_size = memory.size - (*char_offset);
+
+   uS buffer_size = 0;
+   MSH_MatToken* tokens = MSH_TokenizeMaterial((memblob){ read_head, read_size }, &buffer_size);
+
+   if (tokens == NULL || Util_ArrayLength(tokens) == 0)
+   {
+      FREE_ARRAY(tokens);
+
+      return (Material){ .name = NULL };
+   }
+
+   (*char_offset) += buffer_size;
+
+   bool in_material = false;
+   bool in_id = false;
+   bool in_surf = false;
+   bool in_tex = false;
+   bool in_param = false;
+
+   u32 arg_count = 0;
+   u32 param_count = 0;
+   bool param_is_float = false;
+   i32 tex_slot = 0;
+
+   Material material = { .name = NULL };
+
+   for (u32 token_i = 0; token_i < Util_ArrayLength(tokens); token_i++)
+   {
+      MSH_MatToken token = tokens[token_i];
+
+      if (token.token_type == MSH_MATTOK_INVALID)
+      {
+         Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_ERROR }, "Encountered invalid token! Material parsing failed.");
+
+         break;
+      }
+
+      bool mat_scope = in_material && !in_id && !in_surf && !in_tex && !in_param;
+
+      switch (token.token_type)
+      {
+         case MSH_MATTOK_VALID_STRING: {
+            if (!in_material)
+               material.name = MSH_CopyTokenString(token);
+            else {
+               if (in_id)
+               {
+                  if (arg_count >= 1)
+                     Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Material 'id' only takes 1 argument!");
+
+               }
+
+               if (in_surf)
+               {
+                  if (arg_count >= 1)
+                     Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Material 'surf' only takes 1 argument!");
+                  else
+                     material.surface_name = MSH_CopyTokenString(token);
+
+               }
+
+               if (in_tex)
+               {
+                  if (arg_count >= 2)
+                     Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Material 'tex' only takes 2 arguments!");
+                  else {
+                     if (arg_count == 0)
+                     {
+                        token.token_start[token.token_size] = 0;
+                        tex_slot = strtol(token.token_start, NULL, 10);
+
+                     } else
+                        material.texture_strings[tex_slot] = MSH_CopyTokenString(token);
+
+                  }
+
+               }
+
+               if (in_param)
+               {
+                  if (arg_count >= 6)
+                     Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Material 'param' only takes up to 6 arguments!");
+                  else {
+                     if (arg_count == 0)
+                        material.parameter[param_count].key = MSH_CopyTokenString(token);
+                     else if (arg_count == 1)
+                        param_is_float = (token.token_start[0] == 'f');
+                     else {
+                        u32 param_idx = M_CLAMP(arg_count - 2, 0, 3);
+
+                        token.token_start[token.token_size] = 0;
+                        if (param_is_float)
+                           material.parameter[param_count].value.as_f32[param_idx] = strtof(token.token_start, NULL);
+                        else
+                           material.parameter[param_count].value.as_i32[param_idx] = strtol(token.token_start, NULL, 10);
+
+                     }
+
+                  }
+
+               }
+
+               arg_count++;
+
+               if (mat_scope)
+               {
+                  if (strncmp(token.token_start, "id", token.token_size) == 0)
+                     in_id = true;
+                  else if (strncmp(token.token_start, "surf", token.token_size) == 0)
+                     in_surf = true;
+                  else if (strncmp(token.token_start, "tex", token.token_size) == 0)
+                     in_tex = true;
+                  else if (strncmp(token.token_start, "param", token.token_size) == 0)
+                     in_param = true;
+                  else
+                     Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Unrecognized keyword \"%.*s\"", (i32)token.token_size, token.token_start);
+
+                  arg_count = 0;
+
+               }
+
+            }
+
+         } break;
+
+         case MSH_MATTOK_END_LINE: {
+            if (in_param)
+               param_count++;
+
+            in_id = false;
+            in_surf = false;
+            in_tex = false;
+            in_param = false;
+
+         } break;
+
+         case MSH_MATTOK_START: {
+            if (in_material)
+               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Materials cannot nest!");
+            else
+               in_material = true;
+
+         } break;
+
+         case MSH_MATTOK_STOP: {
+            if (!in_material)
+               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Materials cannot nest!");
+            else
+               in_material = false;
+
+         } break;
+
+         default:
+            break;
+      }
+
+   }
+
+   FREE_ARRAY(tokens);
+
+   return material;
+}
+
+MSH_MatToken* MSH_TokenizeMaterial(memblob memory, uS* out_buffer_size)
+{
+   if (memory.data == NULL || memory.size == 0)
+      return NULL;
+
+   (*out_buffer_size) = 0;
+
+   char* read_head = (char*)memory.data;
+   MSH_MatToken* tokens = NEW_ARRAY(MSH_MatToken);
+   uS space_count = 0;
+
+   MSH_MatToken new_token = { .token_start = NULL };
+   while ((*out_buffer_size) < memory.size)
+   {
+      char* prev_head = read_head;
+      char head = (*prev_head);
+      read_head++;
+      (*out_buffer_size)++;
+
+      MSH_MatTokenType token_type = MSH_MATTOK_INVALID;
+      u32 token_size = new_token.token_size;
+
+      if (isspace(head) || iscntrl(head))
+      {
+         space_count++;
+
+         continue;
+      }
+
+      bool is_seperator = (head == '=' || head == ',');
+
+      if (!is_seperator && (isalnum(head) || ispunct(head)) && head != '{' && head != '}')
+      {
+         token_type = MSH_MATTOK_VALID_STRING;
+         token_size++;
+
+         if (new_token.token_type != token_type)
+            space_count = 0;
+
+      }
+
+      switch (head)
+      {
+         case ';': {
+            token_type = MSH_MATTOK_END_LINE;
+            token_size = 1;
+
+         } break;
+
+         case '{': {
+            token_type = MSH_MATTOK_START;
+            token_size = 1;
+
+         } break;
+
+         case '}': {
+            token_type = MSH_MATTOK_STOP;
+            token_size = 1;
+
+         } break;
+
+         default:
+            break;
+      }
+
+      if (new_token.token_type == MSH_MATTOK_VALID_STRING && token_type != new_token.token_type)
+         ADD_BACK_ARRAY(tokens, new_token);
+
+      if (token_type != MSH_MATTOK_VALID_STRING)
+      {
+         new_token.token_type = token_type;
+         new_token.token_size = token_size;
+         new_token.token_start = prev_head;
+
+         if (!is_seperator)
+            ADD_BACK_ARRAY(tokens, new_token);
+
+         new_token.token_size = 0;
+
+         if (token_type == MSH_MATTOK_STOP)
+            break;
+
+      } else {
+         if (new_token.token_type != token_type)
+            new_token.token_start = prev_head;
+
+         new_token.token_type = token_type;
+         new_token.token_size = token_size + space_count;
+         space_count = 0;
+
+      }
+
+   }
+
+   return tokens;
 }
 
 Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)

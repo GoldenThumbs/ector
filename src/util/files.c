@@ -7,6 +7,29 @@
 #include <stdlib.h>
 #include <string.h>
 
+char* Util_ReplaceFileExtension(const char* file_path, const char* extension)
+{
+   if (file_path == NULL || extension == NULL)
+      return NULL;
+
+   i32 path_length = (i32)strnlen(file_path, PATH_CHARACTER_LIMIT);
+   while (path_length > 0)
+   {
+      char path_char = file_path[--path_length];
+      if (path_char == '.')
+         break;
+   }
+
+   i32 new_path_length = snprintf(NULL, 0, "%.*s%s", path_length, file_path, extension) + 1;
+   char* new_file_path = malloc(new_path_length * sizeof(char));
+   if (new_file_path == NULL)
+      return NULL;
+
+   snprintf(new_file_path, new_path_length, "%.*s%s", path_length, file_path, extension);
+
+   return new_file_path;
+}
+
 char* Util_MakeFilePath(const char* base_path, const char* file_name)
 {
    if (base_path == NULL || file_name == NULL)

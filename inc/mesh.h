@@ -43,11 +43,11 @@ typedef struct Mesh_t
 {
    u8* vertex_buffer;
    void* index_buffer;
-   
+
    u32 vertex_count;
    u32 index_count;
    i32 node_id;
-   u16 material_id;
+   i16 material_id;
    u8 primitive: 7;
    u8 index_type: 1;
    u8 attribute_count;
@@ -78,12 +78,20 @@ typedef struct MeshInterface_t
 
 typedef struct Material_t
 {
-   char* name;
-   char* texture_strings[MATERIAL_MAX_TEXTURES];
+   const char* name;
+   const char* surface_name;
+   const char* texture_strings[MATERIAL_MAX_TEXTURES];
+
    struct {
-      char* key;
-      vec4 value;
+      const char* key;
+      union {
+         f32 as_f32[4];
+         i32 as_i32[4];
+
+      } value;
+
    } parameter[MATERIAL_MAX_PARAMS];
+
 } Material;
 
 typedef struct Model_t
@@ -91,7 +99,7 @@ typedef struct Model_t
    Node* nodes;
    Mesh* meshes;
    Material* materials;
-   
+
    u16 version;
    i16 root_bone_id;
    u32 node_count;
@@ -165,12 +173,7 @@ Mesh Mesh_CreateBoxAdvanced(u32 faces_x, u32 faces_y, u32 faces_z, vec3 size, bo
 Mesh Mesh_CreateSphere(u32 faces, f32 size);
 
 Mesh Mesh_LoadEctorMesh(memblob memory);
-Model Mesh_LoadEctorModel(memblob memory); // I dislike the naming of this function
-// Which is a better alternative?
-// - Mesh_LoadEctorModel
-// - Model_LoadEctorModel
-// - Model_LoadEBMF
-// - Model_LoadEctorBinaryModel
-
+Model Mesh_LoadEctorModel(memblob memory);
+void Mesh_ParseEctorMaterials(memblob memory, Model* inout_model);
 
 #endif
