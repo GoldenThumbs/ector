@@ -6,6 +6,7 @@
 // #include <stdalign.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef clz
    //#define clz __builtin_clzll
@@ -26,6 +27,16 @@
 #define POP_BACK_ARRAY(ptr) REMOVE_ARRAY(ptr, Util_ArrayLength(ptr) - 1u)
 #define POP_FRONT_ARRAY(ptr) REMOVE_ARRAY(ptr, 0u)
 
+#define NEW_MAP_N(T, N) Util_CreateArrayOfLength(N, sizeof(T) + sizeof(MapItem))
+#define NEW_MAP(T) NEW_MAP_N(T, 2u)
+#define SET_MAP_LENGTH(ptr, N) SET_ARRAY_LENGTH(ptr, N)
+#define FREE_MAP(ptr) Util_FreeMap(ptr)
+#define JOIN_MAPS(ptr_a, ptr_b) JOIN_ARRAYS(ptr_a, ptr_b)
+#define ADD_MAP_ITEM(ptr, key, item) Util_AddMapItem(REF(ptr), key, &(item))
+#define ADD_MAP_KEY(ptr, key) Util_AddMapItem(REF(ptr), key, NULL)
+#define GET_MAP_ITEM(ptr, key) Util_GetMapItem(ptr, key)
+#define REMOVE_MAP_ITEM(ptr, key) REMOVE_ARRAY(ptr, Util_GetMapItemIndex(ptr, key))
+
 enum {
    ERR_ARRAY_REALLOC_FAILED = 1
 
@@ -41,7 +52,15 @@ typedef struct Array_t
    u32 length;
    error err;
    u8 data[];
+
 } Array;
+
+typedef struct MapItem_t
+{
+   char* key;
+   u8 value[];
+
+} MapItem;
 
 uS LeadingZeros_uS(uS x);
 uS Log2_uS(uS x);
@@ -63,22 +82,122 @@ u32 Util_UsableArrayIndex(void* ptr, u32 index);
 
 static inline uS Util_ArrayTypeSize(void* ptr)
 {
+   if (ptr == NULL)
+      return 0;
+
    return ARRAY_HEADER(ptr)->size;
 }
 
 static inline uS Util_ArrayMemory(void* ptr)
 {
+   if (ptr == NULL)
+      return 0;
+
    return ARRAY_HEADER(ptr)->memory;
 }
 
 static inline u32 Util_ArrayLength(void* ptr)
 {
+   if (ptr == NULL)
+      return 0;
+
    return ARRAY_HEADER(ptr)->length;
 }
 
 static inline error Util_ArrayError(void* ptr)
 {
+   if (ptr == NULL)
+      return (error){ .general = ERR_LEVEL_ERROR };
+
    return ARRAY_HEADER(ptr)->err;
+}
+
+static inline MapItem* Util_GetMapItemFromIndex(void* ptr, u32 index)
+{
+   if (ptr == NULL)
+      return NULL;
+
+   Array* array = ARRAY_HEADER(ptr);
+   if (index >= array->length)
+      return NULL;
+
+   return (MapItem*)(array->data + index * array->size);
+}
+
+static inline u32 Util_GetMapItemIndex(void* ptr, const char* key)
+{
+   if (key == NULL)
+      return INVALID_HANDLE_ID;
+
+   for (u32 item_i = 0; item_i < Util_ArrayLength(ptr); item_i++)
+   {
+      MapItem* map_item = Util_GetMapItemFromIndex(ptr, item_i);
+      if (map_item->key != NULL && strncmp(map_item->key, key, 512) == 0)
+         return item_i;
+
+   }
+
+   return INVALID_HANDLE_ID;
+}
+
+static inline void* Util_GetMapItem(void* ptr, const char* key)
+{
+   u32 index = Util_GetMapItemIndex(ptr, key);
+
+   MapItem* map_item =  Util_GetMapItemFromIndex(ptr, index);
+
+   if (map_item != NULL)
+      return map_item->value;
+
+   return NULL;
+}
+
+static inline void Util_FreeMap(void* ptr)
+{
+   if (ptr == NULL)
+      return;
+
+   for (u32 item_i = 0; item_i < Util_ArrayLength(ptr); item_i++)
+   {
+      MapItem* map_item = Util_GetMapItemFromIndex(ptr, item_i);
+      if (map_item->key != NULL)
+         free(map_item->key);
+
+   }
+
+   FREE_ARRAY(ptr);
+
+}
+
+static inline void* Util_AddMapItem(void** array_ptr, const char* key, const void* value)
+{
+   if (array_ptr == NULL || key == NULL)
+      return NULL;
+
+   uS size = Util_ArrayTypeSize(*array_ptr) - sizeof(MapItem);
+   u32 length = Util_ArrayLength(*array_ptr);
+
+   MapItem* map_item = Util_GetMapItem(*array_ptr, key);
+   if (map_item == NULL)
+   {
+      Util_SetArrayLength(array_ptr, length + 1);
+      map_item = Util_GetMapItemFromIndex(*array_ptr, length);
+
+   }
+
+   if (map_item != NULL && value != NULL)
+      memcpy(map_item->value, value, size);
+
+   if (map_item != NULL)
+   {
+      uS string_size = strnlen(key, 512) + 1;
+      map_item->key = calloc(string_size, sizeof(char));
+      memcpy(map_item->key, key, string_size);
+
+      return map_item->value;
+   }
+
+   return NULL;
 }
 
 #endif
