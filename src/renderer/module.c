@@ -30,6 +30,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
 
    renderer->surfaces = NEW_ARRAY_N(rndr_Surface, 16);
    renderer->drawable_types = NEW_ARRAY_N(rndr_DrawableType, 8);
+   renderer->textures = NEW_MAP_N(Texture, 4);
 
    renderer->lightmanager_info = (LightManagerInfo){ 0 };
 
@@ -77,12 +78,12 @@ void Renderer_Free(Renderer* renderer)
    if (renderer->lightmanager_info.lightman_free != NULL)
       renderer->lightmanager_info.lightman_free(renderer);
 
-   u32 drawable_type_count = Util_ArrayLength(renderer->drawable_types);
-   for (u32 type_i = 0; type_i < drawable_type_count; type_i++)
+   for (u32 type_i = 0; type_i < Util_ArrayLength(renderer->drawable_types); type_i++)
       FREE_ARRAY(renderer->drawable_types[type_i].drawable_buffer);
 
    FREE_ARRAY(renderer->surfaces);
    FREE_ARRAY(renderer->drawable_types);
+   FREE_MAP(renderer->textures);
 
    free(renderer);
 
@@ -464,41 +465,21 @@ Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture
 
 Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb)
 {
-   if (renderer == NULL || renderer->app_path == NULL || texture_file_path == NULL)
+   if (renderer == NULL || texture_file_path == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
-   u8 image_type = (slice_size.width <= 0 || slice_size.height <= 0) ? IMG_TYPE_2D : IMG_TYPE_3D;
+   Texture* texture_ptr = GET_MAP_ITEM(renderer->textures, texture_file_path);
+   if (texture_ptr == NULL)
+   {
+      Texture texture = RNDR_LoadTexture(renderer, texture_file_path, slice_size, generate_mipmaps, is_srgb);
+      texture_ptr = ADD_MAP_ITEM(renderer->textures, texture_file_path, texture);
 
-   char* file_path = Util_MakeFilePath(renderer->app_path, texture_file_path);
+   }
 
-   memblob file_data = Util_LoadFileIntoMemory(file_path, true);
-   Image image = Image_CreateImage(file_data, image_type, slice_size, is_srgb);
-   if (generate_mipmaps)
-      Image_GenerateMipmaps(&image);
-
-   if (file_data.data != NULL)
-      free(file_data.data);
-
-   if (file_path != NULL)
-      free(file_path);
-
-   if (image.data == NULL)
+   if (texture_ptr == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
 
-   TextureDesc desc = { 0 };
-   desc.size = image.size.width_height;
-   desc.depth = image.size.depth;
-   desc.mipmap_count = image.mipmap_count;
-   desc.texture_type = (image_type == IMG_TYPE_2D) ? GFX_TEXTURETYPE_2D : GFX_TEXTURETYPE_3D;
-   if (image.image_format == IMG_FORMAT_U8_SRGB)
-      desc.texture_format = (image.channel_count == 4) ? GFX_TEXTUREFORMAT_SRGB_ALPHA : GFX_TEXTUREFORMAT_SRGB;
-   else
-      desc.texture_format = ((image.image_format == IMG_FORMAT_F32) ? GFX_TEXTUREFORMAT_R_F32 : GFX_TEXTUREFORMAT_R_U8_NORM) + image.channel_count - 1;
-
-   Texture texture = Graphics_CreateTexture(renderer->graphics, image.data, desc);
-   Image_Free(&image);
-
-   return texture;
+   return (*texture_ptr);
 }
 
 Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute)
@@ -542,6 +523,45 @@ Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path)
       free(mat_data.data);
 
    return model;
+}
+
+Texture RNDR_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb)
+{
+   if (renderer == NULL || renderer->app_path == NULL || texture_file_path == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   u8 image_type = (slice_size.width <= 0 || slice_size.height <= 0) ? IMG_TYPE_2D : IMG_TYPE_3D;
+
+   char* file_path = Util_MakeFilePath(renderer->app_path, texture_file_path);
+
+   memblob file_data = Util_LoadFileIntoMemory(file_path, true);
+   Image image = Image_CreateImage(file_data, image_type, slice_size, is_srgb);
+   if (generate_mipmaps)
+      Image_GenerateMipmaps(&image);
+
+   if (file_data.data != NULL)
+      free(file_data.data);
+
+   if (file_path != NULL)
+      free(file_path);
+
+   if (image.data == NULL)
+      return (handle){ .id = INVALID_HANDLE_ID };
+
+   TextureDesc desc = { 0 };
+   desc.size = image.size.width_height;
+   desc.depth = image.size.depth;
+   desc.mipmap_count = image.mipmap_count;
+   desc.texture_type = (image_type == IMG_TYPE_2D) ? GFX_TEXTURETYPE_2D : GFX_TEXTURETYPE_3D;
+   if (image.image_format == IMG_FORMAT_U8_SRGB)
+      desc.texture_format = (image.channel_count == 4) ? GFX_TEXTUREFORMAT_SRGB_ALPHA : GFX_TEXTUREFORMAT_SRGB;
+   else
+      desc.texture_format = ((image.image_format == IMG_FORMAT_F32) ? GFX_TEXTUREFORMAT_R_F32 : GFX_TEXTUREFORMAT_R_U8_NORM) + image.channel_count - 1;
+
+   Texture texture = Graphics_CreateTexture(renderer->graphics, image.data, desc);
+   Image_Free(&image);
+
+   return texture;
 }
 
 Geometry RNDR_CreateDefaultPlane(Graphics* graphics)

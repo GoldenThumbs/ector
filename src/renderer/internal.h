@@ -85,6 +85,7 @@ struct Renderer_t
 
    rndr_Surface* surfaces;
    rndr_DrawableType* drawable_types;
+   Texture* textures;
 
    LightManagerInfo lightmanager_info;
 
@@ -166,6 +167,8 @@ static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_ty
 
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
 }
+
+Texture RNDR_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb);
 
 Geometry RNDR_CreateDefaultPlane(Graphics* graphics);
 Geometry RNDR_CreateDefaultBox(Graphics* graphics);
