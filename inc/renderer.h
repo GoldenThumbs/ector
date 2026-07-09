@@ -3,6 +3,7 @@
 
 #include "util/types.h"
 #include "util/extra_types.h"
+#include "util/math.h"
 #include "mesh.h"
 #include "graphics.h"
 
@@ -168,6 +169,22 @@ typedef struct GeometryDrawable_t
    Transform3D transform;
 
 } GeometryDrawable;
+
+static inline const char* Renderer_TextureSlotString(u32 slot_index)
+{
+   const char* const texture_strings[MATERIAL_MAX_TEXTURES] = {
+      "tex_0",
+      "tex_1",
+      "tex_2",
+      "tex_3",
+      "tex_4",
+      "tex_5",
+      "tex_6",
+      "tex_7"
+   };
+
+   return texture_strings[M_MIN(slot_index, 7)];
+}
 
 Renderer* Renderer_Init(Graphics* graphics, const char* app_path);
 void Renderer_Free(Renderer* renderer);
