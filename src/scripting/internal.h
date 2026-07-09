@@ -50,6 +50,7 @@ static inline bool SCRP_IsScriptValid(scrp_Script script, Script res_script)
    return true;
 }
 
+void SCRP_PushVariable(lua_State* script_state, memblob value, u8 variable_type);
 int SCRP_LuaWriter(lua_State* script_state, const void* ptr, size_t size, void* data);
 
 #endif

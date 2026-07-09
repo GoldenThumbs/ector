@@ -82,6 +82,10 @@ void Scripting_AddGlobalVariable(ScriptHandler* script_handler, const char* name
 void Scripting_AddGlobalFunction(ScriptHandler* script_handler, const char* name, LuaCFunc function);
 void Scripting_AddModule(ScriptHandler* script_handler, ScriptModuleDesc desc);
 
+void Scripting_CreateTable(void* script_state);
+
+void Scripting_SetTableField(void* script_state, const char* name, LuaIndex index);
+void Scripting_AddFieldToTable(void* script_state, const char* name, memblob value, u8 field_type);
 void Scripting_AddFunctionsToTable(void* script_state, NamedScriptFunction named_functions[], u32 function_count);
 void Scripting_AddEnumToTable(void* script_state, const char* enum_name, EnumPair enum_pairs[], u32 enum_count);
 

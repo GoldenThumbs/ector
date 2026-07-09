@@ -179,57 +179,7 @@ void Scripting_AddGlobalVariable(ScriptHandler* script_handler, const char* name
    if (script_handler == NULL || name == NULL || value.data == NULL)
       return;
 
-   switch (variable_type)
-   {
-      case SCRP_VARIABLE_I32: {
-         if (value.size != sizeof(i32))
-            return;
-
-         i32* ptr = (i32*)value.data;
-         lua_pushinteger(script_handler->script_state, (lua_Integer)(*ptr));
-
-      } break;
-
-      case SCRP_VARIABLE_F32: {
-         if (value.size != sizeof(f32))
-            return;
-
-         f32* ptr = (f32*)value.data;
-         lua_pushnumber(script_handler->script_state, (lua_Number)(*ptr));
-
-      } break;
-
-      case SCRP_VARIABLE_VEC4: {
-         if (value.size != sizeof(vec4))
-            return;
-
-         vec4* ptr = (vec4*)value.data;
-         SCRP_Util_PushVector(script_handler->script_state, *ptr);
-
-      } break;
-
-      case SCRP_VARIABLE_STRING: {
-         if (value.size == 0)
-            return;
-
-         char* ptr = (char*)value.data;
-         lua_pushstring(script_handler->script_state, ptr);
-
-      } break;
-
-      case SCRP_VARIABLE_USERDATA: {
-         if (value.size == 0)
-            return;
-
-         void* ptr = lua_newuserdatauv(script_handler->script_state, value.size, 0);
-         memcpy(ptr, value.data, value.size);
-
-      } break;
-
-      default:
-         return;
-   }
-
+   SCRP_PushVariable(script_handler->script_state, value, variable_type);
    lua_setglobal(script_handler->script_state, name);
 
 }
@@ -271,6 +221,35 @@ void Scripting_AddModule(ScriptHandler* script_handler, ScriptModuleDesc desc)
       desc.register_func(script_handler->script_state, desc.data);
 
    lua_rawset(script_handler->script_state, -3);
+
+}
+
+void Scripting_CreateTable(void* script_state)
+{
+   if (script_state == NULL)
+      return;
+
+   lua_newtable(script_state);
+
+}
+
+void Scripting_SetTableField(void* script_state, const char* name, LuaIndex index)
+{
+   if (script_state == NULL || name == NULL || !lua_istable(script_state, index))
+      return;
+
+   lua_setfield(script_state, index, name);
+
+}
+
+void Scripting_AddFieldToTable(void* script_state, const char* name, memblob value, u8 field_type)
+{
+   if (script_state == NULL || name == NULL || value.data == NULL || !lua_istable(script_state, -1))
+      return;
+
+   lua_pushstring(script_state, name);
+   SCRP_PushVariable(script_state, value, field_type);
+   lua_rawset(script_state, -3);
 
 }
 
@@ -438,6 +417,63 @@ void Scripting_PushUserData(void* script_state, memblob value)
    void* ptr = lua_newuserdatauv(script_state, value.size, 0);
    memcpy(ptr, value.data, value.size);
 
+}
+
+void SCRP_PushVariable(lua_State* script_state, memblob value, u8 variable_type)
+{
+   if (script_state == NULL || value.data == NULL)
+      return;
+
+   switch (variable_type)
+   {
+      case SCRP_VARIABLE_I32: {
+         if (value.size != sizeof(i32))
+            return;
+
+         i32* ptr = (i32*)value.data;
+         lua_pushinteger(script_state, (lua_Integer)(*ptr));
+
+      } break;
+
+      case SCRP_VARIABLE_F32: {
+         if (value.size != sizeof(f32))
+            return;
+
+         f32* ptr = (f32*)value.data;
+         lua_pushnumber(script_state, (lua_Number)(*ptr));
+
+      } break;
+
+      case SCRP_VARIABLE_VEC4: {
+         if (value.size != sizeof(vec4))
+            return;
+
+         vec4* ptr = (vec4*)value.data;
+         SCRP_Util_PushVector(script_state, *ptr);
+
+      } break;
+
+      case SCRP_VARIABLE_STRING: {
+         if (value.size == 0)
+            return;
+
+         char* ptr = (char*)value.data;
+         lua_pushstring(script_state, ptr);
+
+      } break;
+
+      case SCRP_VARIABLE_USERDATA: {
+         if (value.size == 0)
+            return;
+
+         void* ptr = lua_newuserdatauv(script_state, value.size, 0);
+         memcpy(ptr, value.data, value.size);
+
+      } break;
+
+      default:
+         return;
+   }
 }
 
 int SCRP_LuaWriter(lua_State* script_state, const void* buffer, size_t size, void* data)
