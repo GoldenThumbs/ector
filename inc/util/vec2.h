@@ -45,6 +45,14 @@ static inline vec2 Util_AbsVec2(vec2 vector)
    return res;
 }
 
+static inline vec2 Util_LerpVec2(vec2 a, vec2 b, f32 fac)
+{
+   vec2 res = { 0 };
+
+   Util_LerpVec_N(a.arr, b.arr, fac, res.arr, M_VEC2_LEN);
+   return res;
+}
+
 static inline vec2 Util_AddVec2(vec2 a, vec2 b)
 {
    vec2 res = { 0 };

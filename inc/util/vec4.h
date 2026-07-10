@@ -45,6 +45,14 @@ static inline vec4 Util_AbsVec4(vec4 vector)
    return res;
 }
 
+static inline vec4 Util_LerpVec4(vec4 a, vec4 b, f32 fac)
+{
+   vec4 res = { 0 };
+
+   Util_LerpVec_N(a.arr, b.arr, fac, res.arr, M_VEC4_LEN);
+   return res;
+}
+
 static inline vec4 Util_AddVec4(vec4 a, vec4 b)
 {
    vec4 res = { 0 };

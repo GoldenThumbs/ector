@@ -45,6 +45,14 @@ static inline vec3 Util_AbsVec3(vec3 vector)
    return res;
 }
 
+static inline vec3 Util_LerpVec3(vec3 a, vec3 b, f32 fac)
+{
+   vec3 res = { 0 };
+
+   Util_LerpVec_N(a.arr, b.arr, fac, res.arr, M_VEC3_LEN);
+   return res;
+}
+
 static inline vec3 Util_AddVec3(vec3 a, vec3 b)
 {
    vec3 res = { 0 };

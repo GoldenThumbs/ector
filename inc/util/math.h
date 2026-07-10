@@ -25,6 +25,10 @@
 #define M_TURN64 (M_PI64 * 0.01)
 #define M_TO_TURN32 (100.0f * M_INVPI32)
 #define M_TO_TURN64 (100.0 * M_INVPI64)
+#define M_TO_DEGREES32 1.8f
+#define M_TO_DEGREES64 1.8
+#define M_FROM_DEGREES32 (1.0f / M_TO_DEGREES32)
+#define M_FROM_DEGREES64 (1.0 / M_TO_DEGREES64)
 
 #define M_TURN(a) _Generic((a), \
    f32: (M_TURN32 * (a)), \
@@ -35,6 +39,18 @@
 #define M_TO_TURN(a) _Generic((a), \
    f32: (M_TO_TURN32 * (a)), \
    f64: (M_TO_TURN64 * (a)), \
+   default: (a) \
+)
+
+#define M_TO_DEGREES(a) _Generic((a), \
+   f32: (M_TO_DEGREES32 * (a)), \
+   f64: (M_TO_DEGREES64 * (a)), \
+   default: (a) \
+)
+
+#define M_FROM_DEGREES(a) _Generic((a), \
+   f32: (M_FROM_DEGREES32 * (a)), \
+   f64: (M_FROM_DEGREES64 * (a)), \
    default: (a) \
 )
 
@@ -53,7 +69,7 @@
 
    #define M_ASIN32(x) (M_TO_TURN32 * asinf(x))
    #define M_ASIN64(x) (M_TO_TURN64 * asin(x))
-   
+
    #define M_ACOS32(x) (M_TO_TURN32 * acosf(x))
    #define M_ACOS64(x) (M_TO_TURN64 * acos(x))
 
@@ -115,6 +131,22 @@
    )
 
 #endif
+
+static inline f32 Util_Lerp(f32 a, f32 b, f32 fac)
+{
+   f32 inv_fac = 1.0f - fac;
+
+   return a * inv_fac + b * fac;
+}
+
+static inline f32 Util_AngleWrap(f32 angle, f32 min_angle, f32 max_angle)
+{
+   min_angle = M_CLAMP(min_angle, 0, 200);
+   max_angle = M_CLAMP(max_angle, 0, 200);
+
+   f32 a = (angle > max_angle) ? (min_angle + angle - max_angle) : angle;
+   return ((angle < 0) ? max_angle : min_angle) + fmodf(angle, max_angle - min_angle);
+}
 
 static inline void Util_AddVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)
 {
@@ -184,6 +216,14 @@ static inline void Util_AbsVec_N(f32 vector[], f32* res_vec, const u32 N)
 {
    for (u32 i=0; i<N; i++)
       res_vec[i] = M_ABS(vector[i]);
+}
+
+static inline void Util_LerpVec_N(f32 a[], f32 b[], f32 fac, f32* res_vec, const u32 N)
+{
+   f32 inv_fac = 1.0f - fac;
+
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = a[i] * inv_fac + b[i] * fac;
 }
 
 static inline void Util_TransposeMat_NxN(f32 matrix[], f32* res_mat, const u32 N)
