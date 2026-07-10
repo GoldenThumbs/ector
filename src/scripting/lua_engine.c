@@ -47,6 +47,8 @@ error SCRP_RegisterEngine(lua_State* script_state, Engine* engine)
       { "GetWindowTitle", SCRP_GetWindowTitle },
       { "SetAppName", SCRP_SetAppName },
       { "SetWindowTitle", SCRP_SetWindowTitle },
+      { "RadiansToTurns", SCRP_RadiansToTurns },
+      { "TurnsToRadians", SCRP_TurnsToRadians },
       { NULL, NULL }
    };
 
@@ -113,9 +115,12 @@ void SCRP_AddVectorClass(lua_State* script_state)
       { "Normalize", SCRP_NormalizeVector },
       { "Cross", SCRP_CrossVector },
       { "Dot", SCRP_DotVector },
+      { "Lerp", SCRP_LerpVector },
       { "NewQuat", SCRP_NewQuatVector },
       { "Rotate", SCRP_RotateVector },
       { "MulQuat", SCRP_MulQuatVector },
+      { "Slerp", SCRP_SlerpQuatVector },
+      { "MakeLookingAt", SCRP_LookingAtQuatVector },
       { NULL, NULL }
    };
 

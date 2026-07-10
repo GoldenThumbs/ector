@@ -35,6 +35,16 @@ function Ector.SetAppName(app_name) end
 ---@param window_title string
 function Ector.SetWindowTitle(window_title) end
 
+--- Convert an angle in radians to turns
+---@param angle_radians number
+---@return number
+function Ector.RadiansToTurns(angle_radians) end
+
+--- Convert an angle in turns to radians
+---@param angle_turns number
+---@return number
+function Ector.TurnsToRadians(angle_turns) end
+
 --- Namespace of input-related functionality.
 ---@class Ector.Input
 Ector.Input = {}
@@ -167,12 +177,20 @@ function Ector.Vector:Cross(b) end
 ---@return number
 function Ector.Vector:Dot(b) end
 
+--- Linearly interpolate two vectors.
+---@param b Ector.Vector
+---@param fac number
+---@return Ector.Vector
+function Ector.Vector:Lerp(b, fac) end
+
 --- Create a new quaternion-vector, using euler angles as input.
+--- NOTE: angles are expected in turns, not radians.
 ---@param euler Ector.Vector
 ---@return Ector.Vector quaternion
 function Ector.Vector:NewQuat(euler) end
 
 --- Create a new quaternion-vector, using axis-angle as input.
+--- NOTE: angles are expected in turns, not radians.
 ---@param axis Ector.Vector
 ---@param angle number
 ---@return Ector.Vector quaternion
@@ -187,6 +205,20 @@ function Ector.Vector:Rotate(rotation) end
 ---@param b Ector.Vector # quaternion
 ---@return Ector.Vector quaternion
 function Ector.Vector:MulQuat(b) end
+
+--- Interpolate two quaternion-vectors using the shortest available path.
+---@param b Ector.Vector # quaternion
+---@param fac number
+---@return Ector.Vector quaternion
+function Ector.Vector:Slerp(b, fac) end
+
+--- Make a quaternion-vector looking towards a given target from a given origin.
+---@param origin Ector.Vector
+---@param target Ector.Vector
+---@param front? Ector.Vector
+---@param up? Ector.Vector
+---@return Ector.Vector quaternion
+function Ector.Vector:MakeLookingAt(origin, target, front, up) end
 
 --- Keyboard keys
 ---

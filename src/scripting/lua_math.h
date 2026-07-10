@@ -17,6 +17,20 @@
 
 #define META_VECTOR_DATA "ECT_META_VECTOR"
 
+static inline int SCRP_RadiansToTurns(lua_State* script_state)
+{
+   f32 angle_radians = (f32)lua_tonumber(script_state, 1);
+
+   return M_TO_TURN(angle_radians);
+}
+
+static inline int SCRP_TurnsToRadians(lua_State* script_state)
+{
+   f32 angle_turns = (f32)lua_tonumber(script_state, 1);
+
+   return M_TURN(angle_turns);
+}
+
 static inline bool SCRP_Util_IsInputVector(lua_State* script_state, int index)
 {
    if (!lua_istable(script_state, index))
@@ -279,6 +293,18 @@ static inline int SCRP_DotVector(lua_State* script_state)
    return 1;
 }
 
+static inline int SCRP_LerpVector(lua_State* script_state)
+{
+   vec4 a = SCRP_Util_GetVector(script_state, 1);
+   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   f32 fac = (f32)lua_tonumber(script_state, 3);
+   vec4 result = Util_LerpVec4(a, b, fac);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
 static inline int SCRP_NewQuatVector(lua_State* script_state)
 {
    vec3 vector = SCRP_Util_GetVector(script_state, 2).xyz;
@@ -312,9 +338,38 @@ static inline int SCRP_RotateVector(lua_State* script_state)
 
 static inline int SCRP_MulQuatVector(lua_State* script_state)
 {
-   vec4 a = SCRP_Util_GetVector(script_state, 1);
-   vec4 b = SCRP_Util_GetVector(script_state, 2);
+   quat a = SCRP_Util_GetVector(script_state, 1);
+   quat b = SCRP_Util_GetVector(script_state, 2);
    quat result = Util_MulQuat(a, b);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
+static inline int SCRP_SlerpQuatVector(lua_State* script_state)
+{
+   quat a = SCRP_Util_GetVector(script_state, 1);
+   quat b = SCRP_Util_GetVector(script_state, 2);
+   f32 fac = (f32)lua_tonumber(script_state, 3);
+   quat result = Util_SphericalLerp(a, b, fac);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
+static inline int SCRP_LookingAtQuatVector(lua_State* script_state)
+{
+   vec3 origin = SCRP_Util_GetVector(script_state, 1).xyz;
+   vec3 target = SCRP_Util_GetVector(script_state, 2).xyz;
+   vec3 front = SCRP_Util_GetVector(script_state, 3).xyz;
+   vec3 up = SCRP_Util_GetVector(script_state, 4).xyz;
+
+   front = (Util_DotVec3(front, front) > 0.0001f) ? front : VEC3(0, 0,-1);
+   up = (Util_DotVec3(up, up) > 0.0001f) ? up : VEC3(0, 1, 0);
+
+   quat result = Util_MakeQuatLookingAt(origin, target, front, up);
 
    SCRP_Util_PushVector(script_state, result);
 
