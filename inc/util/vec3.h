@@ -37,6 +37,14 @@ static inline vec3 Util_MaxVec3(vec3 a, vec3 b)
    return res;
 }
 
+static inline vec3 Util_NegVec3(vec3 vector)
+{
+   vec3 res = { 0 };
+
+   Util_NegVec_N(vector.arr, res.arr, M_VEC3_LEN);
+   return res;
+}
+
 static inline vec3 Util_AbsVec3(vec3 vector)
 {
    vec3 res = { 0 };
@@ -115,6 +123,11 @@ static inline f32 Util_DotVec3(vec3 a, vec3 b)
 
    Util_DotVec_N(a.arr, b.arr, &res, M_VEC3_LEN);
    return res;
+}
+
+static inline f32 Util_MagSqrVec3(vec3 vector)
+{
+   return Util_DotVec3(vector, vector);
 }
 
 static inline vec3 Util_CrossVec3(vec3 a, vec3 b)

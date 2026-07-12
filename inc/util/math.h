@@ -12,7 +12,7 @@
    #define M_INVPI64 (1.0 / M_PI64)
 #endif
 
-#define M_FLOAT_FUZZ (1e-32)
+#define M_FLOAT_FUZZ (1e-7f)
 
 #define M_ABS(x) (((x) > 0) ? (x) : -(x))
 #define M_SIGN(x) (((x) != 0) ? (((x) > 0) ? 1 : -1) : 0)
@@ -20,6 +20,8 @@
 #define M_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define M_CLAMP(x, x_min, x_max) M_MAX(x_min, M_MIN(x, x_max))
 #define M_RCP(x, eps) ((M_ABS(x) > (eps)) ? (1.0f / (x)) : 0.0f)
+#define M_RCPF(x) M_RCP(x, M_FLOAT_FUZZ)
+#define M_EQUALF(a, b) Util_FuzzyEqual((a), (b), M_FLOAT_FUZZ)
 
 #define M_TURN32 (M_PI32 * 0.01f)
 #define M_TURN64 (M_PI64 * 0.01)
@@ -132,6 +134,11 @@
 
 #endif
 
+static inline bool Util_FuzzyEqual(f32 a, f32 b, f32 eps)
+{
+   return (M_ABS(a - b) <= eps);
+}
+
 static inline f32 Util_Lerp(f32 a, f32 b, f32 fac)
 {
    f32 inv_fac = 1.0f - fac;
@@ -146,6 +153,12 @@ static inline f32 Util_AngleWrap(f32 angle, f32 min_angle, f32 max_angle)
 
    f32 a = (angle > max_angle) ? (min_angle + angle - max_angle) : angle;
    return ((angle < 0) ? max_angle : min_angle) + fmodf(angle, max_angle - min_angle);
+}
+
+static inline void Util_NegVec_N(f32 vector[], f32* res_vec, const u32 N)
+{
+   for (u32 i=0; i<N; i++)
+      res_vec[i] = -vector[i];
 }
 
 static inline void Util_AddVec_N(f32 a[], f32 b[], f32* res_vec, const u32 N)

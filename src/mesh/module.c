@@ -309,9 +309,17 @@ Material MSH_ParseNextMaterial(memblob memory, uS* char_offset)
 
                         token.token_start[token.token_size] = 0;
                         if (param_is_float)
+                        {
+                           material.parameter[param_count].type = MAT_PARAMTYPE_F32;
                            material.parameter[param_count].value.as_f32[param_idx] = strtof(token.token_start, NULL);
-                        else
+
+                        } else {
+                           material.parameter[param_count].type = MAT_PARAMTYPE_I32;
                            material.parameter[param_count].value.as_i32[param_idx] = strtol(token.token_start, NULL, 10);
+
+                        }
+
+                        material.parameter[param_count].count++;
 
                      }
 

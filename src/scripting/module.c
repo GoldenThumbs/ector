@@ -29,6 +29,17 @@ ScriptHandler* Scripting_InitHandler(Engine* engine)
 
    luaL_openlibs(script_state);
 
+   lua_getglobal(script_state, "math");
+
+   lua_pushstring(script_state, "sign");
+   lua_pushcfunction(script_state, SCRP_Sign);
+   lua_rawset(script_state, -3);
+   lua_pushstring(script_state, "clamp");
+   lua_pushcfunction(script_state, SCRP_Clamp);
+   lua_rawset(script_state, -3);
+
+   lua_pop(script_state, 1);
+
    ScriptHandler* script_handler = malloc(sizeof(ScriptHandler));
    if (script_handler == NULL)
    {

@@ -1,8 +1,8 @@
 #ifndef ECT_MESH_H
 #define ECT_MESH_H
 
-#include "util/extra_types.h"
 #include "util/types.h"
+#include "util/extra_types.h"
 
 #define MESH_MAX_ATTRIBUTES 8
 
@@ -76,6 +76,11 @@ typedef struct MeshInterface_t
 #define MATERIAL_MAX_TEXTURES 8
 #define MATERIAL_MAX_PARAMS 32
 
+enum {
+   MAT_PARAMTYPE_F32 = 0,
+   MAT_PARAMTYPE_I32
+};
+
 typedef struct Material_t
 {
    const char* name;
@@ -84,6 +89,9 @@ typedef struct Material_t
 
    struct {
       const char* key;
+      u32 count;
+      u32 type;
+
       union {
          f32 as_f32[4];
          i32 as_i32[4];

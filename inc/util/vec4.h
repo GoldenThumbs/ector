@@ -37,6 +37,14 @@ static inline vec4 Util_MaxVec4(vec4 a, vec4 b)
    return res;
 }
 
+static inline vec4 Util_NegVec4(vec4 vector)
+{
+   vec4 res = { 0 };
+
+   Util_NegVec_N(vector.arr, res.arr, M_VEC4_LEN);
+   return res;
+}
+
 static inline vec4 Util_AbsVec4(vec4 vector)
 {
    vec4 res = { 0 };
@@ -115,6 +123,11 @@ static inline f32 Util_DotVec4(vec4 a, vec4 b)
 
    Util_DotVec_N(a.arr, b.arr, &res, M_VEC4_LEN);
    return res;
+}
+
+static inline f32 Util_MagSqrVec4(vec4 vector)
+{
+   return Util_DotVec4(vector, vector);
 }
 
 static inline vec4 Util_MulMat4Vec4(mat4x4 matrix, vec4 vector)

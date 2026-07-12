@@ -109,6 +109,7 @@ void SCRP_AddVectorClass(lua_State* script_state)
       { "__sub", SCRP_SubVector },
       { "__mul", SCRP_MulVector },
       { "__div", SCRP_DivVector },
+      { "__unm", SCRP_NegVector },
       { "__len", SCRP_LengthOfVector },
       { "New", SCRP_NewVector },
       { "Index", SCRP_IndexVector },
@@ -116,11 +117,15 @@ void SCRP_AddVectorClass(lua_State* script_state)
       { "Cross", SCRP_CrossVector },
       { "Dot", SCRP_DotVector },
       { "Lerp", SCRP_LerpVector },
+      { "Dup", SCRP_DupVector },
+      { "QuatAngle", SCRP_QuatVectorAngle },
       { "NewQuat", SCRP_NewQuatVector },
+      { "InverseQuat", SCRP_InverseQuatVector },
       { "Rotate", SCRP_RotateVector },
       { "MulQuat", SCRP_MulQuatVector },
       { "Slerp", SCRP_SlerpQuatVector },
       { "MakeLookingAt", SCRP_LookingAtQuatVector },
+      { "RelativeToQuat", SCRP_RelativeToQuatVector },
       { NULL, NULL }
    };
 

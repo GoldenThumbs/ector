@@ -6,20 +6,27 @@
 #include "util/vec3.h"
 #include "util/vec4.h"
 
+static inline f32 Util_QuatAngle(quat quaternion)
+{
+   // only unit quaternions can reprisent a rotation
+   if (!M_EQUALF(Util_DotVec4(quaternion, quaternion), 1.0f))
+      quaternion = Util_NormalizeVec4(quaternion);
+
+   f32 s = M_SIGN((quaternion.x + quaternion.y + quaternion.z) * quaternion.w);
+   f32 angle = M_ACOS(M_ABS(quaternion.w)) * 2.0;
+   return -s * angle;
+}
+
 static inline quat Util_IdentityQuat(void)
 {
    return QUAT(0, 0, 0, 1);
 }
 
-static inline quat Util_MakeQuat(vec3 axis, f32 angle)
+static inline quat Util_InverseQuat(quat quaternion)
 {
-   f32 a = angle * 0.5f;
-   f32 b = M_SIN(a);
-   f32 c = M_COS(a);
+   quat res = quaternion;
+   res.xyz = Util_NegVec3(res.xyz);
 
-   quat res = { 0 };
-   res.xyz = Util_ScaleVec3(axis, b);
-   res.w = -c;
    return res;
 }
 
@@ -31,6 +38,18 @@ static inline quat Util_MulQuat(quat a, quat b)
       Util_CrossVec3(a.xyz, b.xyz)
    );
    res.w = a.w * b.w - Util_DotVec3(a.xyz, b.xyz);
+   return res;
+}
+
+static inline quat Util_MakeQuat(vec3 axis, f32 angle)
+{
+   f32 a = angle * 0.5f;
+   f32 b = M_SIN(a);
+   f32 c = M_COS(a);
+
+   quat res = { 0 };
+   res.xyz = Util_ScaleVec3(axis, b);
+   res.w = -c;
    return res;
 }
 
@@ -110,12 +129,10 @@ static inline quat Util_MakeQuatLookingAt(vec3 origin, vec3 target, vec3 front, 
    return Util_NormalizeVec4(Util_MulQuat(yaw_q, pitch_q));
 }
 
-static inline vec3 Util_RotatePoint(quat rotation, vec3 point)
+static inline quat Util_RelativeToQuat(quat a, quat b)
 {
-   quat p = Util_FillVec4_XYZ_W(point, 0);
-   quat inv_rot = Util_FillVec4_XYZ_W(Util_ScaleVec3(rotation.xyz, -1), rotation.w);
-
-   return Util_MulQuat(inv_rot, Util_MulQuat(p, rotation)).xyz;
+   quat relative = Util_MulQuat(a, Util_InverseQuat(b));
+   return Util_NormalizeVec4(relative);
 }
 
 static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
@@ -143,6 +160,14 @@ static inline quat Util_SphericalLerp(quat a, quat b, f32 fac)
    quat q1 = Util_ScaleVec4(a, M_SIN(angle * (1.0f - fac)));
    quat q2 = Util_ScaleVec4(b, M_SIN(angle * fac));
    return Util_NormalizeVec4(Util_ScaleVec4(Util_AddVec4(q1, q2), denom));
+}
+
+static inline vec3 Util_RotatePoint(quat rotation, vec3 point)
+{
+   quat q_point = Util_FillVec4_XYZ_W(point, 0);
+   quat inv_rotation = Util_InverseQuat(rotation);
+
+   return Util_MulQuat(inv_rotation, Util_MulQuat(q_point, rotation)).xyz;
 }
 
 #endif

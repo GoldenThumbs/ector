@@ -17,20 +17,6 @@
 
 #define META_VECTOR_DATA "ECT_META_VECTOR"
 
-static inline int SCRP_RadiansToTurns(lua_State* script_state)
-{
-   f32 angle_radians = (f32)lua_tonumber(script_state, 1);
-
-   return M_TO_TURN(angle_radians);
-}
-
-static inline int SCRP_TurnsToRadians(lua_State* script_state)
-{
-   f32 angle_turns = (f32)lua_tonumber(script_state, 1);
-
-   return M_TURN(angle_turns);
-}
-
 static inline bool SCRP_Util_IsInputVector(lua_State* script_state, int index)
 {
    if (!lua_istable(script_state, index))
@@ -110,6 +96,61 @@ static inline void SCRP_Util_SetVectorComponents(lua_State* script_state, vec4 v
    lua_pushnumber(script_state, (lua_Number)vector.w);
    lua_rawset(script_state, -3);
 
+}
+
+static inline int SCRP_Sign(lua_State* script_state)
+{
+   if (lua_isinteger(script_state, 1))
+   {
+      lua_Integer x = lua_tointeger(script_state, 1);
+      lua_pushinteger(script_state, M_SIGN(x));
+
+   } else {
+      lua_Number x = luaL_checknumber(script_state, 1);
+      lua_pushnumber(script_state, M_SIGN(x));
+
+   }
+
+   return 1;
+}
+
+static inline int SCRP_Clamp(lua_State* script_state)
+{
+   if (lua_isinteger(script_state, 1))
+   {
+      lua_Integer x = lua_tointeger(script_state, 1);
+      lua_Integer min = luaL_optinteger(script_state, 2, 0);
+      lua_Integer max = luaL_optinteger(script_state, 3, 1);
+      lua_pushinteger(script_state, M_CLAMP(x, min, max));
+
+   } else {
+      lua_Number x = luaL_checknumber(script_state, 1);
+      lua_Number min = luaL_optnumber(script_state, 2, 0);
+      lua_Number max = luaL_optnumber(script_state, 3, 1);
+      lua_pushnumber(script_state, M_CLAMP(x, min, max));
+
+   }
+
+   return 1;
+}
+
+
+static inline int SCRP_RadiansToTurns(lua_State* script_state)
+{
+   f32 angle_radians = (f32)lua_tonumber(script_state, 1);
+
+   lua_pushnumber(script_state, M_TO_TURN(angle_radians));
+
+   return 1;
+}
+
+static inline int SCRP_TurnsToRadians(lua_State* script_state)
+{
+   f32 angle_turns = (f32)lua_tonumber(script_state, 1);
+
+   lua_pushnumber(script_state, M_TURN(angle_turns));
+
+   return 1;
 }
 
 static inline int SCRP_NewVector(lua_State* script_state)
@@ -228,6 +269,16 @@ static inline int SCRP_DivVector(lua_State* script_state)
    return 1;
 }
 
+static inline int SCRP_NegVector(lua_State* script_state)
+{
+   vec4 vector = SCRP_Util_GetVector(script_state, 1);
+   vec4 result = Util_NegVec4(vector);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
 static inline int SCRP_LengthOfVector(lua_State* script_state)
 {
    vec4 vector = SCRP_Util_GetVector(script_state, 1);
@@ -305,24 +356,60 @@ static inline int SCRP_LerpVector(lua_State* script_state)
    return 1;
 }
 
+static inline int SCRP_DupVector(lua_State* script_state)
+{
+   vec4 vector = SCRP_Util_GetVector(script_state, 1);
+
+   SCRP_Util_PushVector(script_state, vector);
+
+   return 1;
+}
+
+static inline int SCRP_QuatVectorAngle(lua_State* script_state)
+{
+   quat quaternion = SCRP_Util_GetVector(script_state, 1);
+   f32 result = Util_QuatAngle(quaternion);
+
+   lua_pushnumber(script_state, (lua_Number)result);
+
+   return 1;
+}
+
 static inline int SCRP_NewQuatVector(lua_State* script_state)
 {
-   vec3 vector = SCRP_Util_GetVector(script_state, 2).xyz;
-   quat result = { 0 };
+
+   quat result = { 0, 0, 0, 1 };
 
    i32 inputs = (i32)lua_gettop(script_state);
    if (inputs > 2 && lua_isnumber(script_state, 3))
    {
+      vec3 vector = SCRP_Util_GetVector(script_state, 2).xyz;
       f32 angle = (f32)lua_tonumber(script_state, 3);
       result = Util_MakeQuat(vector, angle);
 
-   } else
+   }
+   else if (inputs == 1)
+   {
+      vec3 vector = SCRP_Util_GetVector(script_state, 2).xyz;
       result = Util_MakeQuatEuler(vector);
+
+   }
 
    SCRP_Util_PushVector(script_state, result);
 
    return 1;
 }
+
+static inline int SCRP_InverseQuatVector(lua_State* script_state)
+{
+   quat quaternion = SCRP_Util_GetVector(script_state, 1);
+   quat result = Util_InverseQuat(quaternion);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
 
 static inline int SCRP_RotateVector(lua_State* script_state)
 {
@@ -361,15 +448,29 @@ static inline int SCRP_SlerpQuatVector(lua_State* script_state)
 
 static inline int SCRP_LookingAtQuatVector(lua_State* script_state)
 {
-   vec3 origin = SCRP_Util_GetVector(script_state, 1).xyz;
-   vec3 target = SCRP_Util_GetVector(script_state, 2).xyz;
-   vec3 front = SCRP_Util_GetVector(script_state, 3).xyz;
-   vec3 up = SCRP_Util_GetVector(script_state, 4).xyz;
+   vec3 origin = SCRP_Util_GetVector(script_state, 2).xyz;
+   vec3 target = SCRP_Util_GetVector(script_state, 3).xyz;
 
-   front = (Util_DotVec3(front, front) > 0.0001f) ? front : VEC3(0, 0,-1);
-   up = (Util_DotVec3(up, up) > 0.0001f) ? up : VEC3(0, 1, 0);
+   vec3 front = { 0, 0,-1 };
+   vec3 up = { 0, 1, 0 };
+
+   i32 inputs = (i32)lua_gettop(script_state);
+
+   front = (inputs >= 4) ? SCRP_Util_GetVector(script_state, 4).xyz : front;
+   up = (inputs >= 5) ? SCRP_Util_GetVector(script_state, 5).xyz : up;
 
    quat result = Util_MakeQuatLookingAt(origin, target, front, up);
+
+   SCRP_Util_PushVector(script_state, result);
+
+   return 1;
+}
+
+static inline int SCRP_RelativeToQuatVector(lua_State* script_state)
+{
+   quat a = SCRP_Util_GetVector(script_state, 1);
+   quat b = SCRP_Util_GetVector(script_state, 2);
+   quat result = Util_RelativeToQuat(a, b);
 
    SCRP_Util_PushVector(script_state, result);
 

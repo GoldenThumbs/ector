@@ -1,5 +1,19 @@
 ---@meta
 
+--- Returns the sign of x.
+---@generic Number:number
+---@param x Number
+---@return Number
+function math.sign(x) end
+
+--- Clamps x between min and max.
+---@generic Number:number
+---@param x Number
+---@param min? Number
+---@param max? Number
+---@return Number
+function math.clamp(x, min, max) end
+
 --- Namespace of all Ector functionality.
 ---@class Ector
 Ector = {}
@@ -147,6 +161,7 @@ Ector.Module = {}
 ---@operator mul(number): Ector.Vector
 ---@operator div(Ector.Vector): Ector.Vector
 ---@operator div(number): Ector.Vector
+---@operator unm(Ector.Vector): Ector.Vector
 ---@operator len(Ector.Vector): number
 Ector.Vector = {}
 
@@ -183,9 +198,20 @@ function Ector.Vector:Dot(b) end
 ---@return Ector.Vector
 function Ector.Vector:Lerp(b, fac) end
 
+
+--- Create a duplicate of a vector.
+---@return Ector.Vector
+function Ector.Vector:Dup() end
+
+--- Get the overall rotation angle of a quaternion-vector along its axis.
+--- NOTE: returned angle is in turns, not radians.
+---@return number
+function Ector.Vector:QuatAngle() end
+
 --- Create a new quaternion-vector, using euler angles as input.
+--- When no input is given returns an identity quaternion.
 --- NOTE: angles are expected in turns, not radians.
----@param euler Ector.Vector
+---@param euler? Ector.Vector
 ---@return Ector.Vector quaternion
 function Ector.Vector:NewQuat(euler) end
 
@@ -195,6 +221,10 @@ function Ector.Vector:NewQuat(euler) end
 ---@param angle number
 ---@return Ector.Vector quaternion
 function Ector.Vector:NewQuat(axis, angle) end
+
+--- Get inverse of a quaternion-vector.
+---@return Ector.Vector quaternion
+function Ector.Vector:InverseQuat() end
 
 --- Rotate a vector with a quaternion-vector.
 ---@param rotation Ector.Vector # quaternion-based rotation.
@@ -219,6 +249,11 @@ function Ector.Vector:Slerp(b, fac) end
 ---@param up? Ector.Vector
 ---@return Ector.Vector quaternion
 function Ector.Vector:MakeLookingAt(origin, target, front, up) end
+
+--- Make quaternion-vector relative to another.
+---@param b Ector.Vector # quaternion
+---@return Ector.Vector quaternion
+function Ector.Vector:RelativeToQuat(b) end
 
 --- Keyboard keys
 ---
