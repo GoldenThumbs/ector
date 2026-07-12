@@ -62,60 +62,34 @@ function Ector.TurnsToRadians(angle_turns) end
 --- Namespace of input-related functionality.
 ---@class Ector.Input
 Ector.Input = {}
-Ector.Input.Key = {}
-Ector.Input.Mouse = {}
 
 --- Check if the specified mouse_button is currently held down.
----@param mouse_button
----| 'Ector.Input.Mouse.LEFT_CLICK'
----| 'Ector.Input.Mouse.RIGHT_CLICK'
----| 'Ector.Input.Mouse.MIDDLE_CLICK'
----| 'Ector.Input.Mouse.BUTTON_4'
----| 'Ector.Input.Mouse.BUTTON_5'
----| 'Ector.Input.Mouse.BUTTON_6'
----| 'Ector.Input.Mouse.BUTTON_7'
----| 'Ector.Input.Mouse.BUTTON_8'
+---@param mouse_button EctorMouseButton
 ---@return boolean
 function Ector.Input.GetMouseButtonDown(mouse_button) end
 
 --- Check if the specified mouse button was just pressed.
----@param mouse_button
----| 'Ector.Input.Mouse.LEFT_CLICK'
----| 'Ector.Input.Mouse.RIGHT_CLICK'
----| 'Ector.Input.Mouse.MIDDLE_CLICK'
----| 'Ector.Input.Mouse.BUTTON_4'
----| 'Ector.Input.Mouse.BUTTON_5'
----| 'Ector.Input.Mouse.BUTTON_6'
----| 'Ector.Input.Mouse.BUTTON_7'
----| 'Ector.Input.Mouse.BUTTON_8'
+---@param mouse_button EctorMouseButton
 ---@return boolean
 function Ector.Input.GetMouseButtonPressed(mouse_button) end
 
 --- Check if the specified mouse button was just released.
----@param mouse_button
----| 'Ector.Input.Mouse.LEFT_CLICK'
----| 'Ector.Input.Mouse.RIGHT_CLICK'
----| 'Ector.Input.Mouse.MIDDLE_CLICK'
----| 'Ector.Input.Mouse.BUTTON_4'
----| 'Ector.Input.Mouse.BUTTON_5'
----| 'Ector.Input.Mouse.BUTTON_6'
----| 'Ector.Input.Mouse.BUTTON_7'
----| 'Ector.Input.Mouse.BUTTON_8'
+---@param mouse_button EctorMouseButton
 ---@return boolean
 function Ector.Input.GetMouseButtonReleased(mouse_button) end
 
 --- Check if the specified key is currently held down.
----@param key Ector.Input.Key
+---@param key EctorKey
 ---@return boolean
 function Ector.Input.GetKeyDown(key) end
 
 --- Check if the specified key was just pressed.
----@param key Ector.Input.Key
+---@param key EctorKey
 ---@return boolean
 function Ector.Input.GetKeyPressed(key) end
 
 --- Check if the specified key was just released.
----@param key Ector.Input.Key
+---@param key EctorKey
 ---@return boolean
 function Ector.Input.GetKeyReleased(key) end
 
@@ -132,11 +106,7 @@ function Ector.Input.GetMouseDelta() end
 function Ector.Input.GetMouseScroll() end
 
 --- Set how the mouse cursor is handled.
----@param mouse_mode
----| 'Ector.Input.Mouse.MODE_DEFAULT'
----| 'Ector.Input.Mouse.MODE_HIDE_CURSOR'
----| 'Ector.Input.Mouse.MODE_DISABLE_CURSOR'
----| 'Ector.Input.Mouse.MODE_CAPTURE_CURSOR'
+---@param mouse_mode EctorMouseMode
 function Ector.Input.SetMouseMode(mouse_mode) end
 
 --- Enable/Disable raw mouse input.
@@ -255,295 +225,150 @@ function Ector.Vector:MakeLookingAt(origin, target, front, up) end
 ---@return Ector.Vector quaternion
 function Ector.Vector:RelativeToQuat(b) end
 
+---@class EctorMouseButton integer
+
+---@class EctorMouseMode integer
+
+---@class EctorKey integer
+
+--- Mouse buttons and options
+---
+---@enum
+---@class Ector.Input.Mouse
+---@field MODE_DEFAULT EctorMouseMode
+---@field MODE_HIDE_CURSOR EctorMouseMode
+---@field MODE_DISABLE_CURSOR EctorMouseMode
+---@field MODE_CAPTURE_CURSOR EctorMouseMode
+---@field LEFT_CLICK EctorMouseButton
+---@field RIGHT_CLICK EctorMouseButton
+---@field MIDDLE_CLICK EctorMouseButton
+---@field BUTTON_4 EctorMouseButton
+---@field BUTTON_5 EctorMouseButton
+---@field BUTTON_6 EctorMouseButton
+---@field BUTTON_7 EctorMouseButton
+---@field BUTTON_8 EctorMouseButton
+Ector.Input.Mouse = {}
+
 --- Keyboard keys
 ---
----@alias Ector.Input.Key
----
----| 'KEY_APOSTROPHE'
----
----| 'KEY_COMMA'
----
----| 'KEY_MINUS'
----
----| 'KEY_PERIOD'
----
----| 'KEY_SLASH'
----
----| 'KEY_0'
----
----| 'KEY_1'
----
----| 'KEY_2'
----
----| 'KEY_3'
----
----| 'KEY_4'
----
----| 'KEY_5'
----
----| 'KEY_6'
----
----| 'KEY_7'
----
----| 'KEY_8'
----
----| 'KEY_9'
----
----| 'KEY_SEMICOLON'
----
----| 'KEY_EQUAL'
----
---- A key
----
----| 'KEY_A'
----
---- B key
----
----| 'KEY_B'
----
---- C key
----
----| 'KEY_C'
----
---- D key
----
----| 'KEY_D'
----
---- E key
----
----| 'KEY_E'
----
---- F key
----
----| 'KEY_F'
----
---- G key
----
----| 'KEY_G'
----
---- H key
----
----| 'KEY_H'
----
---- I key
----
----| 'KEY_I'
----
---- J key
----
----| 'KEY_J'
----
---- K key
----
----| 'KEY_K'
----
---- L key
----
----| 'KEY_L'
----
---- M key
----
----| 'KEY_M'
----
---- N key
----
----| 'KEY_N'
----
---- O key
----
----| 'KEY_O'
----
---- P key
----
----| 'KEY_P'
----
---- Q key
----
----| 'KEY_Q'
----
---- R key
----
----| 'KEY_R'
----
---- S key
----
----| 'KEY_S'
----
---- T key
----
----| 'KEY_T'
----
---- U key
----
----| 'KEY_U'
----
---- V key
----
----| 'KEY_V'
----
---- W key
----
----| 'KEY_W'
----
---- X key
----
----| 'KEY_X'
----
---- Y key
----
----| 'KEY_Y'
----
---- Z key
----
----| 'KEY_Z'
----
----| 'KEY_LEFT_BRACKET'
----
----| 'KEY_BACKSLASH'
----
----| 'KEY_RIGHT_BRACKET'
----
----| 'KEY_GRAVE_ACCENT'
----
----| 'KEY_SPACE'
----
----| 'KEY_ESCAPE'
----
----| 'KEY_ENTER'
----
----| 'KEY_TAB'
----
----| 'KEY_BACKSPACE'
----
----| 'KEY_INSERT'
----
----| 'KEY_DELETE'
----
----| 'KEY_RIGHT'
----
----| 'KEY_LEFT'
----
----| 'KEY_DOWN'
----
----| 'KEY_UP'
----
----| 'KEY_PAGE_UP'
----
----| 'KEY_PAGE_DOWN'
----
----| 'KEY_HOME'
----
----| 'KEY_END'
----
----| 'KEY_CAPS_LOCK'
----
----| 'KEY_SCROLL_LOCK'
----
----| 'KEY_NUM_LOCK'
----
----| 'KEY_PRINT_SCREEN'
----
----| 'KEY_PAUSE'
----
----| 'KEY_F1'
----
----| 'KEY_F2'
----
----| 'KEY_F3'
----
----| 'KEY_F4'
----
----| 'KEY_F5'
----
----| 'KEY_F6'
----
----| 'KEY_F7'
----
----| 'KEY_F8'
----
----| 'KEY_F9'
----
----| 'KEY_F10'
----
----| 'KEY_F11'
----
----| 'KEY_F12'
----
----| 'KEY_F13'
----
----| 'KEY_F14'
----
----| 'KEY_F15'
----
----| 'KEY_F16'
----
----| 'KEY_F17'
----
----| 'KEY_F18'
----
----| 'KEY_F19'
----
----| 'KEY_F20'
----
----| 'KEY_F21'
----
----| 'KEY_F22'
----
----| 'KEY_F23'
----
----| 'KEY_F24'
----
----| 'KEY_F25'
----
----| 'KEY_LEFT_SHIFT'
----
----| 'KEY_LEFT_CONTROL'
----
----| 'KEY_LEFT_ALT'
----
----| 'KEY_LEFT_SUPER'
----
----| 'KEY_RIGHT_SHIFT'
----
----| 'KEY_RIGHT_CONTROL'
----
----| 'KEY_RIGHT_ALT'
----
----| 'KEY_RIGHT_SUPER'
----
----| 'KEY_MENU'
----
----| 'KEY_KP_0'
----
----| 'KEY_KP_1'
----
----| 'KEY_KP_2'
----
----| 'KEY_KP_3'
----
----| 'KEY_KP_4'
----
----| 'KEY_KP_5'
----
----| 'KEY_KP_6'
----
----| 'KEY_KP_7'
----
----| 'KEY_KP_8'
----
----| 'KEY_KP_9'
----
----| 'KEY_KP_DECIMAL'
----
----| 'KEY_KP_DIVIDE'
----
----| 'KEY_KP_MULTIPLY'
----
----| 'KEY_KP_SUBTRACT'
----
----| 'KEY_KP_ADD'
----
----| 'KEY_KP_ENTER'
----
----| 'KEY_KP_EQUAL'
----
+---@enum
+---@class Ector.Input.Key
+---@field KEY_APOSTROPHE EctorKey
+---@field KEY_COMMA EctorKey
+---@field KEY_MINUS EctorKey
+---@field KEY_PERIOD EctorKey
+---@field KEY_SLASH EctorKey
+---@field KEY_0 EctorKey
+---@field KEY_1 EctorKey
+---@field KEY_2 EctorKey
+---@field KEY_3 EctorKey
+---@field KEY_4 EctorKey
+---@field KEY_5 EctorKey
+---@field KEY_6 EctorKey
+---@field KEY_7 EctorKey
+---@field KEY_8 EctorKey
+---@field KEY_9 EctorKey
+---@field KEY_SEMICOLON EctorKey
+---@field KEY_EQUAL EctorKey
+---@field KEY_A EctorKey
+---@field KEY_B EctorKey
+---@field KEY_C EctorKey
+---@field KEY_D EctorKey
+---@field KEY_E EctorKey
+---@field KEY_F EctorKey
+---@field KEY_G EctorKey
+---@field KEY_H EctorKey
+---@field KEY_I EctorKey
+---@field KEY_J EctorKey
+---@field KEY_K EctorKey
+---@field KEY_L EctorKey
+---@field KEY_M EctorKey
+---@field KEY_N EctorKey
+---@field KEY_O EctorKey
+---@field KEY_P EctorKey
+---@field KEY_Q EctorKey
+---@field KEY_R EctorKey
+---@field KEY_S EctorKey
+---@field KEY_T EctorKey
+---@field KEY_U EctorKey
+---@field KEY_V EctorKey
+---@field KEY_W EctorKey
+---@field KEY_X EctorKey
+---@field KEY_Y EctorKey
+---@field KEY_Z EctorKey
+---@field KEY_LEFT_BRACKET EctorKey
+---@field KEY_BACKSLASH EctorKey
+---@field KEY_RIGHT_BRACKET EctorKey
+---@field KEY_GRAVE_ACCENT EctorKey
+---@field KEY_SPACE EctorKey
+---@field KEY_ESCAPE EctorKey
+---@field KEY_ENTER EctorKey
+---@field KEY_TAB EctorKey
+---@field KEY_BACKSPACE EctorKey
+---@field KEY_INSERT EctorKey
+---@field KEY_DELETE EctorKey
+---@field KEY_RIGHT EctorKey
+---@field KEY_LEFT EctorKey
+---@field KEY_DOWN EctorKey
+---@field KEY_UP EctorKey
+---@field KEY_PAGE_UP EctorKey
+---@field KEY_PAGE_DOWN EctorKey
+---@field KEY_HOME EctorKey
+---@field KEY_END EctorKey
+---@field KEY_CAPS_LOCK EctorKey
+---@field KEY_SCROLL_LOCK EctorKey
+---@field KEY_NUM_LOCK EctorKey
+---@field KEY_PRINT_SCREEN EctorKey
+---@field KEY_PAUSE EctorKey
+---@field KEY_F1 EctorKey
+---@field KEY_F2 EctorKey
+---@field KEY_F3 EctorKey
+---@field KEY_F4 EctorKey
+---@field KEY_F5 EctorKey
+---@field KEY_F6 EctorKey
+---@field KEY_F7 EctorKey
+---@field KEY_F8 EctorKey
+---@field KEY_F9 EctorKey
+---@field KEY_F10 EctorKey
+---@field KEY_F11 EctorKey
+---@field KEY_F12 EctorKey
+---@field KEY_F13 EctorKey
+---@field KEY_F14 EctorKey
+---@field KEY_F15 EctorKey
+---@field KEY_F16 EctorKey
+---@field KEY_F17 EctorKey
+---@field KEY_F18 EctorKey
+---@field KEY_F19 EctorKey
+---@field KEY_F20 EctorKey
+---@field KEY_F21 EctorKey
+---@field KEY_F22 EctorKey
+---@field KEY_F23 EctorKey
+---@field KEY_F24 EctorKey
+---@field KEY_F25 EctorKey
+---@field KEY_LEFT_SHIFT EctorKey
+---@field KEY_LEFT_CONTROL EctorKey
+---@field KEY_LEFT_ALT EctorKey
+---@field KEY_LEFT_SUPER EctorKey
+---@field KEY_RIGHT_SHIFT EctorKey
+---@field KEY_RIGHT_CONTROL EctorKey
+---@field KEY_RIGHT_ALT EctorKey
+---@field KEY_RIGHT_SUPER EctorKey
+---@field KEY_MENU EctorKey
+---@field KEY_KP_0 EctorKey
+---@field KEY_KP_1 EctorKey
+---@field KEY_KP_2 EctorKey
+---@field KEY_KP_3 EctorKey
+---@field KEY_KP_4 EctorKey
+---@field KEY_KP_5 EctorKey
+---@field KEY_KP_6 EctorKey
+---@field KEY_KP_7 EctorKey
+---@field KEY_KP_8 EctorKey
+---@field KEY_KP_9 EctorKey
+---@field KEY_KP_DECIMAL EctorKey
+---@field KEY_KP_DIVIDE EctorKey
+---@field KEY_KP_MULTIPLY EctorKey
+---@field KEY_KP_SUBTRACT EctorKey
+---@field KEY_KP_ADD EctorKey
+---@field KEY_KP_ENTER EctorKey
+---@field KEY_KP_EQUAL EctorKey
+Ector.Input.Key = {}
