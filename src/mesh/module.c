@@ -1,7 +1,8 @@
-#include "util/array.h"
-#include "util/files.h"
 #include "util/types.h"
 #include "util/extra_types.h"
+#include "util/array.h"
+#include "util/files.h"
+#include "util/math.h"
 
 #include "mesh/internal.h"
 #include "mesh.h"
@@ -189,6 +190,9 @@ void Mesh_ParseEctorMaterials(memblob memory, Model* inout_model)
    if (memory.data == NULL || memory.size == 0 || inout_model == NULL)
       return;
 
+   if (inout_model->materials == NULL)
+      inout_model->materials = calloc(inout_model->material_count, sizeof(Material));
+
    uS char_offset = 0;
    u32 material_count = 0;
    while (true)
@@ -197,16 +201,24 @@ void Mesh_ParseEctorMaterials(memblob memory, Model* inout_model)
       if (material.name == NULL)
          break;
 
-      u32 index = material_count;
-      material_count++;
-      Material* tmp = realloc(inout_model->materials, material_count * sizeof(Material));
-      if (tmp == NULL)
-         break;
+      u32 index = (material.id == INVALID_HANDLE_ID) ? material_count : material.id;
+      material_count = index + 1;
 
-      inout_model->materials = tmp;
+      if (material_count > inout_model->material_count)
+      {
+         Material* tmp = realloc(inout_model->materials, material_count * sizeof(Material));
+         if (tmp == NULL)
+            break;
+
+         inout_model->materials = tmp;
+
+      }
+
       inout_model->materials[index] = material;
 
    }
+
+   inout_model->material_count = M_MAX(material_count, inout_model->material_count);
 
 }
 
@@ -235,13 +247,17 @@ Material MSH_ParseNextMaterial(memblob memory, uS* char_offset)
    bool in_surf = false;
    bool in_tex = false;
    bool in_param = false;
+   bool has_start = false;
 
    u32 arg_count = 0;
    u32 param_count = 0;
    bool param_is_float = false;
    i32 tex_slot = 0;
 
-   Material material = { .name = NULL };
+   Material material = {
+      .name = NULL,
+      .id = INVALID_HANDLE_ID
+   };
 
    for (u32 token_i = 0; token_i < Util_ArrayLength(tokens); token_i++)
    {
@@ -259,13 +275,18 @@ Material MSH_ParseNextMaterial(memblob memory, uS* char_offset)
       switch (token.token_type)
       {
          case MSH_MATTOK_VALID_STRING: {
-            if (!in_material)
+            if (!in_material && material.name == NULL)
                material.name = MSH_CopyTokenString(token);
             else {
                if (in_id)
                {
                   if (arg_count >= 1)
                      Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Material 'id' only takes 1 argument!");
+                  else {
+                     token.token_start[token.token_size] = 0;
+                     material.id = strtol(token.token_start, NULL, 10);
+
+                  }
 
                }
 
@@ -351,27 +372,35 @@ Material MSH_ParseNextMaterial(memblob memory, uS* char_offset)
          } break;
 
          case MSH_MATTOK_END_LINE: {
-            if (in_param)
-               param_count++;
+            if (in_material)
+            {
+               if (in_param)
+                  param_count++;
 
-            in_id = false;
-            in_surf = false;
-            in_tex = false;
-            in_param = false;
+               in_id = false;
+               in_surf = false;
+               in_tex = false;
+               in_param = false;
+
+            }
 
          } break;
 
          case MSH_MATTOK_START: {
+            has_start = true;
+
             if (in_material)
-               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Materials cannot nest!");
+               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Misplaced open bracket!");
+            else if (material.name == NULL)
+               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Materials require names!");
             else
                in_material = true;
 
          } break;
 
          case MSH_MATTOK_STOP: {
-            if (!in_material)
-               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Materials cannot nest!");
+            if (!in_material && !has_start)
+               Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Misplaced closing bracket!");
             else
                in_material = false;
 
@@ -382,6 +411,9 @@ Material MSH_ParseNextMaterial(memblob memory, uS* char_offset)
       }
 
    }
+
+   if (in_material)
+      Util_Log(NULL, "Mesh", (error){ .general = ERR_LEVEL_WARN }, "Missing closing bracket!");
 
    FREE_ARRAY(tokens);
 
@@ -409,6 +441,29 @@ MSH_MatToken* MSH_TokenizeMaterial(memblob memory, uS* out_buffer_size)
 
       MSH_MatTokenType token_type = MSH_MATTOK_INVALID;
       u32 token_size = new_token.token_size;
+
+      if (head == '#')
+      {
+         new_token.token_type = MSH_MATTOK_COMMENT;
+         new_token.token_size = 0;
+
+      }
+
+      if (new_token.token_type == MSH_MATTOK_COMMENT)
+      {
+         new_token.token_size++;
+
+         if (head == '\n')
+         {
+            ADD_BACK_ARRAY(tokens, new_token);
+
+            new_token.token_type = MSH_MATTOK_INVALID;
+            new_token.token_size = 0;
+
+         }
+
+         continue;
+      }
 
       if (isspace(head) || iscntrl(head))
       {
