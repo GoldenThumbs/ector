@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static eng_EngineGlobal* ENGINE_G;
+// static eng_EngineGlobal* ENGINE_G;
 
 Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
 {
@@ -94,11 +94,11 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
    engine->internal = (eng_EngineGlobal){ 0 };
    engine->internal.up_time = 0.0;
    engine->internal.window = window;
-   ENGINE_G = &engine->internal;
+   glfwSetWindowUserPointer(window, &engine->internal);
 
    glfwGetFramebufferSize(window,
-      &ENGINE_G->frame_size.width,
-      &ENGINE_G->frame_size.height
+      &engine->internal.frame_size.width,
+      &engine->internal.frame_size.height
    );
 
    glfwSetFramebufferSizeCallback(window, ENG_FramebufferSizeCallback);
@@ -222,10 +222,9 @@ void Engine_RegisterModule(Engine* engine, Module module)
 
    if (err.general != ERR_LEVEL_OK)
    {
-      bool is_fatal = (err.general == ERR_LEVEL_FATAL);
-      Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on init!%s", module.name, (is_fatal) ? "Error is fatal, engine aborting..." : "");
+      Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on init!", module.name);
 
-      if (is_fatal)
+      if (err.general == ERR_LEVEL_FATAL)
          abort();
 
    }
@@ -279,24 +278,35 @@ void Engine_SetWindowTitle(Engine* engine, const char* window_title)
 
 void ENG_FramebufferSizeCallback(GLFWwindow* window, i32 width, i32 height)
 {
-   ENGINE_G->frame_size.width = width;
-   ENGINE_G->frame_size.height = height;
+   eng_EngineGlobal* eng_glb = glfwGetWindowUserPointer(window);
+
+   eng_glb->frame_size.width = width;
+   eng_glb->frame_size.height = height;
+
 }
 
 static void ENG_CursorCallback(GLFWwindow* window, f64 x, f64 y)
 {
-   ENGINE_G->input.mouse.position[0].x = x;
-   ENGINE_G->input.mouse.position[0].y = y;
+   eng_EngineGlobal* eng_glb = glfwGetWindowUserPointer(window);
+
+   eng_glb->input.mouse.position[0].x = x;
+   eng_glb->input.mouse.position[0].y = y;
+
 }
 
 void ENG_ScrollCallback(GLFWwindow* window, f64 x, f64 y)
 {
-   ENGINE_G->input.mouse.scroll.x = x;
-   ENGINE_G->input.mouse.scroll.y = y;
+   eng_EngineGlobal* eng_glb = glfwGetWindowUserPointer(window);
+
+   eng_glb->input.mouse.scroll.x = x;
+   eng_glb->input.mouse.scroll.y = y;
+
 }
 
 void ENG_KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 mods)
 {
+   eng_EngineGlobal* eng_glb = glfwGetWindowUserPointer(window);
+
    KeyState key_state = (KeyState){
       .mod_shift = ((mods & GLFW_MOD_SHIFT) == GLFW_MOD_SHIFT),
       .mod_ctrl = ((mods & GLFW_MOD_CONTROL) == GLFW_MOD_CONTROL),
@@ -305,7 +315,7 @@ void ENG_KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 
       .mod_capslock = ((mods & GLFW_MOD_CAPS_LOCK) == GLFW_MOD_CAPS_LOCK),
       .mod_numlock = ((mods & GLFW_MOD_NUM_LOCK) == GLFW_MOD_NUM_LOCK)
    };
-   key_state.was_down = ENGINE_G->input.keyboard.key_state[key].was_down;
+   key_state.was_down = eng_glb->input.keyboard.key_state[key].was_down;
 
    switch (action)
    {
@@ -316,15 +326,18 @@ void ENG_KeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 action, i32 
          key_state.is_down = 1;
          break;
       default:
-         ENGINE_G->input.keyboard.key_state[key].total_bits = 0;
+         eng_glb->input.keyboard.key_state[key].total_bits = 0;
          return;
    }
 
-   ENGINE_G->input.keyboard.key_state[key] = key_state;
+   eng_glb->input.keyboard.key_state[key] = key_state;
+
 }
 
 void ENG_ButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods)
 {
+   eng_EngineGlobal* eng_glb = glfwGetWindowUserPointer(window);
+
    KeyState button_state = (KeyState){
       .mod_shift = ((mods & GLFW_MOD_SHIFT) == GLFW_MOD_SHIFT),
       .mod_ctrl = ((mods & GLFW_MOD_CONTROL) == GLFW_MOD_CONTROL),
@@ -333,7 +346,7 @@ void ENG_ButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods)
       .mod_capslock = ((mods & GLFW_MOD_CAPS_LOCK) == GLFW_MOD_CAPS_LOCK),
       .mod_numlock = ((mods & GLFW_MOD_NUM_LOCK) == GLFW_MOD_NUM_LOCK)
    };
-   button_state.was_down = ENGINE_G->input.mouse.button_state[button].was_down;
+   button_state.was_down = eng_glb->input.mouse.button_state[button].was_down;
 
    switch (action)
    {
@@ -344,9 +357,10 @@ void ENG_ButtonCallback(GLFWwindow* window, i32 button, i32 action, i32 mods)
          button_state.is_down = 1;
          break;
       default:
-         ENGINE_G->input.mouse.button_state[button].total_bits = 0;
+         eng_glb->input.mouse.button_state[button].total_bits = 0;
          return;
    }
 
-   ENGINE_G->input.mouse.button_state[button] = button_state;
+   eng_glb->input.mouse.button_state[button] = button_state;
+
 }
