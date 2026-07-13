@@ -220,4 +220,11 @@ void Util_Log(FILE* stream, const char* module_name, error err, const char* mess
    fprintf(stream_out, "]\n\n");
 #endif
 
+   if (err.general == ERR_LEVEL_FATAL)
+   {
+      fprintf(stream_out, "Aborting...\n");
+      abort();
+
+   }
+
 }
