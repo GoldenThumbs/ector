@@ -2,6 +2,7 @@
 #define ECT_ARRAY_H
 
 #include "util/types.h"
+#include "util/files.h"
 
 // #include <stdalign.h>
 #include <stddef.h>
@@ -15,6 +16,21 @@
 
 #define ARRAY_HEADER(ptr) ((Array*)(ptr) - 1)
 
+// utility macros for denoting arrays and maps
+// --<
+
+#define ARRAY_TYPE(T) Array_##T
+#define MAP_TYPE(T) Map_##T
+#define ARRAY_TYPEDEF(T) typedef T* ARRAY_TYPE(T)
+#define MAP_TYPEDEF(T) typedef T* MAP_TYPE(T)
+
+// >--
+
+#define ARRAY_SIZE Util_ArrayTypeSize
+#define ARRAY_MEMORY Util_ArrayMemory
+#define ARRAY_LENGTH Util_ArrayLength
+#define ARRAY_ERROR Util_ArrayError
+
 #define NEW_ARRAY_N(T, N) Util_CreateArrayOfLength(N, sizeof(T))
 #define NEW_ARRAY(T) NEW_ARRAY_N(T, 2u)
 #define SET_ARRAY_LENGTH(ptr, N) Util_SetArrayLength(REF(ptr), N)
@@ -27,6 +43,11 @@
 #define POP_BACK_ARRAY(ptr) REMOVE_ARRAY(ptr, Util_ArrayLength(ptr) - 1u)
 #define POP_FRONT_ARRAY(ptr) REMOVE_ARRAY(ptr, 0u)
 
+#define MAP_SIZE Util_ArrayTypeSize
+#define MAP_MEMORY Util_ArrayMemory
+#define MAP_LENGTH Util_ArrayLength
+#define MAP_ERROR Util_ArrayError
+
 #define NEW_MAP_N(T, N) Util_CreateArrayOfLength(N, sizeof(T) + sizeof(MapItem))
 #define NEW_MAP(T) NEW_MAP_N(T, 2u)
 #define SET_MAP_LENGTH(ptr, N) SET_ARRAY_LENGTH(ptr, N)
@@ -35,11 +56,13 @@
 #define ADD_MAP_ITEM(ptr, key, item) Util_AddMapItem(REF(ptr), key, &(item))
 #define ADD_MAP_KEY(ptr, key) Util_AddMapItem(REF(ptr), key, NULL)
 #define GET_MAP_ITEM(ptr, key) Util_GetMapItem(ptr, key)
-#define REMOVE_MAP_ITEM(ptr, key) REMOVE_ARRAY(ptr, Util_GetMapItemIndex(ptr, key))
+#define REMOVE_MAP_ITEM(ptr, key) Util_RemoveMapItem(REF(ptr), key)
+
+#define ARRAY_MODULE "Array"
 
 enum {
-   ERR_ARRAY_REALLOC_FAILED = 1
-
+   ERR_ARRAY_REALLOC_FAILED = 1,
+   ERR_ARRAY_INVALID
 };
 
 #define WARN_ARRAY_INDEX_OVER (1u << 0u)
@@ -80,9 +103,38 @@ void Util_JoinArrays(void** array_ptr_a, void* ptr_b);
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index);
 
+static inline bool Util_ArrayIsValid(void* ptr)
+{
+   if (ptr != NULL)
+   {
+      error array_err = ARRAY_HEADER(ptr)->err;
+      if (array_err.general >= ERR_LEVEL_ERROR)
+      {
+         Util_Log(NULL, ARRAY_MODULE, array_err, "Array has errors!");
+
+         return false;
+      }
+
+      return true;
+   }
+
+   error err = { 0 };
+   err.general = ERR_LEVEL_ERROR;
+   err.extra = ERR_ARRAY_INVALID;
+
+   Util_Log(NULL, ARRAY_MODULE, err, "Array is NULL!");
+
+   return false;
+}
+
+static bool Util_ArrayPtrIsValid(void** array_ptr)
+{
+   return (array_ptr != NULL && Util_ArrayIsValid(*array_ptr));
+}
+
 static inline uS Util_ArrayTypeSize(void* ptr)
 {
-   if (ptr == NULL)
+   if (!Util_ArrayIsValid(ptr))
       return 0;
 
    return ARRAY_HEADER(ptr)->size;
@@ -90,7 +142,7 @@ static inline uS Util_ArrayTypeSize(void* ptr)
 
 static inline uS Util_ArrayMemory(void* ptr)
 {
-   if (ptr == NULL)
+   if (!Util_ArrayIsValid(ptr))
       return 0;
 
    return ARRAY_HEADER(ptr)->memory;
@@ -98,7 +150,7 @@ static inline uS Util_ArrayMemory(void* ptr)
 
 static inline u32 Util_ArrayLength(void* ptr)
 {
-   if (ptr == NULL)
+   if (!Util_ArrayIsValid(ptr))
       return 0;
 
    return ARRAY_HEADER(ptr)->length;
@@ -107,18 +159,24 @@ static inline u32 Util_ArrayLength(void* ptr)
 static inline error Util_ArrayError(void* ptr)
 {
    if (ptr == NULL)
-      return (error){ .general = ERR_LEVEL_ERROR };
+   {
+      error err = { 0 };
+      err.general = ERR_LEVEL_ERROR;
+      err.extra = ERR_ARRAY_INVALID;
+
+      return err;
+   }
 
    return ARRAY_HEADER(ptr)->err;
 }
 
 static inline MapItem* Util_GetMapItemFromIndex(void* ptr, u32 index)
 {
-   if (ptr == NULL)
+   if (!Util_ArrayIsValid(ptr))
       return NULL;
 
    Array* array = ARRAY_HEADER(ptr);
-   if (index >= array->length)
+   if (index > array->length) // removed items go to back of map/array, right after its canon length.
       return NULL;
 
    return (MapItem*)(array->data + index * array->size);
@@ -154,7 +212,7 @@ static inline void* Util_GetMapItem(void* ptr, const char* key)
 
 static inline void Util_FreeMap(void* ptr)
 {
-   if (ptr == NULL)
+   if (!Util_ArrayIsValid(ptr))
       return;
 
    for (u32 item_i = 0; item_i < Util_ArrayLength(ptr); item_i++)
@@ -171,7 +229,7 @@ static inline void Util_FreeMap(void* ptr)
 
 static inline void* Util_AddMapItem(void** array_ptr, const char* key, const void* value)
 {
-   if (array_ptr == NULL || key == NULL)
+   if (!Util_ArrayPtrIsValid(array_ptr) || key == NULL)
       return NULL;
 
    uS size = Util_ArrayTypeSize(*array_ptr) - sizeof(MapItem);
@@ -198,6 +256,28 @@ static inline void* Util_AddMapItem(void** array_ptr, const char* key, const voi
    }
 
    return NULL;
+}
+
+static inline void* Util_RemoveMapItem(void** array_ptr, const char* key)
+{
+   if (!Util_ArrayPtrIsValid(array_ptr) || key == NULL)
+      return NULL;
+
+   u32 index = Util_GetMapItemIndex(*array_ptr, key);
+   if (index == INVALID_HANDLE_ID)
+      return NULL;
+
+
+   Util_RemoveArrayIndex(array_ptr, index);
+   MapItem* map_item = Util_GetMapItemFromIndex(*array_ptr, index);
+
+   // free the key so we can avoid losing track of allocated memory.
+   free(map_item->key);
+
+   // set key to NULL, ensure we pass key == NULL comparisons and dont fail due to invalid memory.
+   map_item->key = NULL;
+
+   return map_item->value;
 }
 
 #endif

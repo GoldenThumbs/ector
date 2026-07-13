@@ -7,10 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ARRAY_MODULE "Array"
-
 #define ARR_DATA(array) (&(array)->data)
-#define ARR_PTR_VALID(array_ptr) (((array_ptr) != NULL) && (*(array_ptr) != NULL))
 #define ARR_N_OK(array, offs) ((1u + (array)->length + (offs)) < (u32)(array)->memory)
 
 uS LeadingZeros_uS(uS x)
@@ -39,6 +36,9 @@ uS Pow2_uS(uS x)
 
 void Util_SetArrayMemory(void** array_ptr, u32 desired_length)
 {
+   if (!Util_ArrayPtrIsValid(array_ptr))
+      return;
+
    Array* array = ARRAY_HEADER(*array_ptr);
 
    if ((uS)desired_length >= array->memory)
@@ -47,6 +47,9 @@ void Util_SetArrayMemory(void** array_ptr, u32 desired_length)
 
 void Util_SetArrayLength(void** array_ptr, u32 desired_length)
 {
+   if (!Util_ArrayPtrIsValid(array_ptr))
+      return;
+
    Util_SetArrayMemory(array_ptr, desired_length);
 
    Array* array = ARRAY_HEADER(*array_ptr);
@@ -95,8 +98,8 @@ void* Util_CreateArrayOfLength(u32 length, uS type_size)
 
 void Util_ReallocArray(void** array_ptr, u32 desired_length)
 {
-   if (!ARR_PTR_VALID(array_ptr))
-      abort();
+   if (!Util_ArrayPtrIsValid(array_ptr))
+      return;
 
    Array* array = ARRAY_HEADER(*array_ptr);
 
@@ -132,8 +135,8 @@ void Util_ReallocArray(void** array_ptr, u32 desired_length)
 
 void Util_InsertArrayIndex(void** array_ptr, u32 index)
 {
-   if (!ARR_PTR_VALID(array_ptr))
-      abort();
+   if (!Util_ArrayPtrIsValid(array_ptr))
+      return;
 
    Array* array = ARRAY_HEADER(*array_ptr);
 
@@ -168,8 +171,8 @@ void Util_InsertArrayIndex(void** array_ptr, u32 index)
 
 void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 {
-   if (!ARR_PTR_VALID(array_ptr))
-      abort();
+   if (!Util_ArrayPtrIsValid(array_ptr))
+      return;
 
    Array* array = ARRAY_HEADER(*array_ptr);
 
@@ -205,7 +208,7 @@ void Util_RemoveArrayIndex(void** array_ptr, u32 index)
 
 void Util_JoinArrays(void** array_ptr_a, void* ptr_b)
 {
-   if (!ARR_PTR_VALID(array_ptr_a) || ptr_b == NULL)
+   if (!Util_ArrayPtrIsValid(array_ptr_a) || !Util_ArrayIsValid(ptr_b))
       return;
 
    Array* array_a = ARRAY_HEADER(*array_ptr_a);
@@ -239,8 +242,8 @@ void Util_JoinArrays(void** array_ptr_a, void* ptr_b)
 
 u32 Util_UsableArrayIndex(void* ptr, u32 index)
 {
-   if (ptr == NULL)
-      abort();
+   if (!Util_ArrayIsValid(ptr))
+      return INVALID_HANDLE_ID;
 
    Array* array = ARRAY_HEADER(ptr);
 

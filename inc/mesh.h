@@ -100,6 +100,8 @@ typedef struct Material_t
 
    } parameter[MATERIAL_MAX_PARAMS];
 
+   u32 id;
+
 } Material;
 
 typedef struct Model_t
