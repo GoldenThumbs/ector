@@ -10,7 +10,6 @@
 
 #include <GLFW/glfw3.h>
 
-//#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -39,9 +38,7 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
       err.extra = ERR_ENG_INIT_FAILED;
       err.flags |= ERR_FLAG_WINDOW_INIT_FAILED | ERR_FLAG_WINDOW_CREATION_FAILED;
 
-      Util_Log(NULL, ENGINE_LOG_NAME, err, "Window initialization failed! Exiting...");
-
-      abort();
+      Util_Log(NULL, ENGINE_LOG_NAME, err, "Window initialization failed!");
 
    }
 
@@ -62,9 +59,7 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
       err.flags |= ERR_FLAG_WINDOW_CREATION_FAILED;
 
       glfwTerminate();
-      Util_Log(NULL, ENGINE_LOG_NAME, err, "Window creation failed! Exiting...");
-
-      abort();
+      Util_Log(NULL, ENGINE_LOG_NAME, err, "Window creation failed!");
 
    }
 
@@ -79,9 +74,7 @@ Engine* Engine_Init(i32 argc, char* argv[], const EngineDesc* desc)
       err.flags |= ERR_FLAG_ENGINE_ALLOC_FAILED;
 
       glfwTerminate();
-      Util_Log(NULL, ENGINE_LOG_NAME, err, "Engine allocation failed! Exiting...");
-
-      abort();
+      Util_Log(NULL, ENGINE_LOG_NAME, err, "Engine allocation failed!");
 
    }
 
@@ -133,18 +126,12 @@ void Engine_Free(Engine* engine)
 
       error err = module->mod_free(module, engine);
       if (err.general != ERR_LEVEL_OK)
-      {
-         bool is_fatal = (err.general == ERR_LEVEL_FATAL);
-         Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on free!%s", module->name, (is_fatal) ? "Error is fatal, engine aborting..." : "");
-
-         if (is_fatal)
-            abort();
-
-      }
+         Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on free!", module->name);
 
    }
 
    FREE_ARRAY(engine->modules);
+   FREE_ARRAY(engine->internal.input.keyboard.text_buffer);
 
    glfwTerminate();
    free(engine);
@@ -170,12 +157,12 @@ bool Engine_CheckExitConditions(Engine* engine)
    eng_glb->input.mouse.scroll.x = 0.0;
    eng_glb->input.mouse.scroll.y = 0.0;
 
-   for (i32 key=0; key<MAX_KEYS; key++)
+   for (i32 key = 0; key < MAX_KEYS; key++)
    {
       eng_glb->input.keyboard.key_state[key].was_down = eng_glb->input.keyboard.key_state[key].is_down;
    }
 
-   for (i32 button=0; button<MAX_MOUSE_BUTTONS; button++)
+   for (i32 button = 0; button < MAX_MOUSE_BUTTONS; button++)
    {
       eng_glb->input.mouse.button_state[button].was_down = eng_glb->input.mouse.button_state[button].is_down;
    }
@@ -195,16 +182,12 @@ void* Engine_FetchModule(Engine* engine, const char* name)
       return NULL;
 
    u32 module_count = Util_ArrayLength(engine->modules);
-   for (u32 i=0; i<module_count; i++)
+   for (u32 mod_i = 0; mod_i < module_count; mod_i++)
    {
-      Module* m = engine->modules + (uS)i;
-      if (m == NULL)
-         break;
+      Module* module = &engine->modules[mod_i];
 
-      if (strncmp(m->name, name, 64) == 0)
-      {
-         return m->data;
-      }
+      if (strncmp(module->name, name, 64) == 0)
+         return module->data;
 
    }
 
@@ -221,13 +204,7 @@ void Engine_RegisterModule(Engine* engine, Module module)
    error err = module.mod_init(m, engine);
 
    if (err.general != ERR_LEVEL_OK)
-   {
       Util_Log(NULL, ENGINE_LOG_NAME, err, "\"%s\" module error on init!", module.name);
-
-      if (err.general == ERR_LEVEL_FATAL)
-         abort();
-
-   }
 
 }
 

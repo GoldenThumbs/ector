@@ -10,7 +10,7 @@
 
 #include <GLFW/glfw3.h>
 
-#define MAX_TEXTBUF 128
+#define DEFAULT_TEXTBUF 128
 #define MAX_KEYS 512
 #define MAX_MOUSE_BUTTONS 8
 
@@ -33,7 +33,7 @@ typedef struct eng_EngineGlobal_t
       } mouse;
 
       struct {
-         u32 text_buffer[MAX_TEXTBUF];
+         u32* text_buffer;
          KeyState key_state[MAX_KEYS];
 
       } keyboard;

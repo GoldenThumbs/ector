@@ -7,7 +7,6 @@
 #include "renderer/internal.h"
 
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>

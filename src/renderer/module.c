@@ -11,7 +11,6 @@
 #include "renderer/internal.h"
 
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
