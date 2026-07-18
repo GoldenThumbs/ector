@@ -200,6 +200,7 @@ void Renderer_ReserveTexture(Renderer* renderer, u32 bind_slot);
 void Renderer_UnreserveTexture(Renderer* renderer, u32 bind_slot);
 
 void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color);
+void Renderer_UploadModelData(Renderer* renderer, mat4x4 matrix, color8 color);
 
 void Renderer_SetViewMatrix(Renderer* renderer, mat4x4 view);
 void Renderer_SetProjectionMatrix(Renderer* renderer, mat4x4 proj);
@@ -222,6 +223,7 @@ void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface);
 Surface Renderer_GetSurface(Renderer* renderer, const char* name);
 SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32 pass_id);
 UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id);
+UniformBlockList Renderer_UseSurfaceMaterialAdvanced(Renderer* renderer, mat4x4 matrix, SurfaceMaterial material, color8 color, u32 pass_id);
 
 void Renderer_RegisterDrawableType(Renderer* renderer, const char* name, const DrawableTypeDesc* desc);
 u16 Renderer_GetDrawableTypeIndexFromName(Renderer* renderer, const char* drawable_type_name);

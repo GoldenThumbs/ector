@@ -190,11 +190,17 @@ void Renderer_UnreserveTexture(Renderer* renderer, u32 bind_slot)
 
 void Renderer_UpdateModelData(Renderer* renderer, Transform3D transform, color8 color)
 {
+   Renderer_UploadModelData(renderer, Util_TransformationMatrix(transform), color);
+
+}
+
+void Renderer_UploadModelData(Renderer* renderer, mat4x4 matrix, color8 color)
+{
    if (renderer == NULL)
       return;
 
    ModelData model_data = { 0 };
-   model_data.mat_model = Util_TransformationMatrix(transform);
+   model_data.mat_model = matrix;
    model_data.mat_invmodel = Util_InverseMat4(model_data.mat_model);
    model_data.mat_mvp = Util_MulMat4(renderer->view_projection, model_data.mat_model);
    model_data.u_color = Util_Vec4FromColor(color);

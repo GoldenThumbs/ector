@@ -1,3 +1,4 @@
+#include "util/extra_types.h"
 #include "util/types.h"
 #include "util/array.h"
 #include "util/resource.h"
@@ -82,12 +83,18 @@ SurfacePass Renderer_GetSurfacePass(Renderer* renderer, Surface res_surface, u32
 
 UniformBlockList Renderer_UseSurfaceMaterial(Renderer* renderer, Transform3D transform, SurfaceMaterial material, color8 color, u32 pass_id)
 {
+   mat4x4 matrix = Util_TransformationMatrix(transform);
+   return Renderer_UseSurfaceMaterialAdvanced(renderer, matrix, material, color, pass_id);
+}
+
+UniformBlockList Renderer_UseSurfaceMaterialAdvanced(Renderer* renderer, mat4x4 matrix, SurfaceMaterial material, color8 color, u32 pass_id)
+{
    rndr_Surface* surface = RNDR_GetSurface(renderer, material.surface);
    if (surface == NULL || surface->pass_count  < pass_id + 1)
       return (UniformBlockList){ 0 };
 
    Renderer_UseMaterialTextures(renderer, material);
-   Renderer_UpdateModelData(renderer, transform, color);
+   Renderer_UploadModelData(renderer, matrix, color);
 
    return RNDR_UpdateMaterialUBOs(renderer, material, pass_id);
 }
