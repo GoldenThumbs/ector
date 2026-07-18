@@ -235,12 +235,41 @@ void Scripting_AddModule(ScriptHandler* script_handler, ScriptModuleDesc desc)
 
 }
 
-void Scripting_CreateTable(void* script_state)
+void Scripting_Copy(void* script_state, LuaIndex index)
 {
    if (script_state == NULL)
       return;
 
+   lua_pushnil(script_state);
+   lua_copy(script_state, index, -1);
+
+}
+
+void Scripting_PopFromStack(void* script_state, u32 count)
+{
+   if (script_state == NULL)
+      return;
+
+   lua_pop(script_state, (i32)count);
+
+}
+
+LuaIndex Scripting_CreateTable(void* script_state)
+{
+   if (script_state == NULL)
+      return 0;
+
    lua_newtable(script_state);
+
+   return lua_gettop(script_state);
+}
+
+void Scripting_GetTableField(void* script_state, const char* name, LuaIndex index)
+{
+   if (script_state == NULL || name == NULL || !lua_istable(script_state, index))
+      return;
+
+   lua_getfield(script_state, index, name);
 
 }
 
@@ -329,18 +358,29 @@ void* Scripting_GetModuleData(void* script_state, const char* module_name)
    lua_rawget(script_state, -2);
 
    if (!Scripting_FieldExists(script_state, module_name))
+   {
+      lua_pop(script_state, 2);
+
       return NULL;
+   }
 
    lua_pushstring(script_state, module_name);
    lua_rawget(script_state, -2);
 
    if (!Scripting_FieldExists(script_state, "data") || !lua_islightuserdata(script_state, 0))
+   {
+      lua_pop(script_state, 3);
+
       return NULL;
+   }
 
    lua_pushstring(script_state, "data");
    lua_rawget(script_state, -2);
 
-   return lua_touserdata(script_state, -1);
+   void* data = lua_touserdata(script_state, -1);
+   lua_pop(script_state, 4);
+
+   return data;
 }
 
 i32 Scripting_GetI32(void* script_state, LuaIndex index)
@@ -384,50 +424,55 @@ memblob Scripting_GetUserData(void* script_state, LuaIndex index)
    return (memblob){ lua_touserdata(script_state, index), size };
 }
 
-void Scripting_PushI32(void* script_state, i32 value)
+LuaIndex Scripting_PushI32(void* script_state, i32 value)
 {
    if (script_state == NULL)
-      return;
+      return 0;
 
    lua_pushinteger(script_state, (lua_Integer)value);
 
+   return lua_gettop(script_state);
 }
 
-void Scripting_PushF32(void* script_state, f32 value)
+LuaIndex Scripting_PushF32(void* script_state, f32 value)
 {
    if (script_state == NULL)
-      return;
+      return 0;
 
    lua_pushnumber(script_state, (lua_Number)value);
 
+   return lua_gettop(script_state);
 }
 
-void Scripting_PushVec4(void* script_state, vec4 value)
+LuaIndex Scripting_PushVec4(void* script_state, vec4 value)
 {
    if (script_state == NULL)
-      return;
+      return 0;
 
    SCRP_Util_PushVector(script_state, value);
 
+   return lua_gettop(script_state);
 }
 
-void Scripting_PushString(void* script_state, const char* value)
+LuaIndex Scripting_PushString(void* script_state, const char* value)
 {
    if (script_state == NULL || value == NULL)
-      return;
+      return 0;
 
    lua_pushstring(script_state, value);
 
+   return lua_gettop(script_state);
 }
 
-void Scripting_PushUserData(void* script_state, memblob value)
+LuaIndex Scripting_PushUserData(void* script_state, memblob value)
 {
    if (script_state == NULL || value.data == NULL || value.size == 0)
-      return;
+      return 0;
 
    void* ptr = lua_newuserdatauv(script_state, value.size, 0);
    memcpy(ptr, value.data, value.size);
 
+   return lua_gettop(script_state);
 }
 
 void SCRP_PushVariable(lua_State* script_state, memblob value, u8 variable_type)

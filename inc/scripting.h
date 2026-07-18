@@ -78,12 +78,17 @@ error Scripting_RunScript(ScriptHandler* script_handler, Script res_script);
 
 bool Scripting_FieldExists(void* script_state, const char* name);
 
+
 void Scripting_AddGlobalVariable(ScriptHandler* script_handler, const char* name, memblob value, u8 variable_type);
 void Scripting_AddGlobalFunction(ScriptHandler* script_handler, const char* name, LuaCFunc function);
 void Scripting_AddModule(ScriptHandler* script_handler, ScriptModuleDesc desc);
 
-void Scripting_CreateTable(void* script_state);
+void Scripting_Copy(void* script_state, LuaIndex index);
+void Scripting_PopFromStack(void* script_state, u32 count);
 
+LuaIndex Scripting_CreateTable(void* script_state);
+
+void Scripting_GetTableField(void* script_state, const char* name, LuaIndex index);
 void Scripting_SetTableField(void* script_state, const char* name, LuaIndex index);
 void Scripting_AddFieldToTable(void* script_state, const char* name, memblob value, u8 field_type);
 void Scripting_AddFunctionsToTable(void* script_state, NamedScriptFunction named_functions[], u32 function_count);
@@ -98,10 +103,10 @@ vec4 Scripting_GetVec4(void* script_state, LuaIndex index);
 const char* Scripting_GetString(void* script_state, LuaIndex index);
 memblob Scripting_GetUserData(void* script_state, LuaIndex index);
 
-void Scripting_PushI32(void* script_state, i32 value);
-void Scripting_PushF32(void* script_state, f32 value);
-void Scripting_PushVec4(void* script_state, vec4 value);
-void Scripting_PushString(void* script_state, const char* value);
-void Scripting_PushUserData(void* script_state, memblob value);
+LuaIndex Scripting_PushI32(void* script_state, i32 value);
+LuaIndex Scripting_PushF32(void* script_state, f32 value);
+LuaIndex Scripting_PushVec4(void* script_state, vec4 value);
+LuaIndex Scripting_PushString(void* script_state, const char* value);
+LuaIndex Scripting_PushUserData(void* script_state, memblob value);
 
 #endif
