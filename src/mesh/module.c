@@ -7,6 +7,7 @@
 #include "mesh/internal.h"
 #include "mesh.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -553,14 +554,17 @@ Mesh MSH_ParseEctorMesh(memblob memory, uS* mesh_size)
    if ((mesh_header.vertex_count == 0) || (mesh_header.attribute_count == 0))
       return (Mesh){ 0 };
 
-   uS index_size = mesh_header.index_count * sizeof(u16);
-   uS vertex_size = 0;
+   bool high_precision_idx = (mesh_header.vertex_count > UINT16_MAX);
 
    Mesh mesh = {
       .node_id = mesh_header.node_id,
       .material_id = mesh_header.material_id,
-      .attribute_count = mesh_header.attribute_count
+      .attribute_count = mesh_header.attribute_count,
+      .index_type = (high_precision_idx) ? MESH_INDEXTYPE_32BIT : MESH_INDEXTYPE_16BIT
    };
+
+   uS index_size = mesh_header.index_count * ((high_precision_idx) ? sizeof(u32) : sizeof(u16));
+   uS vertex_size = 0;
 
    for (u8 attribute_i = 0; attribute_i < mesh.attribute_count; attribute_i++)
    {
