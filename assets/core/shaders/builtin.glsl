@@ -91,7 +91,7 @@ layout(binding=1) uniform sampler2D tex_normal;
 layout(binding=2) uniform sampler2D tex_roughness;
 layout(binding=3) uniform sampler2D tex_metallic;
 
-layout(binding=5) uniform samplerCubeArray tex_pointlight_shadows;
+layout(binding=5) uniform samplerCubeArrayShadow tex_pointlight_shadows;
 
 in vec3 v2f_normal;
 in vec3 v2f_tangent;
@@ -292,10 +292,19 @@ float Distribution(float nDh, float r)
 float SampleShadow(float depth, vec3 shadowmap_coords, int shadow_id)
 {
    vec4 sm = vec4(shadowmap_coords, float(shadow_id));
-   vec4 shadowmap_depth = textureGather(tex_pointlight_shadows, sm, 0);
-   vec4 comp = step(depth, shadowmap_depth);
+   float shadowmap = texture(tex_pointlight_shadows, sm, depth);
 
-   return (comp.r + comp.g + comp.b + comp.a) * 0.25;
+   return shadowmap;
+}
+
+mat3 Basis(vec3 v)
+{
+   mat3 basis = mat3(0.0);
+   basis[0] = normalize((abs(v.x) >= 0.57735) ? vec3(v.y,-v.x, 0.0) : vec3(0.0, v.z,-v.y));
+   basis[1] = cross(v, basis[0]);
+   basis[2] = v;
+
+   return basis;
 }
 
 vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
@@ -314,41 +323,15 @@ vec3 LightContribution(SurfaceData surf_data, PackedLight packed_light)
    attenuation *= SpotAttenuation(light_dir, light);
 
    float shadow_spread = 1.0 / float(textureSize(tex_pointlight_shadows, 0).x);
-   float noise_spread = 0.8 * shadow_spread;
+   float noise_spread = 1.0 * shadow_spread;
    if (light.shadow_id > -1)
    {
       vec3 surf_to_light = -(mat3(mat_invview) * light_position);
 
-      const float g_3d = 1.32471795724474602596;
-      const vec3 p_3d = 1.0 / (vec3(g_3d, g_3d * g_3d, g_3d * g_3d * g_3d));
-
-      float ign = InterleavedGradientNoise(surf_data.screen_coord);
-      vec3 ign_p = 0.5 + ign * 15.0 * p_3d;
-
       surf_to_light += mat3(mat_invview) * surf_data.vertex_normal * 0.02;
       float surf_depth = max(abs(surf_to_light.x), max(abs(surf_to_light.y), abs(surf_to_light.z)));
 
-      const vec3 shadow_offsets[8] = vec3[](
-         vec3( -1.0, -1.0, -1.0 ),
-         vec3( -1.0,  1.0, -1.0 ),
-         vec3(  1.0,  1.0, -1.0 ),
-         vec3(  1.0, -1.0, -1.0 ),
-         vec3( -1.0, -1.0,  1.0 ),
-         vec3( -1.0,  1.0,  1.0 ),
-         vec3(  1.0,  1.0,  1.0 ),
-         vec3(  1.0, -1.0,  1.0 )
-      );
-
-      float shadow = 0.0;
-      for (int s = 0; s < 8; s++)
-      {
-         vec3 shadow_noise = (fract(ign_p + float(s) * p_3d) - 0.5) * noise_spread;
-         vec3 shadowmap_coords = surf_to_light + shadow_noise + shadow_offsets[s] * shadow_spread;
-
-         shadow += SampleShadow(surf_depth, shadowmap_coords, light.shadow_id);
-      }
-
-      attenuation *= shadow * 0.125;
+      attenuation *= SampleShadow(surf_depth, surf_to_light, light.shadow_id);
 
    }
 
@@ -383,7 +366,7 @@ void main()
       v2f_position
    );
 
-   vec3 final_color = surf_data.surf_color * 0.0001;
+   vec3 final_color = vec3(0.0);
 
    vec2 tile_size = vec2(u_screen_size) / vec2(u_cluster_dimensions.xy);
    uint z_id = uint((log(abs(surf_data.position_vs.z) / u_near_far.x) * u_cluster_dimensions.z) / log(u_near_far.y / u_near_far.x));

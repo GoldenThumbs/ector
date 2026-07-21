@@ -98,6 +98,7 @@ DefaultLightManager* DefaultLightManager_Init(Renderer* renderer)
    };
 
    lightmanager->shadow.pointlight = Graphics_CreateTexture(graphics, NULL, point_shadow_desc);
+   Graphics_SetTextureShadowSampler(graphics, lightmanager->shadow.pointlight, true);
    Graphics_CheckErrors(graphics);
    Graphics_CreateFramebuffer(graphics, lightmanager->shadow.shadow_size, false);
    Graphics_CheckErrors(graphics);
