@@ -1,5 +1,5 @@
-#ifndef UTIL_MATRIX_H
-#define UTIL_MATRIX_H
+#ifndef ECT_MATRIX_H
+#define ECT_MATRIX_H
 
 #include "util/types.h"
 #include "util/math.h"
@@ -278,7 +278,7 @@ static inline mat4x4 Util_InversePerspectiveMatrix(mat4x4 perspective_matrix)
    res.m[0][0] = 1.0f / perspective_matrix.m[0][0];
    res.m[1][1] = 1.0f / perspective_matrix.m[1][1];
    res.m[2][2] = 0.0f;
-   
+
    res.m[2][3] = 1.0f / perspective_matrix.m[3][2];
    res.m[3][3] = perspective_matrix.m[2][2] * res.m[2][3];
    res.m[3][2] = perspective_matrix.m[2][3];

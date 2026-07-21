@@ -1,7 +1,7 @@
 #include "util/types.h"
 #include "util/array.h"
 #include "util/files.h"
-#include "util/resource.h"
+#include "util/handle.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"

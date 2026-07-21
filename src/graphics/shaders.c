@@ -1,6 +1,6 @@
 #include "util/files.h"
 #include "util/types.h"
-#include "util/resource.h"
+#include "util/handle.h"
 #include "util/files.h"
 
 #include "graphics.h"
@@ -54,9 +54,9 @@ Shader Graphics_CreateShader(Graphics* graphics, const char* vertex_shader, cons
    shader.id.program = shd_id;
 
    if (graphics->freed_shader_root == INVALID_HANDLE)
-      return ADD_RESOURCE(graphics->shaders, shader);
+      return ADD_HANDLE(graphics->shaders, shader);
 
-   return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
+   return REUSE_HANDLE(graphics->shaders, shader, graphics->freed_shader_root);
 }
 
 Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shader)
@@ -97,9 +97,9 @@ Shader Graphics_CreateComputeShader(Graphics* graphics, const char* compute_shad
    shader.id.program = shd_id;
 
    if (graphics->freed_shader_root == INVALID_HANDLE)
-      return ADD_RESOURCE(graphics->shaders, shader);
+      return ADD_HANDLE(graphics->shaders, shader);
 
-   return REUSE_RESOURCE(graphics->shaders, shader, graphics->freed_shader_root);
+   return REUSE_HANDLE(graphics->shaders, shader, graphics->freed_shader_root);
 }
 
 Shader Graphics_LoadShaderFromFile(Graphics* graphics, const char* file_path, const char* defines[], const u32 define_count, bool is_compute)

@@ -1,10 +1,10 @@
 #include "util/types.h"
-#include "util/resource.h"
+#include "util/handle.h"
 #include "util/array.h"
 
 #include <string.h>
 
-handle Util_AddNewResource(void** array_ptr, const void* item_ptr, handle* inout_compare, u16* inout_next_idx)
+handle Util_AddNewHandle(void** array_ptr, const void* item_ptr, handle* inout_compare, u16* inout_next_idx)
 {
    if (array_ptr == NULL || inout_compare == NULL || inout_next_idx == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };
@@ -24,7 +24,7 @@ handle Util_AddNewResource(void** array_ptr, const void* item_ptr, handle* inout
    return (*inout_compare);
 }
 
-handle Util_ReuseResource(void** array_ptr, const void* item_ptr, handle* inout_compare, handle* inout_old_compare, u16* inout_root_idx, u16 next_idx)
+handle Util_ReuseHandle(void** array_ptr, const void* item_ptr, handle* inout_compare, handle* inout_old_compare, u16* inout_root_idx, u16 next_idx)
 {
    if (array_ptr == NULL || inout_compare == NULL || inout_old_compare == NULL || inout_root_idx == NULL)
       return (handle){ .id = INVALID_HANDLE_ID };

@@ -1,5 +1,5 @@
-#ifndef UTIL_MATH_H
-#define UTIL_MATH_H
+#ifndef ECT_MATH_H
+#define ECT_MATH_H
 
 #include "util/types.h"
 

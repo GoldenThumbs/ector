@@ -1,5 +1,5 @@
-#ifndef UTIL_QUATERNION_H
-#define UTIL_QUATERNION_H
+#ifndef ECT_QUATERNION_H
+#define ECT_QUATERNION_H
 
 #include "util/types.h"
 #include "util/math.h"

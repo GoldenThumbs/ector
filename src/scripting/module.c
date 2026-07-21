@@ -1,7 +1,7 @@
 #include "util/types.h"
 #include "util/array.h"
 #include "util/files.h"
-#include "util/resource.h"
+#include "util/handle.h"
 #include "engine.h"
 
 #include "scripting/internal.h"
@@ -99,9 +99,9 @@ Script Scripting_CreateScriptFromCode(ScriptHandler* script_handler, const char*
    lua_dump(script_handler->script_state, SCRP_LuaWriter, &script.code, 0);
 
    if (script_handler->freed_script_root == INVALID_HANDLE)
-      return ADD_RESOURCE(script_handler->scripts, script);
+      return ADD_HANDLE(script_handler->scripts, script);
 
-   return REUSE_RESOURCE(script_handler->scripts, script, script_handler->freed_script_root);
+   return REUSE_HANDLE(script_handler->scripts, script, script_handler->freed_script_root);
 }
 
 Script Scripting_LoadScriptFromFile(ScriptHandler* script_handler, const char* lua_file_path)

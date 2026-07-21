@@ -38,7 +38,7 @@ Renderer* Renderer_Init(Graphics* graphics, const char* app_path)
    renderer->built_in.texture.white = Renderer_CreateColorTexture(renderer, Util_IntToColor(0XFFFFFFFF), GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.black = Renderer_CreateColorTexture(renderer, Util_IntToColor(0x000000FF), GFX_TEXTURETYPE_2D);
    renderer->built_in.texture.gray = Renderer_CreateColorTexture(renderer, (color8){ 128, 128, 128, 255 }, GFX_TEXTURETYPE_2D);
-   renderer->built_in.texture.normal = Renderer_CreateColorTexture(renderer, (color8){ 127, 127, 255, 255 }, GFX_TEXTURETYPE_2D);
+   renderer->built_in.texture.normal = RNDR_CreateFloatColorTexture(renderer, VEC4(0.5f, 0.5f, 1.0f, 1.0f), GFX_TEXTURETYPE_2D);
 
    renderer->built_in.geometry.plane = RNDR_CreateDefaultPlane(graphics);
    renderer->built_in.geometry.box = RNDR_CreateDefaultBox(graphics);
@@ -329,7 +329,7 @@ f32 Renderer_GetFrameDelta(Renderer* renderer)
 Buffer Renderer_GetCameraBuffer(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->ubo.camera_buffer;
 }
@@ -337,7 +337,7 @@ Buffer Renderer_GetCameraBuffer(Renderer* renderer)
 Buffer Renderer_GetModelBuffer(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->ubo.model_buffer;
 }
@@ -361,7 +361,7 @@ void Renderer_SetBasicShader(Renderer* renderer, Shader shader)
 Shader Renderer_UnlitShader(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.shader.unlit;
 }
@@ -369,7 +369,7 @@ Shader Renderer_UnlitShader(Renderer* renderer)
 Shader Renderer_BasicShader(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.shader.basic;
 }
@@ -377,7 +377,7 @@ Shader Renderer_BasicShader(Renderer* renderer)
 Geometry Renderer_PlaneGeometry(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.geometry.plane;
 }
@@ -385,7 +385,7 @@ Geometry Renderer_PlaneGeometry(Renderer* renderer)
 Geometry Renderer_BoxGeometry(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.geometry.box;
 }
@@ -393,7 +393,7 @@ Geometry Renderer_BoxGeometry(Renderer* renderer)
 Texture Renderer_GetDefaultTexture(Renderer* renderer, u8 texture_default)
 {
    if (renderer == NULL || texture_default >= RNDR_SURF_DEFAULT_TEXTURE_COUNT)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.textures[texture_default];
 }
@@ -401,7 +401,7 @@ Texture Renderer_GetDefaultTexture(Renderer* renderer, u8 texture_default)
 Texture Renderer_WhiteTexture(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.texture.white;
 }
@@ -409,7 +409,7 @@ Texture Renderer_WhiteTexture(Renderer* renderer)
 Texture Renderer_GrayTexture(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.texture.gray;
 }
@@ -417,7 +417,7 @@ Texture Renderer_GrayTexture(Renderer* renderer)
 Texture Renderer_BlackTexture(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.texture.black;
 }
@@ -425,7 +425,7 @@ Texture Renderer_BlackTexture(Renderer* renderer)
 Texture Renderer_NormalTexture(Renderer* renderer)
 {
    if (renderer == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->built_in.texture.normal;
 }
@@ -471,7 +471,7 @@ Texture Renderer_CreateColorTexture(Renderer* renderer, color8 color, u8 texture
 Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb)
 {
    if (renderer == NULL || texture_file_path == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    Texture* texture_ptr = GET_MAP_ITEM(renderer->textures, texture_file_path);
    if (texture_ptr == NULL)
@@ -482,7 +482,7 @@ Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, 
    }
 
    if (texture_ptr == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return (*texture_ptr);
 }
@@ -490,7 +490,7 @@ Texture Renderer_LoadTexture(Renderer* renderer, const char* texture_file_path, 
 Shader Renderer_LoadShader(Renderer* renderer, const char* shader_file_path, const char* defines[], const u32 defines_count, bool is_compute)
 {
    if (renderer == NULL || renderer->app_path == NULL || shader_file_path == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    char* file_path = Util_MakeFilePath(renderer->app_path, shader_file_path);
 
@@ -530,10 +530,15 @@ Model Renderer_LoadModel(Renderer* renderer, const char* model_file_path)
    return model;
 }
 
+Texture RNDR_CreateFloatColorTexture(Renderer* renderer, vec4 color, u8 texture_type)
+{
+   return Graphics_CreateTexture(renderer->graphics, (u8*)color.arr, (TextureDesc){ { 1, 1 }, 1, 1, texture_type, GFX_TEXTUREFORMAT_RGBA_F32 });
+}
+
 Texture RNDR_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb)
 {
    if (renderer == NULL || renderer->app_path == NULL || texture_file_path == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    u8 image_type = (slice_size.width <= 0 || slice_size.height <= 0) ? IMG_TYPE_2D : IMG_TYPE_3D;
 
@@ -551,7 +556,7 @@ Texture RNDR_LoadTexture(Renderer* renderer, const char* texture_file_path, res2
       free(file_path);
 
    if (image.data == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    TextureDesc desc = { 0 };
    desc.size = image.size.width_height;
@@ -572,7 +577,7 @@ Texture RNDR_LoadTexture(Renderer* renderer, const char* texture_file_path, res2
 Geometry RNDR_CreateDefaultPlane(Graphics* graphics)
 {
    if (graphics == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    Mesh plane_mesh = Mesh_CreatePlane(1, 1, VEC2(2, 2));
    Geometry plane = Graphics_CreateGeometry(graphics, plane_mesh, GFX_DRAWMODE_STATIC);
@@ -584,7 +589,7 @@ Geometry RNDR_CreateDefaultPlane(Graphics* graphics)
 Geometry RNDR_CreateDefaultBox(Graphics* graphics)
 {
    if (graphics == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    Mesh box_mesh = Mesh_CreateBoxAdvanced(1, 1, 1, VEC3(2, 2, 2), false);
    Geometry box = Graphics_CreateGeometry(graphics, box_mesh, GFX_DRAWMODE_STATIC);

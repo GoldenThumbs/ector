@@ -3,7 +3,8 @@
 
 #include "util/types.h"
 #include "util/extra_types.h"
-#include "util/resource.h"
+#include "util/array.h"
+#include "util/handle.h"
 #include "graphics.h"
 
 #include "renderer.h"
@@ -77,15 +78,19 @@ typedef struct rndr_Surface_t
 
 } rndr_Surface;
 
+ARRAY_TYPEDEF(rndr_DrawableType);
+ARRAY_TYPEDEF(rndr_Surface);
+MAP_TYPEDEF(Texture);
+
 struct Renderer_t
 {
    const char* app_path;
 
    Graphics* graphics;
 
-   rndr_Surface* surfaces;
-   rndr_DrawableType* drawable_types;
-   Texture* textures;
+   ARRAY_TYPE(rndr_DrawableType) drawable_types;
+   ARRAY_TYPE(rndr_Surface) surfaces;
+   MAP_TYPE(Texture) textures;
 
    LightManagerInfo lightmanager_info;
 
@@ -152,14 +157,6 @@ struct Renderer_t
 
 };
 
-static inline u16 RNDR_U16Norm(f32 value)
-{
-   const f32 u16_maxf = (f32)UINT16_MAX;
-   f32 f = M_CLAMP(value, 0.0f, 1.0f);
-
-   return (u16)(f * u16_maxf);
-}
-
 static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_type, u16 drawable_idx)
 {
    if (!Util_IsHandleValid(drawable_type->drawable_buffer, (handle){ .handle = drawable_idx, .ref = INVALID_HANDLE_REF }))
@@ -168,6 +165,7 @@ static inline rndr_Drawable* RNDR_DrawableAtIndex(rndr_DrawableType* drawable_ty
    return (rndr_Drawable*)(drawable_type->drawable_buffer + (uS)drawable_idx * (uS)drawable_type->type_size);
 }
 
+Texture RNDR_CreateFloatColorTexture(Renderer* renderer, vec4 color, u8 texture_type);
 Texture RNDR_LoadTexture(Renderer* renderer, const char* texture_file_path, res2D slice_size, bool generate_mipmaps, bool is_srgb);
 
 Geometry RNDR_CreateDefaultPlane(Graphics* graphics);

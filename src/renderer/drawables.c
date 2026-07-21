@@ -1,4 +1,4 @@
-#include "util/resource.h"
+#include "util/handle.h"
 #include "util/types.h"
 #include "util/array.h"
 
@@ -84,11 +84,11 @@ Drawable Renderer_CreateDrawable(Renderer* renderer, const char* drawable_type_n
    if (drawable_type->freed_drawable_root == INVALID_HANDLE)
    {
       u16 next_idx = INVALID_HANDLE;
-      compare = Util_AddNewResource(REF(drawable_type->drawable_buffer), NULL, &compare, &next_idx);
+      compare = Util_AddNewHandle(REF(drawable_type->drawable_buffer), NULL, &compare, &next_idx);
 
    } else {
       rndr_Drawable* root_drawable = (rndr_Drawable*)(drawable_type->drawable_buffer + drawable_type->freed_drawable_root * drawable_type->type_size);
-      compare = Util_ReuseResource(REF(drawable_type->drawable_buffer), NULL, &compare, &root_drawable->compare, &drawable_type->freed_drawable_root, root_drawable->next_freed);
+      compare = Util_ReuseHandle(REF(drawable_type->drawable_buffer), NULL, &compare, &root_drawable->compare, &drawable_type->freed_drawable_root, root_drawable->next_freed);
 
    }
 

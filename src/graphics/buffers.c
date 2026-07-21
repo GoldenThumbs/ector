@@ -1,5 +1,5 @@
 #include "util/types.h"
-#include "util/resource.h"
+#include "util/handle.h"
 
 #include "graphics.h"
 #include "graphics/internal.h"
@@ -36,9 +36,9 @@ Buffer Graphics_CreateBufferExplicit(Graphics* graphics, void* data, uS size, u8
       glClearBufferData(gl_target, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE, NULL);
 
    if (graphics->freed_buffer_root == INVALID_HANDLE)
-      return ADD_RESOURCE(graphics->buffers, buffer);
+      return ADD_HANDLE(graphics->buffers, buffer);
 
-   return REUSE_RESOURCE(graphics->buffers, buffer, graphics->freed_buffer_root);
+   return REUSE_HANDLE(graphics->buffers, buffer, graphics->freed_buffer_root);
 }
 
 void Graphics_FreeBuffer(Graphics* graphics, Buffer res_buffer)

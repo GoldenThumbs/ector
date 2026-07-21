@@ -1,5 +1,5 @@
 #include "util/types.h"
-#include "util/resource.h"
+#include "util/handle.h"
 #include "mesh.h"
 
 #include "graphics.h"
@@ -22,9 +22,9 @@ Geometry Graphics_CreateGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode)
    GFX_CreateGeometry(&geometry, mesh);
 
    if (graphics->freed_geometry_root == INVALID_HANDLE)
-      return ADD_RESOURCE(graphics->geometries, geometry);
+      return ADD_HANDLE(graphics->geometries, geometry);
 
-   return REUSE_RESOURCE(graphics->geometries, geometry, graphics->freed_geometry_root);
+   return REUSE_HANDLE(graphics->geometries, geometry, graphics->freed_geometry_root);
 }
 
 void Graphics_ReuseGeometry(Graphics* graphics, Mesh mesh, u8 draw_mode, Geometry res_geometry)

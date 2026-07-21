@@ -1,7 +1,7 @@
 #include "util/extra_types.h"
 #include "util/types.h"
 #include "util/array.h"
-#include "util/resource.h"
+#include "util/handle.h"
 #include "graphics.h"
 
 #include "renderer.h"
@@ -15,12 +15,12 @@
 Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceDesc* desc)
 {
    if (renderer == NULL || name == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    uS name_length = strnlen(name, RNDR_NAME_MAX);
 
    if (name_length < 2 || desc == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    u16 existing_idx = RNDR_GetSurfaceIndex(renderer, name);
    if (existing_idx != INVALID_HANDLE)
@@ -37,10 +37,10 @@ Surface Renderer_AddSurface(Renderer* renderer, const char* name, const SurfaceD
 
    surface.name = name;
 
-   if (renderer->freed_surface_root == INVALID_HANDLE)
-      return ADD_RESOURCE(renderer->surfaces, surface);
+   if (renderer->freed_surface_root == INVALID_INDEX_U16)
+      return ADD_HANDLE(renderer->surfaces, surface);
 
-   return REUSE_RESOURCE(renderer->surfaces, surface, renderer->freed_surface_root);
+   return REUSE_HANDLE(renderer->surfaces, surface, renderer->freed_surface_root);
 }
 
 void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface)
@@ -48,23 +48,23 @@ void Renderer_RemoveSurface(Renderer* renderer, Surface res_surface)
    if (renderer == NULL || !Util_IsHandleValid(renderer->surfaces, res_surface))
       return;
 
-   rndr_Surface surface = renderer->surfaces[res_surface.handle];
-   if (surface.compare.ref != res_surface.ref)
+   rndr_Surface* surface = &renderer->surfaces[res_surface.handle];
+   if (surface->compare.ref != res_surface.ref)
       return;
 
-   surface.next_freed = renderer->freed_surface_root;
-   renderer->freed_surface_root = (u32)res_surface.handle;
+   surface->next_freed = renderer->freed_surface_root;
+   renderer->freed_surface_root = res_surface.handle;
 
 }
 
 Surface Renderer_GetSurface(Renderer* renderer, const char* name)
 {
    if (renderer == NULL || name == NULL)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    u16 index = RNDR_GetSurfaceIndex(renderer, name);
    if (index == INVALID_HANDLE)
-      return (handle){ .id = INVALID_HANDLE_ID };
+      return NULLHANDLE;
 
    return renderer->surfaces[index].compare;
 }

@@ -2,7 +2,7 @@
 #include "util/types.h"
 #include "util/math.h"
 #include "util/array.h"
-#include "util/resource.h"
+#include "util/handle.h"
 #include "util/files.h"
 
 #include "graphics.h"
@@ -41,9 +41,9 @@ Texture Graphics_CreateTexture(Graphics* graphics, u8* data, TextureDesc desc)
    texture.compare.handle = Util_ArrayLength(graphics->textures);
 
    if (graphics->freed_texture_root == INVALID_HANDLE)
-      return ADD_RESOURCE(graphics->textures, texture);
+      return ADD_HANDLE(graphics->textures, texture);
 
-   return REUSE_RESOURCE(graphics->textures, texture, graphics->freed_texture_root);
+   return REUSE_HANDLE(graphics->textures, texture, graphics->freed_texture_root);
 }
 
 void Graphics_FreeTexture(Graphics* graphics, Texture res_texture)
@@ -262,9 +262,9 @@ Framebuffer Graphics_CreateFramebuffer(Graphics* graphics, res2D size, bool dept
    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
    if (graphics->freed_framebuffer_root == INVALID_HANDLE)
-      return ADD_RESOURCE(graphics->framebuffers, framebuffer);
+      return ADD_HANDLE(graphics->framebuffers, framebuffer);
 
-   return REUSE_RESOURCE(graphics->framebuffers, framebuffer, graphics->freed_framebuffer_root);
+   return REUSE_HANDLE(graphics->framebuffers, framebuffer, graphics->freed_framebuffer_root);
 }
 
 void Graphics_ReuseFramebuffer(Graphics* graphics, res2D size, bool depthstencil_renderbuffer, Framebuffer res_framebuffer)

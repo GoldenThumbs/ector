@@ -1,5 +1,5 @@
-#ifndef UTIL_VEC2_H
-#define UTIL_VEC2_H
+#ifndef ECT_VEC2_H
+#define ECT_VEC2_H
 
 #include "util/types.h"
 #include "util/math.h"

@@ -142,6 +142,14 @@ struct DefaultLightManager_t
 
 };
 
+static inline u16 LIGHTMAN_U16Norm(f32 value)
+{
+   const f32 u16_maxf = (f32)UINT16_MAX;
+   f32 f = M_CLAMP(value, 0.0f, 1.0f);
+
+   return (u16)(f * u16_maxf);
+}
+
 static inline uS LIGHTMAN_ClustersSize(DefaultLightManager* lightmanager)
 {
    return sizeof(u32) * 4 + (sizeof(struct lightman_Cluster_t) + lightmanager->lights_per_cluster * sizeof(u32)) * lightmanager->total_clusters;
@@ -152,14 +160,6 @@ static inline uS LIGHTMAN_LightBufferSize(DefaultLightManager* lightmanager)
    uS light_memory = Util_ArrayMemory(lightmanager->packed_lights);
 
    return sizeof(i32) * 4 + sizeof(lightman_PackedLight) * light_memory;
-}
-
-static inline u16 LIGHTMAN_U16Norm(f32 value)
-{
-   const f32 u16_maxf = (f32)UINT16_MAX;
-   f32 f = M_CLAMP(value, 0.0f, 1.0f);
-
-   return (u16)(f * u16_maxf);
 }
 
 static inline mat4x4 LIGHTMAN_CubemapViewMatrix(vec3 origin, u8 cubemap_face)
@@ -177,7 +177,7 @@ static inline mat4x4 LIGHTMAN_CubemapViewMatrix(vec3 origin, u8 cubemap_face)
          return Util_LookAtMatrix(origin, Util_AddVec3(origin, s[0]), u[1]);
 
       case GFX_CUBEMAPFACE_POSITIVE_Y:
-         Util_ViewMatrix(origin, VEC3(50, 0, 0), 0);
+         return Util_ViewMatrix(origin, VEC3(50, 0, 0), 0);
 
       case GFX_CUBEMAPFACE_NEGATIVE_Y:
          return Util_ViewMatrix(origin, VEC3(150, 0, 0), 0);
