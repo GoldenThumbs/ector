@@ -19,8 +19,8 @@
 // utility macros for denoting arrays and maps
 // --<
 
-#define ARRAY_TYPE(T) Array_##T
-#define MAP_TYPE(T) Map_##T
+#define ARRAY_TYPE(T) __Array_##T
+#define MAP_TYPE(T) __Map_##T
 #define ARRAY_TYPEDEF(T) typedef T* ARRAY_TYPE(T)
 #define MAP_TYPEDEF(T) typedef T* MAP_TYPE(T)
 
@@ -185,7 +185,7 @@ static inline MapItem* Util_GetMapItemFromIndex(void* ptr, u32 index)
 static inline u32 Util_GetMapItemIndex(void* ptr, const char* key)
 {
    if (key == NULL)
-      return INVALID_HANDLE_ID;
+      return INVALID_INDEX_U32;
 
    for (u32 item_i = 0; item_i < Util_ArrayLength(ptr); item_i++)
    {
@@ -195,7 +195,7 @@ static inline u32 Util_GetMapItemIndex(void* ptr, const char* key)
 
    }
 
-   return INVALID_HANDLE_ID;
+   return INVALID_INDEX_U32;
 }
 
 static inline void* Util_GetMapItem(void* ptr, const char* key)
@@ -264,7 +264,7 @@ static inline void* Util_RemoveMapItem(void** array_ptr, const char* key)
       return NULL;
 
    u32 index = Util_GetMapItemIndex(*array_ptr, key);
-   if (index == INVALID_HANDLE_ID)
+   if (index == INVALID_INDEX_U32)
       return NULL;
 
 

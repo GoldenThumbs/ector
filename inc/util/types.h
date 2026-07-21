@@ -20,9 +20,26 @@
 #define ECT_STRINGIFY(x) ECT_STRINGIFY_2(x)
 #define ECT_STRINGIFY_2(x) #x
 
-#define INVALID_HANDLE UINT16_MAX
-#define INVALID_HANDLE_REF UINT16_MAX
-#define INVALID_HANDLE_ID UINT32_MAX
+#define INVALID_INDEX_U16 UINT16_MAX
+#define INVALID_INDEX_U32 UINT32_MAX
+#define INVALID_INDEX_SIGNED -1
+
+// check if a given index valid.
+// returns true if valid, returns false if not.
+#define CHECK_INDEX(idx) _Generic((idx), \
+   u16: ((idx) != INVALID_INDEX_U16), \
+   u32: ((idx) != INVALID_INDEX_U32), \
+   i16: ((idx) > INVALID_INDEX_SIGNED), \
+   i32: ((idx) > INVALID_INDEX_SIGNED), \
+   i64: ((idx) > INVALID_INDEX_SIGNED), \
+   default: false \
+)
+
+#define INVALID_HANDLE INVALID_INDEX_U16
+#define INVALID_HANDLE_REF INVALID_INDEX_U16
+#define INVALID_HANDLE_ID INVALID_INDEX_U32
+
+#define NULLHANDLE ((handle){ INVALID_HANDLE_ID })
 
 #define DATABLOB(data) (memblob) { (void*)(data), sizeof((data)) }
 
