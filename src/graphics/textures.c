@@ -158,6 +158,24 @@ void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, T
 
 }
 
+void Graphics_SetTextureShadowSampler(Graphics* graphics, Texture res_texture, bool is_tex_shadow)
+{
+   if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))
+      return;
+
+   gfx_Texture texture = graphics->textures[res_texture.handle];
+   if (!GFX_IsTextureValid(texture, res_texture))
+      return;
+
+   u32 gl_target = GFX_TextureType(texture.type);
+
+   glBindTexture(gl_target, texture.id.tex);
+
+   GLint compare_mode = (is_tex_shadow) ? GL_COMPARE_REF_TO_TEXTURE : GL_NONE;
+   glTexParameteri(gl_target, GL_TEXTURE_COMPARE_MODE, compare_mode);
+
+}
+
 Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 mip_level, u8 cubemap_face)
 {
    if (graphics == NULL || !Util_IsHandleValid(graphics->textures, res_texture))

@@ -322,6 +322,7 @@ void Graphics_BindTexture(Graphics* graphics, Texture res_texture, u32 bind_slot
 void Graphics_BindTextureView(Graphics* graphics, Texture res_texture, u32 bind_slot, const AdvancedBindOptions* bind_options);
 void Graphics_UnbindTextures(Graphics* graphics, u8 texture_type);
 void Graphics_SetTextureInterpolation(Graphics* graphics, Texture res_texture, TextureInterpolation interpolation_settings);
+void Graphics_SetTextureShadowSampler(Graphics* graphics, Texture res_texture, bool is_tex_shadow);
 
 // NOTE: this function allocates memory.
 Image Graphics_GetTextureImageData(Graphics* graphics, Texture res_texture, u32 mip_level, u8 cubemap_face);
